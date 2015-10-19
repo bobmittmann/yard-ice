@@ -36,8 +36,10 @@
 #define SHOW_SUPV 4
 #define SHOW_PKT  8
 
-extern uint32_t trace_opt;
+extern struct usb_cdc_class * usb_cdc;
+extern uint8_t trace_opt;
 extern uint32_t trace_ts;
+extern uint32_t protocol_buf[];
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,6 +64,8 @@ void trace_raw_pkt(struct packet * pkt);
 void trace_damp_pkt(struct packet * pkt);
 
 void trace_sdu_pkt(struct packet * pkt);
+
+void trace_mstp_pkt(struct packet * pkt);
 
 #ifdef __cplusplus
 }

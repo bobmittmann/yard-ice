@@ -18,13 +18,13 @@
  */
 
 /** 
- * @file damp.h
+ * @file mstp.h
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __DAMP_H__
-#define __DAMP_H__
+#ifndef __MSTP_H__
+#define __MSTP_H__
 
 #include <stdlib.h>
 #include <string.h>
@@ -35,12 +35,12 @@
 extern "C" {
 #endif
 
-void damp_trace_init(void);
-void damp_decode(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len);
+void mstp_trace_init(void);
+void mstp_decode(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __DAMP_H__ */
+#endif /* __MSTP_H__ */
 

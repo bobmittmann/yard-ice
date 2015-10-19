@@ -35,20 +35,24 @@
 
 #include <sys/dcclog.h>
 
+#ifndef SERIAL_STATS_ENABLE
+#define SERIAL_STATS_ENABLE 0
+#endif
+
 #define SERIAL_BAUDRATE 38400
 //#define SERIAL_BAUDRATE 19200
-#define RX_FIFO_LEN 64
+#define RX_FIFO_LEN 16
 
 struct capture_drv {
-	struct stm32_usart * uart;
+#if SERIAL_STATS_ENABLE
 	uint32_t err_cnt;
 	uint32_t ore_cnt;
 	uint32_t fe_cnt;
-	uint32_t idle_bits;
+#endif
+	uint8_t idle_bits;
+	uint16_t baudrate;
 	uint32_t byte_time;
 	uint32_t byte_time_max;
-	uint32_t baudrate;
-
 	struct {
 		uint32_t clk;
 		uint32_t seq;
@@ -98,12 +102,14 @@ void stm32f_usart2_isr(void)
 			/* end of packet */
 			head++;
 			free = RX_FIFO_LEN - (uint8_t)(head - drv->rx_fifo.tail);
-			if (free == 0) { 
-				drv->err_cnt++;
-			} else {
+			if (free != 0) { 
 				drv->rx_fifo.head = head;
 				thinkos_sem_post_i(RX_SEM);
 				pkt = &drv->rx_fifo.buf[head & (RX_FIFO_LEN - 1)];
+			} else {
+#if SERIAL_STATS_ENABLE
+				drv->err_cnt++;
+#endif
 			}
 			pkt->seq = ++drv->rx_fifo.seq;
 			pkt->clk = clk - drv->byte_time; 
@@ -114,9 +120,13 @@ void stm32f_usart2_isr(void)
 		pkt->cnt = cnt;
 		
 	} else if (sr & USART_ORE) {
+#if SERIAL_STATS_ENABLE
 		drv->ore_cnt++;
+#endif
 	} else if (sr & USART_FE) {
+#if SERIAL_STATS_ENABLE
 		drv->fe_cnt++;
+#endif
 	}
 }
 
@@ -148,16 +158,14 @@ struct packet * capture_pkt_recv(void)
 
 void capture_start(void)
 {
-	struct capture_drv * drv = &uart2_capture_drv;
-	struct stm32_usart * uart = drv->uart;
+	struct stm32_usart * uart = STM32_USART2;
 
 	uart->cr1 |= USART_RE;
 }
 
 void capture_stop(void)
 {
-	struct capture_drv * drv = &uart2_capture_drv;
-	struct stm32_usart * uart = drv->uart;
+	struct stm32_usart * uart = STM32_USART2;
 
 	uart->cr1 &= ~USART_RE ;
 }
@@ -213,10 +221,11 @@ void capture_init(void)
 	drv->rx_fifo.buf[0].cnt = 0;
 	drv->rx_fifo.buf[0].seq = 0;
 	drv->rx_fifo.clk = clk;
+#if SERIAL_STATS_ENABLE
 	drv->err_cnt = 0;
 	drv->ore_cnt = 0;
 	drv->fe_cnt = 0;
-	drv->uart = uart;
+#endif
 	drv->idle_bits = 2;
 
 	/* clock enable */

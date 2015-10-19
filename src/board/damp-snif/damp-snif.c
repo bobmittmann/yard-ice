@@ -38,6 +38,7 @@
 #include "trace.h"
 #include "profclk.h"
 #include "capture.h"
+#include "mstp.h"
 
 #define FW_VERSION_MAJOR 0
 #define FW_VERSION_MINOR 1
@@ -104,15 +105,15 @@ const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
    ------------------------------------------------------------------------- */
 
 enum {
-	VCOM_MODE_STANDBY = 0,
-	VCOM_MODE_RAW_TRACE = 1,
+	VCOM_MODE_STANDBY   = 0,
+	VCOM_MODE_RAW_TRACE  = 1,
 	VCOM_MODE_DAMP_TRACE = 2,
-	VCOM_MODE_SDU_TRACE = 3
+	VCOM_MODE_SDU_TRACE  = 3,
+	VCOM_MODE_MSTP_TRACE = 4
 };
 
 struct vcom {
-	volatile int mode;
-	usb_cdc_class_t * cdc;
+	volatile uint8_t mode;
 };
 
 /* -------------------------------------------------------------------------
@@ -147,12 +148,16 @@ void show_menu(void)
 {
 	usb_printf("\r\n - Service options:\r\n");
 	usb_printf(" [0..9] Idle time set (bits)\r\n");
-	usb_printf("    [-]  9600 bps\r\n");
-	usb_printf("    [=] 19200 bps\r\n");
-	usb_printf("    [+] 38400 bps\r\n");
+	usb_printf("    [-]   9600 bps\r\n");
+	usb_printf("    [=]  19200 bps\r\n");
+	usb_printf("    [+]  38400 bps\r\n");
+	usb_printf("    [!]  57600 bps\r\n");
+	usb_printf("    [@] 115200 bps\r\n");
+	usb_printf("    [#] 500000 bps\r\n");
 	usb_printf("    [F] firmware update\r\n");
 	usb_printf("  [A/a] absolute/relative time\r\n");
 	usb_printf("  [D/d] enable/disable DAMP trace\r\n");
+	usb_printf("  [M/m] enable/disable BACnet MS/TP trace\r\n");
 	usb_printf("  [P/p] enable/disable packets\r\n");
 	usb_printf("  [R/r] enable/disable raw data trace\r\n");
 	usb_printf("  [S/s] enable/disable SDU trace\r\n");
@@ -160,163 +165,139 @@ void show_menu(void)
 	usb_printf("[DAMP-SNIFFER %d.%d]: ", FW_VERSION_MAJOR, FW_VERSION_MINOR);
 };
 
-#define VCOM_BUF_SIZE 32
-
-uint32_t proto_buf[128];
+#define VCOM_BUF_SIZE 8
 
 void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 {
-	usb_cdc_class_t * cdc = vcom->cdc;
-	uint8_t buf[VCOM_BUF_SIZE];
-	int len;
-	int i;
-	int c;
-
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-	DCC_LOG2(LOG_TRACE, "vcom->%p, cdc->%p", vcom, cdc);
+	struct usb_cdc_class * cdc = usb_cdc;
+	uint8_t c;
 
 	for (;;) {
-		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 1000);
-
-		for (i = 0; i < len; ++i) {
-			c = buf[i];
-			(void)c;
-
-			switch (c) {
-
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				usb_printf(" - Idle time ser to %d bits...\r\n", c - '0');
-				capture_idletime_set(c - '0');
-				break;
-	
-			case '-':
-				capture_baudrate_set(9600);
-				usb_printf(" - 9600 bps ...\r\n");
-				break;
-				
-			case '=':
-				capture_baudrate_set(19200);
-				usb_printf(" - 19200 bps ...\r\n");
-				break;
-
-			case '+':
-				capture_baudrate_set(38400);
-				usb_printf(" - 38400 bps ...\r\n");
-				break;
-
-			case 'S':
-				usb_printf(" - SDU trace ...\r\n");
-				capture_stop();
-				vcom->mode = VCOM_MODE_SDU_TRACE;
-				sdu_trace_init(proto_buf);
-				capture_start();
-				break;
-
-			case 'D':
-				usb_printf(" - DAMP data trace ...\r\n");
-				capture_stop();
-				vcom->mode = VCOM_MODE_DAMP_TRACE;
-				damp_trace_init(proto_buf);
-				capture_start();
-				break;
-
-			case 'R':
-				usb_printf(" - Raw data trace ...\r\n");
-				vcom->mode = VCOM_MODE_RAW_TRACE;
-				capture_start();
-				break;
-
-			case 'r':
-			case 'd':
-			case 's':
-				capture_stop();
-				vcom->mode = VCOM_MODE_STANDBY;
-				usb_printf(" - Standby ...\r\n");
-				break;
-
-			case 'F':
-				if (vcom->mode == VCOM_MODE_STANDBY) {
-					usb_printf(" - Firmware update...\r\n");
-					usb_xflash(0, 32 * 1024);
-				}
-				break;
-
-			case 'U':
-				sdu_trace_show_supv(true);
-				usb_printf(" - Show supervisory...\r\n");
-				break;
-
-			case 'u':
-				sdu_trace_show_supv(false);
-				usb_printf(" - Don't show supervisory...\r\n");
-				break;
-
-			case 'P':
-				sdu_trace_show_pkt(true);
-				usb_printf(" - Show packets...\r\n");
-				break;
-
-			case 'p':
-				sdu_trace_show_pkt(false);
-				usb_printf(" - Don't show packets...\r\n");
-				break;
-
-			case 'A':
-				trace_time_abs(true);
-				usb_printf(" - Absolute timestamps...\r\n");
-				break;
-
-			case 'a':
-				trace_time_abs(false);
-				usb_printf(" - Relative timestamps...\r\n");
-				break;
-
-			default:
-				show_menu();
-			}
-		}
-	}
-}
-
-void __attribute__((noreturn)) capture_task(struct vcom * vcom)
-{
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	for (;;) {
-		struct packet * pkt;
-
-		pkt = capture_pkt_recv();
-		if (pkt == NULL) {
+		if (usb_cdc_read(cdc, &c, 1, 1000) != 1) {
+			thinkos_sleep(100);
 			continue;
 		}
 
-		led_flash(LED_AMBER, 50);
+		switch (c) {
 
-		if (vcom->mode == VCOM_MODE_RAW_TRACE)
-			trace_raw_pkt(pkt);
-		else if (vcom->mode == VCOM_MODE_DAMP_TRACE)
-			trace_damp_pkt(pkt);
-		else if (vcom->mode == VCOM_MODE_SDU_TRACE)
-			trace_sdu_pkt(pkt);
+		case '0':
+			usb_printf(" - Idle time ser to 0.5 bits...\r\n");
+			capture_idletime_set(c - '0');
+			break;
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			usb_printf(" - Idle time ser to %d bits...\r\n", c - '0');
+			capture_idletime_set(c - '0');
+			break;
+
+		case '-':
+			capture_baudrate_set(9600);
+			usb_printf(" - 9600 bps ...\r\n");
+			break;
+
+		case '=':
+			capture_baudrate_set(19200);
+			usb_printf(" - 19200 bps ...\r\n");
+			break;
+
+		case '+':
+			capture_baudrate_set(38400);
+			usb_printf(" - 38400 bps ...\r\n");
+			break;
+
+		case 'S':
+			usb_printf(" - SDU trace ...\r\n");
+			capture_stop();
+			vcom->mode = VCOM_MODE_SDU_TRACE;
+			sdu_trace_init();
+			capture_start();
+			break;
+
+		case 'D':
+			usb_printf(" - DAMP trace ...\r\n");
+			capture_stop();
+			vcom->mode = VCOM_MODE_DAMP_TRACE;
+			damp_trace_init();
+			capture_start();
+			break;
+
+		case 'M':
+			usb_printf(" - MSTP trace ...\r\n");
+			capture_stop();
+			vcom->mode = VCOM_MODE_MSTP_TRACE;
+			mstp_trace_init();
+			capture_start();
+			break;
+
+		case 'R':
+			usb_printf(" - Raw data trace ...\r\n");
+			vcom->mode = VCOM_MODE_RAW_TRACE;
+			capture_start();
+			break;
+
+		case 'r':
+		case 'd':
+		case 's':
+		case 'm':
+			capture_stop();
+			vcom->mode = VCOM_MODE_STANDBY;
+			usb_printf(" - Standby ...\r\n");
+			break;
+
+		case 'F':
+			if (vcom->mode == VCOM_MODE_STANDBY) {
+				usb_printf(" - Firmware update...\r\n");
+				usb_xflash(0, 32 * 1024);
+			}
+			break;
+
+		case 'U':
+			sdu_trace_show_supv(true);
+			usb_printf(" - Show supervisory...\r\n");
+			break;
+
+		case 'u':
+			sdu_trace_show_supv(false);
+			usb_printf(" - Don't show supervisory...\r\n");
+			break;
+
+		case 'P':
+			sdu_trace_show_pkt(true);
+			usb_printf(" - Show packets...\r\n");
+			break;
+
+		case 'p':
+			sdu_trace_show_pkt(false);
+			usb_printf(" - Don't show packets...\r\n");
+			break;
+
+		case 'A':
+			trace_time_abs(true);
+			usb_printf(" - Absolute timestamps...\r\n");
+			break;
+
+		case 'a':
+			trace_time_abs(false);
+			usb_printf(" - Relative timestamps...\r\n");
+			break;
+
+		default:
+			show_menu();
+		}
 	}
 }
 
-uint32_t __attribute__((aligned(8))) led_stack[32];
-uint32_t __attribute__((aligned(8))) capture_stack[192];
+uint32_t led_stack[24];
+uint32_t usb_recv_stack[96];
 
-extern struct usb_cdc_class * usb_cdc;
-
-int main(int argc, char ** argv)
+int __attribute__((noreturn)) main(int argc, char ** argv)
 {
 	struct usb_cdc_class * cdc;
 	struct vcom vcom;
@@ -344,16 +325,15 @@ int main(int argc, char ** argv)
 					   cdc_acm_strcnt);
 	usb_cdc = cdc;
 
-	vcom.cdc = cdc;
 	vcom.mode = VCOM_MODE_STANDBY;
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
-	thinkos_thread_create((void *)capture_task, 
+	thinkos_thread_create((void *)usb_recv_task, 
 						  (void *)&vcom,
-						  capture_stack, sizeof(capture_stack) |
+						  usb_recv_stack, sizeof(usb_recv_stack) |
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	usb_vbus(true);
@@ -368,7 +348,23 @@ int main(int argc, char ** argv)
 	}
 
 	for (;;) {
-		usb_recv_task(&vcom);
+		struct packet * pkt;
+
+		pkt = capture_pkt_recv();
+		if (pkt == NULL) {
+			continue;
+		}
+
+		led_flash(LED_AMBER, 50);
+
+		if (vcom.mode == VCOM_MODE_RAW_TRACE)
+			trace_raw_pkt(pkt);
+		else if (vcom.mode == VCOM_MODE_DAMP_TRACE)
+			trace_damp_pkt(pkt);
+		else if (vcom.mode == VCOM_MODE_SDU_TRACE)
+			trace_sdu_pkt(pkt);
+		else if (vcom.mode == VCOM_MODE_MSTP_TRACE)
+			trace_mstp_pkt(pkt);
 	}
 }
 

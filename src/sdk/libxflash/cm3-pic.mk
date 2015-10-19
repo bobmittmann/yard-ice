@@ -21,7 +21,7 @@
 THISDIR:= $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 ifndef BASEDIR
-  BASEDIR := $(realpath $(THISDIR)/..)
+  BASEDIR := $(realpath $(THISDIR)/../..)
 endif
 
 ifndef TOOLSDIR 
@@ -30,8 +30,8 @@ endif
 
 CPU = cortex-m3
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork -fpic
-LDSCRIPT = cm3-pic.ld 
-INCPATH	:= $(INCPATH) $(realpath .) $(realpath $(BASEDIR)/sdk/include) 
+LDSCRIPT = $(THISDIR)/cm3-pic.ld
+INCPATH	:= $(INCPATH) $(realpath $(THISDIR)/include) $(realpath $(BASEDIR)/sdk/include) 
 
 override SFLAGS :=  -Wall $(OPTIONS)
 override CFLAGS :=  -Wall $(OPTIONS) -Os -g

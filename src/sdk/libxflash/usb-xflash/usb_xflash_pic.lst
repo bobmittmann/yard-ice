@@ -1,0 +1,1667 @@
+
+usb_xflash_pic.elf:     file format elf32-littlearm
+
+SYMBOL TABLE:
+00000000 l    d  .init	00000000 .init
+0000015c l    d  .text	00000000 .text
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_loc	00000000 .debug_loc
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_ranges	00000000 .debug_ranges
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .ARM.attributes	00000000 .ARM.attributes
+00000000 l    d  .debug_frame	00000000 .debug_frame
+00000000 l    df *ABS*	00000000 xflash.c
+00000000 l    df *ABS*	00000000 crc16ccitt.c
+00000000 l    df *ABS*	00000000 stm32f1xx-flash.c
+00000000 l    df *ABS*	00000000 stm32-usb_fs.c
+00000000 l    df *ABS*	00000000 
+00000330 g     F .text	0000004c flash_write
+00000564 g     F .text	00000062 usb_drain
+00000000 g     F .init	0000015c usb_xflash
+000002d8 g     F .text	00000058 flash_erase
+0000015c g     F .text	0000014c usb_xmodem_rcv_pkt
+0000037c g     F .text	0000001c flash_unlock
+00000398 g     F .text	000000d8 usb_recv
+000002a8 g     F .text	00000030 crc16ccitt
+00000470 g     F .text	000000f4 usb_send
+
+
+
+Disassembly of section .init:
+
+00000000 <usb_xflash>:
+#define MAGIC_REC_MAX 8
+
+int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
+												  unsigned int blk_size,
+												  struct magic * magic)
+{
+   0:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+   4:	f2ad 4d7c 	subw	sp, sp, #1148	; 0x47c
+   8:	4605      	mov	r5, r0
+   a:	460e      	mov	r6, r1
+	unsigned int cnt;
+	uint32_t offs;
+	int ret;
+	int i;
+
+	if (magic != 0) {
+   c:	4617      	mov	r7, r2
+   e:	f10d 080c 	add.w	r8, sp, #12
+  12:	b19a      	cbz	r2, 3c <usb_xflash+0x3c>
+		magic_cnt = magic->cnt > MAGIC_REC_MAX ? 
+			MAGIC_REC_MAX : magic->cnt;
+  14:	6814      	ldr	r4, [r2, #0]
+		for (i = 0; i < magic_cnt; ++i)
+  16:	f04f 0e00 	mov.w	lr, #0
+	int ret;
+	int i;
+
+	if (magic != 0) {
+		magic_cnt = magic->cnt > MAGIC_REC_MAX ? 
+			MAGIC_REC_MAX : magic->cnt;
+  1a:	2c08      	cmp	r4, #8
+  1c:	bf28      	it	cs
+  1e:	2408      	movcs	r4, #8
+		for (i = 0; i < magic_cnt; ++i)
+  20:	45a6      	cmp	lr, r4
+  22:	da0c      	bge.n	3e <usb_xflash+0x3e>
+  24:	230c      	movs	r3, #12
+  26:	fb03 f30e 	mul.w	r3, r3, lr
+  2a:	18fa      	adds	r2, r7, r3
+			rec[i] = magic->rec[i];
+  2c:	3204      	adds	r2, #4
+  2e:	4443      	add	r3, r8
+  30:	ca07      	ldmia	r2, {r0, r1, r2}
+	int i;
+
+	if (magic != 0) {
+		magic_cnt = magic->cnt > MAGIC_REC_MAX ? 
+			MAGIC_REC_MAX : magic->cnt;
+		for (i = 0; i < magic_cnt; ++i)
+  32:	f10e 0e01 	add.w	lr, lr, #1
+			rec[i] = magic->rec[i];
+  36:	e883 0007 	stmia.w	r3, {r0, r1, r2}
+  3a:	e7f1      	b.n	20 <usb_xflash+0x20>
+												  unsigned int blk_size,
+												  struct magic * magic)
+{
+	struct magic_rec rec[MAGIC_REC_MAX];
+	struct xmodem_rcv rx;
+	int magic_cnt = 0;
+  3c:	4614      	mov	r4, r2
+			MAGIC_REC_MAX : magic->cnt;
+		for (i = 0; i < magic_cnt; ++i)
+			rec[i] = magic->rec[i];
+	}
+
+	flash_unlock();
+  3e:	f000 f99d 	bl	37c <flash_unlock>
+  42:	270c      	movs	r7, #12
+  44:	fb07 8404 	mla	r4, r7, r4, r8
+  48:	1d27      	adds	r7, r4, #4
+
+	do {
+		usb_send(CDC_TX_EP, "\r\nErasing...", 12);
+  4a:	4940      	ldr	r1, [pc, #256]	; (14c <usb_xflash+0x14c>)
+  4c:	220c      	movs	r2, #12
+  4e:	4479      	add	r1, pc
+  50:	2002      	movs	r0, #2
+  52:	f000 fa0d 	bl	470 <usb_send>
+
+		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
+  56:	4628      	mov	r0, r5
+  58:	4631      	mov	r1, r6
+  5a:	f000 f93d 	bl	2d8 <flash_erase>
+  5e:	2800      	cmp	r0, #0
+  60:	dbf3      	blt.n	4a <usb_xflash+0x4a>
+
+			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+  62:	493b      	ldr	r1, [pc, #236]	; (150 <usb_xflash+0x150>)
+  64:	220c      	movs	r2, #12
+  66:	4479      	add	r1, pc
+  68:	2002      	movs	r0, #2
+  6a:	f000 fa01 	bl	470 <usb_send>
+
+#define XMODEM_RCV_TMOUT_MS 2000
+
+static int usb_xmodem_rcv_init(struct xmodem_rcv * rx, int mode)
+{
+	rx->mode = mode;
+  6e:	f10d 096c 	add.w	r9, sp, #108	; 0x6c
+  72:	2301      	movs	r3, #1
+  74:	f889 3000 	strb.w	r3, [r9]
+	rx->pktno = 1;
+  78:	f889 3002 	strb.w	r3, [r9, #2]
+#ifndef ENABLE_XMODEM_CKS
+	rx->sync = (rx->mode == XMODEM_RCV_CRC) ? 'C' : NAK;
+#else
+	rx->sync = 'C';
+  7c:	2343      	movs	r3, #67	; 0x43
+  7e:	f889 3001 	strb.w	r3, [r9, #1]
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+			cnt = 0;
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+  82:	4648      	mov	r0, r9
+#ifndef ENABLE_XMODEM_CKS
+	rx->sync = (rx->mode == XMODEM_RCV_CRC) ? 'C' : NAK;
+#else
+	rx->sync = 'C';
+#endif
+	rx->retry = 15;
+  84:	230f      	movs	r3, #15
+  86:	f889 3003 	strb.w	r3, [r9, #3]
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+			cnt = 0;
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+  8a:	f000 f867 	bl	15c <usb_xmodem_rcv_pkt>
+		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
+
+			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+  8e:	46ab      	mov	fp, r5
+			cnt = 0;
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+  90:	4680      	mov	r8, r0
+
+			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+			cnt = 0;
+  92:	f04f 0a00 	mov.w	sl, #0
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+
+			while (ret > 0) {
+  96:	f1b8 0f00 	cmp.w	r8, #0
+  9a:	dd21      	ble.n	e0 <usb_xflash+0xe0>
+  9c:	f10d 0c73 	add.w	ip, sp, #115	; 0x73
+				int rem = ret;
+
+				while (rem > 0) {
+					int n;
+
+					n = MIN(rem, FLASH_WR_BLK_SIZE);
+  a0:	4644      	mov	r4, r8
+  a2:	2c80      	cmp	r4, #128	; 0x80
+  a4:	bfa8      	it	ge
+  a6:	2480      	movge	r4, #128	; 0x80
+					n = MIN(n, blk_size - cnt);
+  a8:	ebca 0306 	rsb	r3, sl, r6
+  ac:	429c      	cmp	r4, r3
+  ae:	bf28      	it	cs
+  b0:	461c      	movcs	r4, r3
+					if (n == 0)
+  b2:	b184      	cbz	r4, d6 <usb_xflash+0xd6>
+						break;
+
+					flash_write(offs, src, n);
+  b4:	4658      	mov	r0, fp
+  b6:	4661      	mov	r1, ip
+  b8:	4622      	mov	r2, r4
+  ba:	f8cd c004 	str.w	ip, [sp, #4]
+
+					offs += n;
+					src += n;
+					cnt += n;
+					rem -= n;
+  be:	ebc4 0808 	rsb	r8, r4, r8
+					n = MIN(rem, FLASH_WR_BLK_SIZE);
+					n = MIN(n, blk_size - cnt);
+					if (n == 0)
+						break;
+
+					flash_write(offs, src, n);
+  c2:	f000 f935 	bl	330 <flash_write>
+
+					offs += n;
+					src += n;
+  c6:	f8dd c004 	ldr.w	ip, [sp, #4]
+
+			while (ret > 0) {
+				unsigned char * src = rx.pkt.data;
+				int rem = ret;
+
+				while (rem > 0) {
+  ca:	f1b8 0f00 	cmp.w	r8, #0
+					if (n == 0)
+						break;
+
+					flash_write(offs, src, n);
+
+					offs += n;
+  ce:	44a3      	add	fp, r4
+					src += n;
+  d0:	44a4      	add	ip, r4
+					cnt += n;
+  d2:	44a2      	add	sl, r4
+
+			while (ret > 0) {
+				unsigned char * src = rx.pkt.data;
+				int rem = ret;
+
+				while (rem > 0) {
+  d4:	dce4      	bgt.n	a0 <usb_xflash+0xa0>
+					src += n;
+					cnt += n;
+					rem -= n;
+				}
+
+				ret = usb_xmodem_rcv_pkt(&rx);
+  d6:	4648      	mov	r0, r9
+  d8:	f000 f840 	bl	15c <usb_xmodem_rcv_pkt>
+  dc:	4680      	mov	r8, r0
+  de:	e7da      	b.n	96 <usb_xflash+0x96>
+			} 
+		}
+
+		if (ret >= 0) {
+  e0:	d1b3      	bne.n	4a <usb_xflash+0x4a>
+  e2:	ab04      	add	r3, sp, #16
+			for (i = 0; i < magic_cnt; ++i) {
+  e4:	42bb      	cmp	r3, r7
+  e6:	d011      	beq.n	10c <usb_xflash+0x10c>
+  e8:	4619      	mov	r1, r3
+				uint32_t data = *rec[i].addr;
+  ea:	f851 2c04 	ldr.w	r2, [r1, #-4]
+  ee:	330c      	adds	r3, #12
+				if ((data & rec[i].mask) != rec[i].comp) {
+  f0:	6810      	ldr	r0, [r2, #0]
+  f2:	680a      	ldr	r2, [r1, #0]
+  f4:	f853 1c08 	ldr.w	r1, [r3, #-8]
+  f8:	4002      	ands	r2, r0
+  fa:	428a      	cmp	r2, r1
+  fc:	d0f2      	beq.n	e4 <usb_xflash+0xe4>
+					ret = -1;
+					usb_send(CDC_TX_EP, "\r\nInvalid!", 10);
+  fe:	4915      	ldr	r1, [pc, #84]	; (154 <usb_xflash+0x154>)
+ 100:	220a      	movs	r2, #10
+ 102:	4479      	add	r1, pc
+ 104:	2002      	movs	r0, #2
+ 106:	f000 f9b3 	bl	470 <usb_send>
+					break;
+ 10a:	e79e      	b.n	4a <usb_xflash+0x4a>
+				}
+			}	
+		}
+
+	} while ((ret < 0) || (cnt == 0));
+ 10c:	f1ba 0f00 	cmp.w	sl, #0
+ 110:	d09b      	beq.n	4a <usb_xflash+0x4a>
+
+	usb_send(CDC_TX_EP, "\r\nDone.\r\n", 9);
+ 112:	4911      	ldr	r1, [pc, #68]	; (158 <usb_xflash+0x158>)
+ 114:	2209      	movs	r2, #9
+ 116:	4479      	add	r1, pc
+ 118:	2002      	movs	r0, #2
+ 11a:	f000 f9a9 	bl	470 <usb_send>
+
+	usb_drain(CDC_TX_EP);
+ 11e:	2002      	movs	r0, #2
+ 120:	f000 fa20 	bl	564 <usb_drain>
+ 124:	f640 33b8 	movw	r3, #3000	; 0xbb8
+	for(;;);
+}
+
+static void delay(unsigned int msec)
+{
+	while (msec > 0) {
+ 128:	b133      	cbz	r3, 138 <usb_xflash+0x138>
+		if (CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG)
+ 12a:	4a05      	ldr	r2, [pc, #20]	; (140 <usb_xflash+0x140>)
+ 12c:	6812      	ldr	r2, [r2, #0]
+ 12e:	03d2      	lsls	r2, r2, #15
+			msec--;
+ 130:	bf48      	it	mi
+ 132:	f103 33ff 	addmi.w	r3, r3, #4294967295
+ 136:	e7f7      	b.n	128 <usb_xflash+0x128>
+
+#define FLASH_WR_BLK_SIZE 128
+
+static void reset(void)
+{
+	CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+ 138:	4a02      	ldr	r2, [pc, #8]	; (144 <usb_xflash+0x144>)
+ 13a:	4b03      	ldr	r3, [pc, #12]	; (148 <usb_xflash+0x148>)
+ 13c:	60da      	str	r2, [r3, #12]
+ 13e:	e7fe      	b.n	13e <usb_xflash+0x13e>
+ 140:	e000e010 	.word	0xe000e010
+ 144:	05fa0004 	.word	0x05fa0004
+ 148:	e000ed00 	.word	0xe000ed00
+ 14c:	00000576 	.word	0x00000576
+ 150:	0000056b 	.word	0x0000056b
+ 154:	000004dc 	.word	0x000004dc
+ 158:	000004d3 	.word	0x000004d3
+
+Disassembly of section .text:
+
+0000015c <usb_xmodem_rcv_pkt>:
+
+#define CDC_TX_EP 2
+#define CDC_RX_EP 1
+
+int usb_xmodem_rcv_pkt(struct xmodem_rcv * rx)
+{
+ 15c:	e92d 41f0 	stmdb	sp!, {r4, r5, r6, r7, r8, lr}
+ 160:	4604      	mov	r4, r0
+	unsigned char * pkt = rx->pkt.hdr;
+ 162:	1d05      	adds	r5, r0, #4
+	int pos;
+	int i;
+
+	for (;;) {
+
+		if ((ret = usb_send(CDC_TX_EP, &rx->sync, 1)) < 0) {
+ 164:	2002      	movs	r0, #2
+ 166:	1c61      	adds	r1, r4, #1
+ 168:	2201      	movs	r2, #1
+ 16a:	f000 f981 	bl	470 <usb_send>
+ 16e:	2800      	cmp	r0, #0
+ 170:	f2c0 8098 	blt.w	2a4 <usb_xmodem_rcv_pkt+0x148>
+ 174:	2200      	movs	r2, #0
+ 176:	4610      	mov	r0, r2
+		rem = 0;
+		pos = 0;
+		for (;;) {
+			int c;
+
+			if (rem == 0) {
+ 178:	b948      	cbnz	r0, 18e <usb_xmodem_rcv_pkt+0x32>
+				ret = usb_recv(CDC_RX_EP, pkt, 128, 2000);
+ 17a:	2001      	movs	r0, #1
+ 17c:	4629      	mov	r1, r5
+ 17e:	2280      	movs	r2, #128	; 0x80
+ 180:	f44f 63fa 	mov.w	r3, #2000	; 0x7d0
+ 184:	f000 f908 	bl	398 <usb_recv>
+
+				if (ret <= 0)
+ 188:	2800      	cmp	r0, #0
+ 18a:	dd79      	ble.n	280 <usb_xmodem_rcv_pkt+0x124>
+					goto timeout;
+
+				pos = 0;
+ 18c:	2200      	movs	r2, #0
+				rem = ret;
+			}
+
+			c = pkt[pos];
+ 18e:	5cab      	ldrb	r3, [r5, r2]
+			pos++;
+			rem--;
+ 190:	3801      	subs	r0, #1
+
+			if (c == STX) {
+ 192:	2b02      	cmp	r3, #2
+				pos = 0;
+				rem = ret;
+			}
+
+			c = pkt[pos];
+			pos++;
+ 194:	f102 0201 	add.w	r2, r2, #1
+			rem--;
+
+			if (c == STX) {
+ 198:	d00f      	beq.n	1ba <usb_xmodem_rcv_pkt+0x5e>
+				
+				cnt = 1024;
+				break;
+			}
+
+			if (c == SOH) {
+ 19a:	2b01      	cmp	r3, #1
+ 19c:	d010      	beq.n	1c0 <usb_xmodem_rcv_pkt+0x64>
+				
+				cnt = 128;
+				break;
+			}
+
+			if (c == EOT) {
+ 19e:	2b04      	cmp	r3, #4
+ 1a0:	d1ea      	bne.n	178 <usb_xmodem_rcv_pkt+0x1c>
+				/* end of transmission */
+				pkt[0] = ACK;
+ 1a2:	2306      	movs	r3, #6
+				pkt[1] = ACK;
+				if ((ret = usb_send(CDC_TX_EP, pkt, 2)) < 0)
+ 1a4:	2002      	movs	r0, #2
+				break;
+			}
+
+			if (c == EOT) {
+				/* end of transmission */
+				pkt[0] = ACK;
+ 1a6:	7123      	strb	r3, [r4, #4]
+				pkt[1] = ACK;
+ 1a8:	7163      	strb	r3, [r4, #5]
+				if ((ret = usb_send(CDC_TX_EP, pkt, 2)) < 0)
+ 1aa:	4629      	mov	r1, r5
+ 1ac:	4602      	mov	r2, r0
+ 1ae:	f000 f95f 	bl	470 <usb_send>
+ 1b2:	ea00 70e0 	and.w	r0, r0, r0, asr #31
+ 1b6:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+			pos++;
+			rem--;
+
+			if (c == STX) {
+				
+				cnt = 1024;
+ 1ba:	f44f 6680 	mov.w	r6, #1024	; 0x400
+ 1be:	e000      	b.n	1c2 <usb_xmodem_rcv_pkt+0x66>
+				break;
+			}
+
+			if (c == SOH) {
+				
+				cnt = 128;
+ 1c0:	2680      	movs	r6, #128	; 0x80
+			}
+		}
+
+		
+
+		cp = pkt + 1;
+ 1c2:	f104 0805 	add.w	r8, r4, #5
+		for (i = 0; i < rem; ++i)
+ 1c6:	2300      	movs	r3, #0
+ 1c8:	4283      	cmp	r3, r0
+ 1ca:	d005      	beq.n	1d8 <usb_xmodem_rcv_pkt+0x7c>
+ 1cc:	18a9      	adds	r1, r5, r2
+			cp[i] = pkt[pos + i];
+ 1ce:	5cc9      	ldrb	r1, [r1, r3]
+ 1d0:	f808 1003 	strb.w	r1, [r8, r3]
+		}
+
+		
+
+		cp = pkt + 1;
+		for (i = 0; i < rem; ++i)
+ 1d4:	3301      	adds	r3, #1
+ 1d6:	e7f7      	b.n	1c8 <usb_xmodem_rcv_pkt+0x6c>
+		cp += rem;
+
+#ifndef ENABLE_XMODEM_CKS
+		rem = cnt + ((rx->mode) ? 4 : 3) - rem;
+#else
+		rem = cnt + 4 - rem;
+ 1d8:	1d37      	adds	r7, r6, #4
+		
+
+		cp = pkt + 1;
+		for (i = 0; i < rem; ++i)
+			cp[i] = pkt[pos + i];
+		cp += rem;
+ 1da:	4498      	add	r8, r3
+
+#ifndef ENABLE_XMODEM_CKS
+		rem = cnt + ((rx->mode) ? 4 : 3) - rem;
+#else
+		rem = cnt + 4 - rem;
+ 1dc:	1aff      	subs	r7, r7, r3
+#endif
+
+		/* receive the packet */
+		while (rem) {
+ 1de:	b15f      	cbz	r7, 1f8 <usb_xmodem_rcv_pkt+0x9c>
+
+			ret = usb_recv(CDC_RX_EP, cp, rem, 500);
+ 1e0:	2001      	movs	r0, #1
+ 1e2:	4641      	mov	r1, r8
+ 1e4:	463a      	mov	r2, r7
+ 1e6:	f44f 73fa 	mov.w	r3, #500	; 0x1f4
+ 1ea:	f000 f8d5 	bl	398 <usb_recv>
+			if (ret <= 0)
+ 1ee:	2800      	cmp	r0, #0
+ 1f0:	dd46      	ble.n	280 <usb_xmodem_rcv_pkt+0x124>
+				goto timeout;
+
+			rem -= ret;
+ 1f2:	1a3f      	subs	r7, r7, r0
+			cp += ret;
+ 1f4:	4480      	add	r8, r0
+ 1f6:	e7f2      	b.n	1de <usb_xmodem_rcv_pkt+0x82>
+		}
+
+		/* sequence */
+		seq = pkt[1];
+		/* inverse sequence */
+		nseq = pkt[2];
+ 1f8:	79a3      	ldrb	r3, [r4, #6]
+			rem -= ret;
+			cp += ret;
+		}
+
+		/* sequence */
+		seq = pkt[1];
+ 1fa:	7960      	ldrb	r0, [r4, #5]
+		/* inverse sequence */
+		nseq = pkt[2];
+
+		
+
+		if (seq != ((~nseq) & 0xff)) {
+ 1fc:	43db      	mvns	r3, r3
+ 1fe:	b2db      	uxtb	r3, r3
+ 200:	4298      	cmp	r0, r3
+ 202:	d132      	bne.n	26a <usb_xmodem_rcv_pkt+0x10e>
+
+#ifndef ENABLE_XMODEM_CKS
+		if (rx->mode) 
+#endif
+		{
+			unsigned short crc = 0;
+ 204:	463b      	mov	r3, r7
+		if (seq != ((~nseq) & 0xff)) {
+			
+			goto error;
+		}
+
+		cp = &pkt[3];
+ 206:	f104 0e07 	add.w	lr, r4, #7
+ 20a:	eb0e 0c06 	add.w	ip, lr, r6
+
+#ifndef __CRC_H__
+#define __CRC_H__
+
+static inline unsigned int __crc16ccitt(unsigned int crc, int c) {
+	crc = (crc >> 8) | ((crc & 0xff) << 8);
+ 20e:	0219      	lsls	r1, r3, #8
+			unsigned short crc = 0;
+			unsigned short cmp;
+			int i;
+
+			for (i = 0; i < cnt; ++i)
+				crc = CRC16CCITT(crc, cp[i]);
+ 210:	f81e 2b01 	ldrb.w	r2, [lr], #1
+ 214:	b289      	uxth	r1, r1
+ 216:	ea41 2313 	orr.w	r3, r1, r3, lsr #8
+	crc ^= c;
+ 21a:	4053      	eors	r3, r2
+	crc ^= (crc & 0xff) >> 4;
+ 21c:	f3c3 1203 	ubfx	r2, r3, #4, #4
+ 220:	405a      	eors	r2, r3
+	crc ^= (crc & 0x0f) << 12;
+ 222:	0313      	lsls	r3, r2, #12
+ 224:	b29b      	uxth	r3, r3
+ 226:	4053      	eors	r3, r2
+	crc ^= (crc & 0xff) << 5;
+ 228:	b2da      	uxtb	r2, r3
+ 22a:	ea83 1342 	eor.w	r3, r3, r2, lsl #5
+		{
+			unsigned short crc = 0;
+			unsigned short cmp;
+			int i;
+
+			for (i = 0; i < cnt; ++i)
+ 22e:	45e6      	cmp	lr, ip
+				crc = CRC16CCITT(crc, cp[i]);
+ 230:	b29b      	uxth	r3, r3
+		{
+			unsigned short crc = 0;
+			unsigned short cmp;
+			int i;
+
+			for (i = 0; i < cnt; ++i)
+ 232:	d1ec      	bne.n	20e <usb_xmodem_rcv_pkt+0xb2>
+				crc = CRC16CCITT(crc, cp[i]);
+
+			cmp = (unsigned short)cp[i] << 8 | cp[i + 1];
+ 234:	f89e 1000 	ldrb.w	r1, [lr]
+ 238:	f89e 2001 	ldrb.w	r2, [lr, #1]
+
+			if (cmp != crc) {
+ 23c:	ea42 2201 	orr.w	r2, r2, r1, lsl #8
+ 240:	429a      	cmp	r2, r3
+ 242:	d112      	bne.n	26a <usb_xmodem_rcv_pkt+0x10e>
+			if (cp[i] != cks)
+				goto error;
+		}
+#endif
+
+		if (seq == ((rx->pktno - 1) & 0xff)) {
+ 244:	78a2      	ldrb	r2, [r4, #2]
+ 246:	1e53      	subs	r3, r2, #1
+ 248:	b2db      	uxtb	r3, r3
+ 24a:	4298      	cmp	r0, r3
+ 24c:	d102      	bne.n	254 <usb_xmodem_rcv_pkt+0xf8>
+			/* retransmission */
+			rx->sync = ACK;
+ 24e:	2306      	movs	r3, #6
+ 250:	7063      	strb	r3, [r4, #1]
+			continue;
+ 252:	e787      	b.n	164 <usb_xmodem_rcv_pkt+0x8>
+		}
+
+		if (seq != rx->pktno) {
+ 254:	4290      	cmp	r0, r2
+ 256:	d108      	bne.n	26a <usb_xmodem_rcv_pkt+0x10e>
+			
+			goto error;
+		}
+
+		rx->pktno = (rx->pktno + 1) & 0xff;
+		rx->retry = 10;
+ 258:	230a      	movs	r3, #10
+		if (seq != rx->pktno) {
+			
+			goto error;
+		}
+
+		rx->pktno = (rx->pktno + 1) & 0xff;
+ 25a:	3001      	adds	r0, #1
+		rx->retry = 10;
+ 25c:	70e3      	strb	r3, [r4, #3]
+		rx->sync = ACK;
+ 25e:	2306      	movs	r3, #6
+		if (seq != rx->pktno) {
+			
+			goto error;
+		}
+
+		rx->pktno = (rx->pktno + 1) & 0xff;
+ 260:	70a0      	strb	r0, [r4, #2]
+		rx->retry = 10;
+		rx->sync = ACK;
+ 262:	7063      	strb	r3, [r4, #1]
+
+		return cnt;
+ 264:	4630      	mov	r0, r6
+ 266:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+
+error:
+		/* flush */
+		while (usb_recv(CDC_RX_EP, pkt, 1024, 200) > 0);
+ 26a:	2001      	movs	r0, #1
+ 26c:	4629      	mov	r1, r5
+ 26e:	f44f 6280 	mov.w	r2, #1024	; 0x400
+ 272:	23c8      	movs	r3, #200	; 0xc8
+ 274:	f000 f890 	bl	398 <usb_recv>
+ 278:	2800      	cmp	r0, #0
+ 27a:	dcf6      	bgt.n	26a <usb_xmodem_rcv_pkt+0x10e>
+		rx->sync = NAK;
+ 27c:	2315      	movs	r3, #21
+ 27e:	7063      	strb	r3, [r4, #1]
+
+timeout:
+
+		if ((--rx->retry) == 0) {
+ 280:	78e3      	ldrb	r3, [r4, #3]
+ 282:	3b01      	subs	r3, #1
+ 284:	b2db      	uxtb	r3, r3
+ 286:	70e3      	strb	r3, [r4, #3]
+ 288:	2b00      	cmp	r3, #0
+ 28a:	f47f af6b 	bne.w	164 <usb_xmodem_rcv_pkt+0x8>
+			ret = -1;
+			break;
+		}
+	}
+
+	pkt[0] = CAN;
+ 28e:	2318      	movs	r3, #24
+ 290:	7123      	strb	r3, [r4, #4]
+	pkt[1] = CAN;
+ 292:	7163      	strb	r3, [r4, #5]
+	pkt[2] = CAN;
+ 294:	71a3      	strb	r3, [r4, #6]
+
+	usb_send(CDC_TX_EP, pkt, 3);
+ 296:	2002      	movs	r0, #2
+ 298:	4629      	mov	r1, r5
+ 29a:	2203      	movs	r2, #3
+ 29c:	f000 f8e8 	bl	470 <usb_send>
+
+	return ret;
+ 2a0:	f04f 30ff 	mov.w	r0, #4294967295
+}
+ 2a4:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+
+000002a8 <crc16ccitt>:
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
+/* CRC algorithm using the CCITT 16bit polynomial: (X^16 + X^12 + X^5 + 1). */
+unsigned int crc16ccitt(unsigned int crc, const void * buf, int len)
+{
+ 2a8:	b570      	push	{r4, r5, r6, lr}
+	unsigned int c;
+	int i;
+
+	cp = (unsigned char *)buf;
+
+	for (i = 0; i < len; i++) {
+ 2aa:	460e      	mov	r6, r1
+ 2ac:	1a73      	subs	r3, r6, r1
+ 2ae:	4293      	cmp	r3, r2
+ 2b0:	da11      	bge.n	2d6 <crc16ccitt+0x2e>
+		c = cp[i];
+		crc = (crc >> 8) | ((crc & 0xff) << 8);
+ 2b2:	0204      	lsls	r4, r0, #8
+ 2b4:	b2a4      	uxth	r4, r4
+	int i;
+
+	cp = (unsigned char *)buf;
+
+	for (i = 0; i < len; i++) {
+		c = cp[i];
+ 2b6:	f816 5b01 	ldrb.w	r5, [r6], #1
+		crc = (crc >> 8) | ((crc & 0xff) << 8);
+ 2ba:	ea44 2010 	orr.w	r0, r4, r0, lsr #8
+		crc ^= c;
+ 2be:	4068      	eors	r0, r5
+		crc ^= (crc & 0xff) >> 4;
+ 2c0:	f3c0 1303 	ubfx	r3, r0, #4, #4
+ 2c4:	ea83 0400 	eor.w	r4, r3, r0
+		crc ^= (crc & 0x0f) << 12;
+ 2c8:	0323      	lsls	r3, r4, #12
+ 2ca:	b29b      	uxth	r3, r3
+ 2cc:	4063      	eors	r3, r4
+		crc ^= (crc & 0xff) << 5;
+ 2ce:	b2d8      	uxtb	r0, r3
+ 2d0:	ea83 1040 	eor.w	r0, r3, r0, lsl #5
+ 2d4:	e7ea      	b.n	2ac <crc16ccitt+0x4>
+	}
+
+	return crc;
+}
+ 2d6:	bd70      	pop	{r4, r5, r6, pc}
+
+000002d8 <flash_erase>:
+
+	return 0;
+}
+
+int flash_erase(uint32_t offs, unsigned int len)
+{
+ 2d8:	b530      	push	{r4, r5, lr}
+	uint32_t blk_offs;
+	int ret;
+	int rem;
+	int cnt;
+
+	blk_offs = offs & ~(FLASH_BLOCK_SIZE - 1);
+ 2da:	f420 737f 	bic.w	r3, r0, #1020	; 0x3fc
+ 2de:	f023 0303 	bic.w	r3, r3, #3
+ 2e2:	4401      	add	r1, r0
+	addr = STM32_FLASH_ADDR + blk_offs;
+ 2e4:	f103 6200 	add.w	r2, r3, #134217728	; 0x8000000
+
+	cnt = 0;
+	rem = len + (offs - blk_offs);
+ 2e8:	1ac9      	subs	r1, r1, r3
+	int cnt;
+
+	blk_offs = offs & ~(FLASH_BLOCK_SIZE - 1);
+	addr = STM32_FLASH_ADDR + blk_offs;
+
+	cnt = 0;
+ 2ea:	2000      	movs	r0, #0
+ 2ec:	1a0b      	subs	r3, r1, r0
+	rem = len + (offs - blk_offs);
+
+	while (rem > 0) {
+ 2ee:	2b00      	cmp	r3, #0
+ 2f0:	dd17      	ble.n	322 <flash_erase+0x4a>
+
+static int stm32f10x_flash_blk_erase(struct stm32_flash * flash, uint32_t addr)
+{
+	uint32_t sr;
+
+	flash->cr = FLASH_SER;
+ 2f2:	4b0e      	ldr	r3, [pc, #56]	; (32c <flash_erase+0x54>)
+ 2f4:	2402      	movs	r4, #2
+ 2f6:	611c      	str	r4, [r3, #16]
+	do {
+		sr = flash->sr;
+ 2f8:	68dd      	ldr	r5, [r3, #12]
+ 2fa:	4c0c      	ldr	r4, [pc, #48]	; (32c <flash_erase+0x54>)
+	} while (sr & FLASH_BSY);
+ 2fc:	07ed      	lsls	r5, r5, #31
+ 2fe:	d4fb      	bmi.n	2f8 <flash_erase+0x20>
+	flash->ar = addr;
+	flash->cr = FLASH_STRT | FLASH_SER;
+ 300:	2542      	movs	r5, #66	; 0x42
+
+	flash->cr = FLASH_SER;
+	do {
+		sr = flash->sr;
+	} while (sr & FLASH_BSY);
+	flash->ar = addr;
+ 302:	6162      	str	r2, [r4, #20]
+	flash->cr = FLASH_STRT | FLASH_SER;
+ 304:	6125      	str	r5, [r4, #16]
+
+	do {
+		sr = flash->sr;
+ 306:	68dc      	ldr	r4, [r3, #12]
+	} while (sr & FLASH_BSY);
+ 308:	f014 0501 	ands.w	r5, r4, #1
+ 30c:	d1fb      	bne.n	306 <flash_erase+0x2e>
+
+	flash->cr = 0;
+ 30e:	4b07      	ldr	r3, [pc, #28]	; (32c <flash_erase+0x54>)
+
+	if (sr & FLASH_ERR)
+ 310:	f014 0f14 	tst.w	r4, #20
+
+	do {
+		sr = flash->sr;
+	} while (sr & FLASH_BSY);
+
+	flash->cr = 0;
+ 314:	611d      	str	r5, [r3, #16]
+
+	if (sr & FLASH_ERR)
+ 316:	d105      	bne.n	324 <flash_erase+0x4c>
+		if (ret < 0) {
+			cnt = ret;
+			break;
+		}
+
+		addr += FLASH_BLOCK_SIZE;
+ 318:	f502 6280 	add.w	r2, r2, #1024	; 0x400
+		rem -= FLASH_BLOCK_SIZE;
+		cnt += FLASH_BLOCK_SIZE;
+ 31c:	f500 6080 	add.w	r0, r0, #1024	; 0x400
+ 320:	e7e4      	b.n	2ec <flash_erase+0x14>
+ 322:	bd30      	pop	{r4, r5, pc}
+	while (rem > 0) {
+
+		ret = stm32f10x_flash_blk_erase(flash, addr);
+
+		if (ret < 0) {
+			cnt = ret;
+ 324:	f04f 30ff 	mov.w	r0, #4294967295
+		rem -= FLASH_BLOCK_SIZE;
+		cnt += FLASH_BLOCK_SIZE;
+	}
+
+	return cnt;
+}
+ 328:	bd30      	pop	{r4, r5, pc}
+ 32a:	bf00      	nop
+ 32c:	40022000 	.word	0x40022000
+
+00000330 <flash_write>:
+	uint16_t * addr;
+	uint8_t * ptr;
+	int n;
+	int i;
+
+	n = (len + 1) / 2;
+ 330:	3201      	adds	r2, #1
+
+	return 0;
+}
+
+int flash_write(uint32_t offs, const void * buf, unsigned int len)
+{
+ 332:	b570      	push	{r4, r5, r6, lr}
+	uint16_t * addr;
+	uint8_t * ptr;
+	int n;
+	int i;
+
+	n = (len + 1) / 2;
+ 334:	0852      	lsrs	r2, r2, #1
+
+	ptr = (uint8_t *)buf;
+	addr = (uint16_t *)(STM32_FLASH_ADDR + offs);
+ 336:	f100 6000 	add.w	r0, r0, #134217728	; 0x8000000
+ 33a:	3102      	adds	r1, #2
+
+	for (i = 0; i < n; i++) {
+ 33c:	2400      	movs	r4, #0
+ 33e:	4294      	cmp	r4, r2
+ 340:	da14      	bge.n	36c <flash_write+0x3c>
+		data = ptr[0] | (ptr[1] << 8);
+ 342:	f811 3c02 	ldrb.w	r3, [r1, #-2]
+ 346:	f811 5c01 	ldrb.w	r5, [r1, #-1]
+static int stm32f10x_flash_wr16(struct stm32_flash * flash,
+						 uint16_t volatile * addr, uint16_t data)
+{
+	uint32_t sr;
+
+	flash->cr = FLASH_PG;
+ 34a:	2601      	movs	r6, #1
+
+	ptr = (uint8_t *)buf;
+	addr = (uint16_t *)(STM32_FLASH_ADDR + offs);
+
+	for (i = 0; i < n; i++) {
+		data = ptr[0] | (ptr[1] << 8);
+ 34c:	ea43 2505 	orr.w	r5, r3, r5, lsl #8
+static int stm32f10x_flash_wr16(struct stm32_flash * flash,
+						 uint16_t volatile * addr, uint16_t data)
+{
+	uint32_t sr;
+
+	flash->cr = FLASH_PG;
+ 350:	4b09      	ldr	r3, [pc, #36]	; (378 <flash_write+0x48>)
+ 352:	611e      	str	r6, [r3, #16]
+	*addr = data;
+ 354:	8005      	strh	r5, [r0, #0]
+	
+	do {
+		sr = flash->sr;
+ 356:	68dd      	ldr	r5, [r3, #12]
+	} while (sr & FLASH_BSY);
+ 358:	07ee      	lsls	r6, r5, #31
+ 35a:	d4fc      	bmi.n	356 <flash_write+0x26>
+
+	if (sr & FLASH_ERR)
+ 35c:	f015 0f14 	tst.w	r5, #20
+ 360:	f101 0102 	add.w	r1, r1, #2
+ 364:	d104      	bne.n	370 <flash_write+0x40>
+	for (i = 0; i < n; i++) {
+		data = ptr[0] | (ptr[1] << 8);
+		if (stm32f10x_flash_wr16(flash, addr, data) < 0)
+			return -1;
+		ptr += 2;
+		addr++;
+ 366:	3002      	adds	r0, #2
+	n = (len + 1) / 2;
+
+	ptr = (uint8_t *)buf;
+	addr = (uint16_t *)(STM32_FLASH_ADDR + offs);
+
+	for (i = 0; i < n; i++) {
+ 368:	3401      	adds	r4, #1
+ 36a:	e7e8      	b.n	33e <flash_write+0xe>
+			return -1;
+		ptr += 2;
+		addr++;
+	}
+	
+	return n * 2;
+ 36c:	0050      	lsls	r0, r2, #1
+ 36e:	bd70      	pop	{r4, r5, r6, pc}
+	addr = (uint16_t *)(STM32_FLASH_ADDR + offs);
+
+	for (i = 0; i < n; i++) {
+		data = ptr[0] | (ptr[1] << 8);
+		if (stm32f10x_flash_wr16(flash, addr, data) < 0)
+			return -1;
+ 370:	f04f 30ff 	mov.w	r0, #4294967295
+		ptr += 2;
+		addr++;
+	}
+	
+	return n * 2;
+}
+ 374:	bd70      	pop	{r4, r5, r6, pc}
+ 376:	bf00      	nop
+ 378:	40022000 	.word	0x40022000
+
+0000037c <flash_unlock>:
+void flash_unlock(void)
+{
+	struct stm32_flash * flash = STM32_FLASH;
+	uint32_t cr;
+
+	cr = flash->cr;
+ 37c:	4b04      	ldr	r3, [pc, #16]	; (390 <flash_unlock+0x14>)
+ 37e:	691a      	ldr	r2, [r3, #16]
+	if (cr & FLASH_LOCK) {
+ 380:	0612      	lsls	r2, r2, #24
+		/* unlock flash write */
+		flash->keyr = FLASH_KEY1;
+ 382:	bf41      	itttt	mi
+ 384:	4a03      	ldrmi	r2, [pc, #12]	; (394 <flash_unlock+0x18>)
+ 386:	605a      	strmi	r2, [r3, #4]
+		flash->keyr = FLASH_KEY2;
+ 388:	f102 3288 	addmi.w	r2, r2, #2290649224	; 0x88888888
+ 38c:	605a      	strmi	r2, [r3, #4]
+ 38e:	4770      	bx	lr
+ 390:	40022000 	.word	0x40022000
+ 394:	45670123 	.word	0x45670123
+
+00000398 <usb_recv>:
+}
+
+/* ------------------------------------------------------------------------- */
+
+int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
+{
+ 398:	b5f0      	push	{r4, r5, r6, r7, lr}
+ 39a:	0086      	lsls	r6, r0, #2
+ 39c:	f106 4680 	add.w	r6, r6, #1073741824	; 0x40000000
+
+	epr = usb->epr[ep_id];
+again:
+	if (epr & USB_EP_DBL_BUF) {
+		/* select the descriptor according to the data toggle bit */
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
+ 3a0:	0105      	lsls	r5, r0, #4
+ 3a2:	f506 46b8 	add.w	r6, r6, #23552	; 0x5c00
+ 3a6:	f105 4580 	add.w	r5, r5, #1073741824	; 0x40000000
+}
+
+/* ------------------------------------------------------------------------- */
+
+int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
+{
+ 3aa:	469e      	mov	lr, r3
+
+	epr = usb->epr[ep_id];
+again:
+	if (epr & USB_EP_DBL_BUF) {
+		/* select the descriptor according to the data toggle bit */
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
+ 3ac:	f505 45c0 	add.w	r5, r5, #24576	; 0x6000
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_rx_pktbuf * rx_pktbuf;
+	uint32_t epr;
+	int cnt;
+
+	epr = usb->epr[ep_id];
+ 3b0:	6833      	ldr	r3, [r6, #0]
+	if (epr & USB_EP_DBL_BUF) {
+		/* select the descriptor according to the data toggle bit */
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
+	} else {
+		/* single buffer */
+		rx_pktbuf = &pktbuf[ep_id].rx;
+ 3b2:	f105 0c08 	add.w	ip, r5, #8
+	uint32_t epr;
+	int cnt;
+
+	epr = usb->epr[ep_id];
+again:
+	if (epr & USB_EP_DBL_BUF) {
+ 3b6:	f413 7780 	ands.w	r7, r3, #256	; 0x100
+		/* select the descriptor according to the data toggle bit */
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
+	} else {
+		/* single buffer */
+		rx_pktbuf = &pktbuf[ep_id].rx;
+ 3ba:	bf0e      	itee	eq
+ 3bc:	4664      	moveq	r4, ip
+
+	epr = usb->epr[ep_id];
+again:
+	if (epr & USB_EP_DBL_BUF) {
+		/* select the descriptor according to the data toggle bit */
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
+ 3be:	f3c3 1480 	ubfxne	r4, r3, #6, #1
+ 3c2:	eb05 04c4 	addne.w	r4, r5, r4, lsl #3
+	} else {
+		/* single buffer */
+		rx_pktbuf = &pktbuf[ep_id].rx;
+	}
+	if (rx_pktbuf->count == 0) {
+ 3c6:	6860      	ldr	r0, [r4, #4]
+ 3c8:	f3c0 0009 	ubfx	r0, r0, #0, #10
+ 3cc:	b990      	cbnz	r0, 3f4 <usb_recv+0x5c>
+		while (!(epr & USB_CTR_RX)) {
+ 3ce:	0418      	lsls	r0, r3, #16
+ 3d0:	d40a      	bmi.n	3e8 <usb_recv+0x50>
+			if (systick->csr & SYSTICK_CSR_COUNTFLAG) {
+ 3d2:	4b26      	ldr	r3, [pc, #152]	; (46c <usb_recv+0xd4>)
+ 3d4:	681b      	ldr	r3, [r3, #0]
+ 3d6:	03dc      	lsls	r4, r3, #15
+ 3d8:	d504      	bpl.n	3e4 <usb_recv+0x4c>
+				if (msec == 0)
+ 3da:	f1be 0f00 	cmp.w	lr, #0
+ 3de:	d041      	beq.n	464 <usb_recv+0xcc>
+					return -1;
+				msec--;
+ 3e0:	f10e 3eff 	add.w	lr, lr, #4294967295
+			}
+			epr = usb->epr[ep_id];
+ 3e4:	6833      	ldr	r3, [r6, #0]
+ 3e6:	e7f2      	b.n	3ce <usb_recv+0x36>
+
+static inline void __clr_ep_flag(struct stm32f_usb * usb, 
+							   int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+	usb->epr[ep_id] = (epr & ~flag) & USB_EPREG_MASK;
+ 3e8:	f640 748f 	movw	r4, #3983	; 0xf8f
+
+
+static inline void __clr_ep_flag(struct stm32f_usb * usb, 
+							   int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+ 3ec:	6830      	ldr	r0, [r6, #0]
+	usb->epr[ep_id] = (epr & ~flag) & USB_EPREG_MASK;
+ 3ee:	4004      	ands	r4, r0
+ 3f0:	6034      	str	r4, [r6, #0]
+ 3f2:	e7e0      	b.n	3b6 <usb_recv+0x1e>
+		/* OUT */
+		__clr_ep_flag(usb, ep_id, USB_CTR_RX);
+		goto again;
+	}
+
+	cnt = MIN(rx_pktbuf->count, len);
+ 3f4:	6863      	ldr	r3, [r4, #4]
+ 3f6:	f3c3 0309 	ubfx	r3, r3, #0, #10
+ 3fa:	4293      	cmp	r3, r2
+ 3fc:	bf28      	it	cs
+ 3fe:	4610      	movcs	r0, r2
+	uint8_t * dst = (uint8_t *)ptr;
+	uint32_t data;
+	int i;
+
+	/* copy data to destination buffer */
+	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
+ 400:	6823      	ldr	r3, [r4, #0]
+		/* OUT */
+		__clr_ep_flag(usb, ep_id, USB_CTR_RX);
+		goto again;
+	}
+
+	cnt = MIN(rx_pktbuf->count, len);
+ 402:	bf38      	it	cc
+ 404:	6860      	ldrcc	r0, [r4, #4]
+	uint8_t * dst = (uint8_t *)ptr;
+	uint32_t data;
+	int i;
+
+	/* copy data to destination buffer */
+	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
+ 406:	ea4f 0353 	mov.w	r3, r3, lsr #1
+		/* OUT */
+		__clr_ep_flag(usb, ep_id, USB_CTR_RX);
+		goto again;
+	}
+
+	cnt = MIN(rx_pktbuf->count, len);
+ 40a:	bf38      	it	cc
+ 40c:	f3c0 0009 	ubfxcc	r0, r0, #0, #10
+	uint8_t * dst = (uint8_t *)ptr;
+	uint32_t data;
+	int i;
+
+	/* copy data to destination buffer */
+	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
+ 410:	009b      	lsls	r3, r3, #2
+ 412:	f103 4380 	add.w	r3, r3, #1073741824	; 0x40000000
+	for (i = 0; i < (cnt + 1) / 2; i++) {
+ 416:	1c42      	adds	r2, r0, #1
+	uint8_t * dst = (uint8_t *)ptr;
+	uint32_t data;
+	int i;
+
+	/* copy data to destination buffer */
+	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
+ 418:	f503 43c0 	add.w	r3, r3, #24576	; 0x6000
+	for (i = 0; i < (cnt + 1) / 2; i++) {
+ 41c:	0852      	lsrs	r2, r2, #1
+ 41e:	eb03 0282 	add.w	r2, r3, r2, lsl #2
+ 422:	4293      	cmp	r3, r2
+ 424:	f101 0102 	add.w	r1, r1, #2
+ 428:	d007      	beq.n	43a <usb_recv+0xa2>
+		data = *src++;
+ 42a:	f853 5b04 	ldr.w	r5, [r3], #4
+		*dst++ = data;
+ 42e:	f801 5c02 	strb.w	r5, [r1, #-2]
+		*dst++ = data >> 8;
+ 432:	0a2d      	lsrs	r5, r5, #8
+ 434:	f801 5c01 	strb.w	r5, [r1, #-1]
+ 438:	e7f3      	b.n	422 <usb_recv+0x8a>
+
+	cnt = MIN(rx_pktbuf->count, len);
+
+	/* Data received */
+	__copy_from_pktbuf(buf, rx_pktbuf, cnt);
+	rx_pktbuf->count = 0;
+ 43a:	6863      	ldr	r3, [r4, #4]
+ 43c:	f423 737f 	bic.w	r3, r3, #1020	; 0x3fc
+ 440:	f023 0303 	bic.w	r3, r3, #3
+ 444:	6063      	str	r3, [r4, #4]
+}
+
+static inline void __toggle_ep_flag(struct stm32f_usb * usb, 
+									int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+ 446:	6832      	ldr	r2, [r6, #0]
+
+	if (epr & USB_EP_DBL_BUF) {
+ 448:	b12f      	cbz	r7, 456 <usb_recv+0xbe>
+	usb->epr[ep_id] = (epr & USB_EPREG_MASK) | flag;
+ 44a:	f648 738f 	movw	r3, #36751	; 0x8f8f
+ 44e:	4013      	ands	r3, r2
+ 450:	f043 0340 	orr.w	r3, r3, #64	; 0x40
+ 454:	e004      	b.n	460 <usb_recv+0xc8>
+};
+
+static inline void __set_ep_rxstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPRX_DTOGMASK;
+ 456:	f64b 738f 	movw	r3, #49039	; 0xbf8f
+ 45a:	4013      	ands	r3, r2
+	usb->epr[ep_id] = epr ^ (stat & USB_STAT_RX_MSK);
+ 45c:	f483 5340 	eor.w	r3, r3, #12288	; 0x3000
+ 460:	6033      	str	r3, [r6, #0]
+ 462:	bdf0      	pop	{r4, r5, r6, r7, pc}
+	}
+	if (rx_pktbuf->count == 0) {
+		while (!(epr & USB_CTR_RX)) {
+			if (systick->csr & SYSTICK_CSR_COUNTFLAG) {
+				if (msec == 0)
+					return -1;
+ 464:	f04f 30ff 	mov.w	r0, #4294967295
+		/* free the out(rx) packet buffer */
+		__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+	}
+
+	return cnt;
+}
+ 468:	bdf0      	pop	{r4, r5, r6, r7, pc}
+ 46a:	bf00      	nop
+ 46c:	e000e010 	.word	0xe000e010
+
+00000470 <usb_send>:
+
+/* start sending */
+int usb_send(int ep_id, void * buf, unsigned int len)
+{
+ 470:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+ 474:	468e      	mov	lr, r1
+
+	
+
+	epr = usb->epr[ep_id];
+	ptr = (uint8_t *)buf;
+	rem = len;
+ 476:	4611      	mov	r1, r2
+ 478:	0083      	lsls	r3, r0, #2
+ 47a:	f103 4380 	add.w	r3, r3, #1073741824	; 0x40000000
+ 47e:	f503 43b8 	add.w	r3, r3, #23552	; 0x5c00
+
+	while (rem > 0) {
+		if (epr & USB_EP_DBL_BUF) {
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+ 482:	0100      	lsls	r0, r0, #4
+ 484:	f100 4580 	add.w	r5, r0, #1073741824	; 0x40000000
+	uint8_t * ptr; /* Pointer to the next transfer */
+	unsigned int pktsz = 0;
+
+	
+
+	epr = usb->epr[ep_id];
+ 488:	681c      	ldr	r4, [r3, #0]
+	rem = len;
+
+	while (rem > 0) {
+		if (epr & USB_EP_DBL_BUF) {
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+ 48a:	f505 45c0 	add.w	r5, r5, #24576	; 0x6000
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t epr;
+	unsigned int mxpktsz = 64; /* Maximum packet size for this EP */
+	unsigned int rem; /* Bytes pendig in the transfer buffer */
+	uint8_t * ptr; /* Pointer to the next transfer */
+	unsigned int pktsz = 0;
+ 48e:	2700      	movs	r7, #0
+ 490:	f404 7080 	and.w	r0, r4, #256	; 0x100
+
+	epr = usb->epr[ep_id];
+	ptr = (uint8_t *)buf;
+	rem = len;
+
+	while (rem > 0) {
+ 494:	2900      	cmp	r1, #0
+ 496:	d042      	beq.n	51e <usb_send+0xae>
+		if (epr & USB_EP_DBL_BUF) {
+ 498:	b120      	cbz	r0, 4a4 <usb_send+0x34>
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+ 49a:	f3c4 3480 	ubfx	r4, r4, #14, #1
+ 49e:	eb05 04c4 	add.w	r4, r5, r4, lsl #3
+ 4a2:	e000      	b.n	4a6 <usb_send+0x36>
+		} else {
+			tx_pktbuf = &pktbuf[ep_id].tx;
+ 4a4:	462c      	mov	r4, r5
+		}
+		pktsz = MIN(rem, mxpktsz);
+ 4a6:	460f      	mov	r7, r1
+ 4a8:	46f0      	mov	r8, lr
+{
+	uint32_t * dst;
+	int i;
+
+	/* copy data to destination buffer */
+	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
+ 4aa:	6826      	ldr	r6, [r4, #0]
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+		} else {
+			tx_pktbuf = &pktbuf[ep_id].tx;
+		}
+		pktsz = MIN(rem, mxpktsz);
+ 4ac:	2940      	cmp	r1, #64	; 0x40
+{
+	uint32_t * dst;
+	int i;
+
+	/* copy data to destination buffer */
+	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
+ 4ae:	ea4f 0656 	mov.w	r6, r6, lsr #1
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+		} else {
+			tx_pktbuf = &pktbuf[ep_id].tx;
+		}
+		pktsz = MIN(rem, mxpktsz);
+ 4b2:	bf28      	it	cs
+ 4b4:	2740      	movcs	r7, #64	; 0x40
+{
+	uint32_t * dst;
+	int i;
+
+	/* copy data to destination buffer */
+	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
+ 4b6:	00b6      	lsls	r6, r6, #2
+ 4b8:	f106 4680 	add.w	r6, r6, #1073741824	; 0x40000000
+	for (i = 0; i < ((len + 1) / 2); i++) {
+ 4bc:	f107 0901 	add.w	r9, r7, #1
+{
+	uint32_t * dst;
+	int i;
+
+	/* copy data to destination buffer */
+	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
+ 4c0:	f506 46c0 	add.w	r6, r6, #24576	; 0x6000
+	for (i = 0; i < ((len + 1) / 2); i++) {
+ 4c4:	ea4f 0969 	mov.w	r9, r9, asr #1
+ 4c8:	f04f 0c00 	mov.w	ip, #0
+ 4cc:	45cc      	cmp	ip, r9
+ 4ce:	f108 0802 	add.w	r8, r8, #2
+ 4d2:	d00a      	beq.n	4ea <usb_send+0x7a>
+		*dst++ = src[0] | (src[1] << 8);
+ 4d4:	f818 bc01 	ldrb.w	fp, [r8, #-1]
+ 4d8:	f818 ac02 	ldrb.w	sl, [r8, #-2]
+ 4dc:	ea4a 2a0b 	orr.w	sl, sl, fp, lsl #8
+ 4e0:	f846 a02c 	str.w	sl, [r6, ip, lsl #2]
+	uint32_t * dst;
+	int i;
+
+	/* copy data to destination buffer */
+	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
+	for (i = 0; i < ((len + 1) / 2); i++) {
+ 4e4:	f10c 0c01 	add.w	ip, ip, #1
+ 4e8:	e7f0      	b.n	4cc <usb_send+0x5c>
+		*dst++ = src[0] | (src[1] << 8);
+		src += 2;
+	}
+
+	tx->count = len;
+ 4ea:	6067      	str	r7, [r4, #4]
+		} else {
+			tx_pktbuf = &pktbuf[ep_id].tx;
+		}
+		pktsz = MIN(rem, mxpktsz);
+		__copy_to_pktbuf(tx_pktbuf, ptr, pktsz);
+		rem -= pktsz;
+ 4ec:	1bc9      	subs	r1, r1, r7
+		ptr += pktsz;
+ 4ee:	44be      	add	lr, r7
+}
+
+static inline void __toggle_ep_flag(struct stm32f_usb * usb, 
+									int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+ 4f0:	681c      	ldr	r4, [r3, #0]
+
+		if (epr & USB_EP_DBL_BUF) {
+ 4f2:	b128      	cbz	r0, 500 <usb_send+0x90>
+	usb->epr[ep_id] = (epr & USB_EPREG_MASK) | flag;
+ 4f4:	f648 708f 	movw	r0, #36751	; 0x8f8f
+ 4f8:	4020      	ands	r0, r4
+ 4fa:	f440 4080 	orr.w	r0, r0, #16384	; 0x4000
+ 4fe:	e004      	b.n	50a <usb_send+0x9a>
+#define EPRX_DTOGMASK  (USB_STAT_RX_MSK | USB_EPREG_MASK)
+
+static inline void __set_ep_txstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
+ 500:	f648 70bf 	movw	r0, #36799	; 0x8fbf
+ 504:	4020      	ands	r0, r4
+	usb->epr[ep_id] = epr ^ (stat & USB_STAT_TX_MSK);
+ 506:	f080 0030 	eor.w	r0, r0, #48	; 0x30
+ 50a:	6018      	str	r0, [r3, #0]
+			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
+		} else {
+			__set_ep_txstat(usb, ep_id, USB_TX_VALID);
+		}
+
+		while (!((epr = usb->epr[ep_id]) & USB_CTR_TX)) {
+ 50c:	681c      	ldr	r4, [r3, #0]
+ 50e:	0620      	lsls	r0, r4, #24
+ 510:	d5fc      	bpl.n	50c <usb_send+0x9c>
+
+static inline void __clr_ep_flag(struct stm32f_usb * usb, 
+							   int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+	usb->epr[ep_id] = (epr & ~flag) & USB_EPREG_MASK;
+ 512:	f648 700f 	movw	r0, #36623	; 0x8f0f
+
+
+static inline void __clr_ep_flag(struct stm32f_usb * usb, 
+							   int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+ 516:	681e      	ldr	r6, [r3, #0]
+	usb->epr[ep_id] = (epr & ~flag) & USB_EPREG_MASK;
+ 518:	4030      	ands	r0, r6
+ 51a:	6018      	str	r0, [r3, #0]
+ 51c:	e7b8      	b.n	490 <usb_send+0x20>
+
+		/* IN */
+		__clr_ep_flag(usb, ep_id, USB_CTR_TX);
+	}
+
+	if (pktsz == mxpktsz) {
+ 51e:	2f40      	cmp	r7, #64	; 0x40
+ 520:	d115      	bne.n	54e <usb_send+0xde>
+		if (epr & USB_EP_DBL_BUF) {
+ 522:	b160      	cbz	r0, 53e <usb_send+0xce>
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+ 524:	f3c4 3480 	ubfx	r4, r4, #14, #1
+			tx_pktbuf->count = 0;
+ 528:	eb05 04c4 	add.w	r4, r5, r4, lsl #3
+ 52c:	6061      	str	r1, [r4, #4]
+
+static inline void __toggle_ep_flag(struct stm32f_usb * usb, 
+									int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+	usb->epr[ep_id] = (epr & USB_EPREG_MASK) | flag;
+ 52e:	f648 718f 	movw	r1, #36751	; 0x8f8f
+}
+
+static inline void __toggle_ep_flag(struct stm32f_usb * usb, 
+									int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+ 532:	681c      	ldr	r4, [r3, #0]
+	usb->epr[ep_id] = (epr & USB_EPREG_MASK) | flag;
+ 534:	4021      	ands	r1, r4
+ 536:	f441 4180 	orr.w	r1, r1, #16384	; 0x4000
+ 53a:	6019      	str	r1, [r3, #0]
+ 53c:	e007      	b.n	54e <usb_send+0xde>
+#define EPRX_DTOGMASK  (USB_STAT_RX_MSK | USB_EPREG_MASK)
+
+static inline void __set_ep_txstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
+ 53e:	f648 71bf 	movw	r1, #36799	; 0x8fbf
+ 542:	6818      	ldr	r0, [r3, #0]
+ 544:	4001      	ands	r1, r0
+	usb->epr[ep_id] = epr ^ (stat & USB_STAT_TX_MSK);
+ 546:	f081 0120 	eor.w	r1, r1, #32
+ 54a:	6019      	str	r1, [r3, #0]
+ 54c:	e000      	b.n	550 <usb_send+0xe0>
+		} else {
+			__set_ep_txstat(usb, ep_id, USB_TX_NAK);
+		}
+	}	
+
+	if (!(epr & USB_EP_DBL_BUF)) {
+ 54e:	b930      	cbnz	r0, 55e <usb_send+0xee>
+#define EPRX_DTOGMASK  (USB_STAT_RX_MSK | USB_EPREG_MASK)
+
+static inline void __set_ep_txstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
+ 550:	f648 71bf 	movw	r1, #36799	; 0x8fbf
+ 554:	6818      	ldr	r0, [r3, #0]
+ 556:	4001      	ands	r1, r0
+	usb->epr[ep_id] = epr ^ (stat & USB_STAT_TX_MSK);
+ 558:	f081 0120 	eor.w	r1, r1, #32
+ 55c:	6019      	str	r1, [r3, #0]
+		__set_ep_txstat(usb, ep_id, USB_TX_NAK);
+	}
+
+	return len;
+}
+ 55e:	4610      	mov	r0, r2
+ 560:	e8bd 8ff0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, pc}
+
+00000564 <usb_drain>:
+
+void usb_drain(int ep_id)
+{
+ 564:	0083      	lsls	r3, r0, #2
+ 566:	f103 4380 	add.w	r3, r3, #1073741824	; 0x40000000
+ 56a:	f503 43b8 	add.w	r3, r3, #23552	; 0x5c00
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	struct stm32f_usb_tx_pktbuf * tx_pktbuf;
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t epr;
+
+	epr = usb->epr[ep_id];
+ 56e:	681a      	ldr	r2, [r3, #0]
+ 570:	0100      	lsls	r0, r0, #4
+
+	if (epr & USB_EP_DBL_BUF) {
+		/* select the descriptor according to the data toggle bit */
+		tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+		tx_pktbuf->count = 0;
+ 572:	f100 4080 	add.w	r0, r0, #1073741824	; 0x40000000
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t epr;
+
+	epr = usb->epr[ep_id];
+
+	if (epr & USB_EP_DBL_BUF) {
+ 576:	f412 7180 	ands.w	r1, r2, #256	; 0x100
+		/* select the descriptor according to the data toggle bit */
+		tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+		tx_pktbuf->count = 0;
+ 57a:	f500 40c0 	add.w	r0, r0, #24576	; 0x6000
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t epr;
+
+	epr = usb->epr[ep_id];
+
+	if (epr & USB_EP_DBL_BUF) {
+ 57e:	d00c      	beq.n	59a <usb_drain+0x36>
+		/* select the descriptor according to the data toggle bit */
+		tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+ 580:	f3c2 3280 	ubfx	r2, r2, #14, #1
+		tx_pktbuf->count = 0;
+ 584:	eb00 00c2 	add.w	r0, r0, r2, lsl #3
+ 588:	2200      	movs	r2, #0
+ 58a:	6042      	str	r2, [r0, #4]
+
+static inline void __toggle_ep_flag(struct stm32f_usb * usb, 
+									int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+	usb->epr[ep_id] = (epr & USB_EPREG_MASK) | flag;
+ 58c:	f648 728f 	movw	r2, #36751	; 0x8f8f
+}
+
+static inline void __toggle_ep_flag(struct stm32f_usb * usb, 
+									int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+ 590:	6819      	ldr	r1, [r3, #0]
+	usb->epr[ep_id] = (epr & USB_EPREG_MASK) | flag;
+ 592:	400a      	ands	r2, r1
+ 594:	f442 4280 	orr.w	r2, r2, #16384	; 0x4000
+ 598:	e006      	b.n	5a8 <usb_drain+0x44>
+#define EPRX_DTOGMASK  (USB_STAT_RX_MSK | USB_EPREG_MASK)
+
+static inline void __set_ep_txstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
+ 59a:	f648 72bf 	movw	r2, #36799	; 0x8fbf
+		__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
+	} else {
+		tx_pktbuf = &pktbuf[ep_id].tx;
+		tx_pktbuf->count = 0;
+ 59e:	6041      	str	r1, [r0, #4]
+ 5a0:	6819      	ldr	r1, [r3, #0]
+ 5a2:	400a      	ands	r2, r1
+	usb->epr[ep_id] = epr ^ (stat & USB_STAT_TX_MSK);
+ 5a4:	f082 0230 	eor.w	r2, r2, #48	; 0x30
+ 5a8:	601a      	str	r2, [r3, #0]
+		__set_ep_txstat(usb, ep_id, USB_TX_VALID);
+	}
+
+	while (!((epr = usb->epr[ep_id]) & USB_CTR_TX)) {
+ 5aa:	681a      	ldr	r2, [r3, #0]
+ 5ac:	0611      	lsls	r1, r2, #24
+ 5ae:	d5fc      	bpl.n	5aa <usb_drain+0x46>
+	}
+
+	if (!(epr & USB_EP_DBL_BUF)) {
+ 5b0:	05d2      	lsls	r2, r2, #23
+#define EPRX_DTOGMASK  (USB_STAT_RX_MSK | USB_EPREG_MASK)
+
+static inline void __set_ep_txstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
+ 5b2:	bf5f      	itttt	pl
+ 5b4:	f648 72bf 	movwpl	r2, #36799	; 0x8fbf
+ 5b8:	6819      	ldrpl	r1, [r3, #0]
+ 5ba:	400a      	andpl	r2, r1
+	usb->epr[ep_id] = epr ^ (stat & USB_STAT_TX_MSK);
+ 5bc:	f082 0220 	eorpl.w	r2, r2, #32
+ 5c0:	bf58      	it	pl
+ 5c2:	601a      	strpl	r2, [r3, #0]
+ 5c4:	4770      	bx	lr
+ 5c6:	bf00      	nop
+ 5c8:	72450a0d 	.word	0x72450a0d
+ 5cc:	6e697361 	.word	0x6e697361
+ 5d0:	2e2e2e67 	.word	0x2e2e2e67
+ 5d4:	580a0d00 	.word	0x580a0d00
+ 5d8:	65646f6d 	.word	0x65646f6d
+ 5dc:	2e2e2e6d 	.word	0x2e2e2e6d
+ 5e0:	0a0d0020 	.word	0x0a0d0020
+ 5e4:	61766e49 	.word	0x61766e49
+ 5e8:	2164696c 	.word	0x2164696c
+ 5ec:	440a0d00 	.word	0x440a0d00
+ 5f0:	2e656e6f 	.word	0x2e656e6f
+ 5f4:	Address 0x000005f4 is out of bounds.
+

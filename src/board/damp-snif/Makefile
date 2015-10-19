@@ -23,7 +23,8 @@
 PROG = damp-snif
 
 CFILES = damp-snif.c serial.c board.c leds.c usb_trace.c \
-		 sdu_trace.c damp_trace.c usb_xflash_pic.c profclk.c
+		 sdu_trace.c damp_trace.c mstp_trace.c usb_xflash_pic.c\
+		 profclk.c
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
 		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm \
@@ -33,7 +34,7 @@ LIBS = stm32f cm3 util thinkos c ice-comm cdc-acm
 
 INCPATH = ../../sdk/include 
 
-CDEFS = CONFIG_H
+CDEFS = CONFIG_H NDEBUG
 CFLAGS = -g -O2 -Wall -ffunction-sections -fdata-sections
 LDFLAGS = -Xlinker --gc-sections 
 

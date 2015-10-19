@@ -97,7 +97,7 @@ again:
 	}
 	if (rx_pktbuf->count == 0) {
 		while (!(epr & USB_CTR_RX)) {
-			if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG) {
+			if (systick->csr & SYSTICK_CSR_COUNTFLAG) {
 				if (msec == 0)
 					return -1;
 				msec--;

@@ -24,21 +24,9 @@
 #include <sys/param.h>
 #include <stdint.h>
 #include <crc.h>
+#include "xflash.h"
 
 #define FLASH_WR_BLK_SIZE 128
-
-void flash_unlock(void);
-int flash_write(uint32_t offs, const void * buf, unsigned int len);
-int flash_erase(uint32_t offs, unsigned int len);
-
-void uart_reset(void * uart);
-void uart_drain(void * uart);
-int uart_send(void * uart, const void * buf, unsigned int len);
-int uart_recv(void * uart, void * buf, unsigned int len, unsigned int msec);
-
-int usb_send(int ep_id, const void * buf, unsigned int len);
-int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec);
-int usb_drain(int ep_id);
 
 static void reset(void)
 {

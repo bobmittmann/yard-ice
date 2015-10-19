@@ -57,3 +57,10 @@ void io_init(void)
 
 }
 
+/* Reset on exception */
+void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+{
+	__tdump();
+	cm3_sysrst();
+}
+

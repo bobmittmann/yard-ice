@@ -265,6 +265,9 @@
 #define THINKOS_ENABLE_STACK_INIT       1
 #endif
 
+#ifndef THINKOS_ENABLE_THREAD_VOID 
+#define THINKOS_ENABLE_THREAD_VOID      1
+#endif
 
 /* -------------------------------------------------------------------------- 
  * Sanity check

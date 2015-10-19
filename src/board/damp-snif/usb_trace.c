@@ -41,7 +41,7 @@
 #include "sdu.h"
 
 uint32_t trace_ts;
-uint32_t trace_opt;
+uint8_t trace_opt;
 struct usb_cdc_class * usb_cdc;
 
 #define TIME_ABS  1
@@ -49,7 +49,10 @@ struct usb_cdc_class * usb_cdc;
 #define SHOW_SUPV 4
 #define SHOW_PKT  8
 
-char trace_buf[129];
+uint32_t protocol_buf[(20 + 512) / sizeof(uint32_t)];
+
+#define TRACE_MAX 92
+char trace_buf[TRACE_MAX + 1];
 
 int tracef(uint32_t ts, const char *fmt, ... )
 {
@@ -140,32 +143,27 @@ int trace_printf(const char *fmt, ... )
 	int n;
 
 	va_start(ap, fmt);
-	n = vsnprintf(s, 129, fmt, ap);
+	n = vsnprintf(s, TRACE_MAX + 1, fmt, ap);
 	va_end(ap);
 
-	n = MIN(n, 128);
+	n = MIN(n, TRACE_MAX);
 
 	return usb_cdc_write(usb_cdc, s, n);
 }
 
 int usb_printf(const char *fmt, ... )
 {
-	struct usb_cdc_class * cdc = usb_cdc;
 	char * s = trace_buf;
 	va_list ap;
-	int ret;
 	int n;
 
 	va_start(ap, fmt);
-	n = vsnprintf(s, 129, fmt, ap);
+	n = vsnprintf(s, TRACE_MAX + 1, fmt, ap);
 	va_end(ap);
 
-	n = MIN(n, 128);
+	n = MIN(n, TRACE_MAX);
 
-	ret = usb_cdc_write(cdc, s, n);
-	DCC_LOG1(LOG_MSG, "ret=%d", ret);
-
-	return ret;
+	return  usb_cdc_write(usb_cdc, s, n);
 }
 
 void trace_raw_pkt(struct packet * pkt)
@@ -230,15 +228,5 @@ void trace_time_abs(bool en)
 	uint32_t opt = trace_opt & ~TIME_ABS;
 	
 	trace_opt = opt | (en ? TIME_ABS : 0);
-}
-
-void trace_damp_pkt(struct packet * pkt)
-{
-	damp_decode(pkt->clk, pkt->data, pkt->cnt);
-}
-
-void trace_sdu_pkt(struct packet * pkt)
-{
-	sdu_decode(pkt->clk, pkt->data, pkt->cnt);
 }
 

@@ -230,7 +230,7 @@ void cm3_svc_isr(void)
  * --------------------------------------------- */
 
 	case THINKOS_MUTEX_LOCK:
-#if THINKOS_MUTEX_MAX > 0
+#if (THINKOS_MUTEX_MAX > 0)
 		thinkos_mutex_lock_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -238,7 +238,7 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_MUTEX_TRYLOCK:
-#if THINKOS_MUTEX_MAX > 0
+#if (THINKOS_MUTEX_MAX > 0)
 		thinkos_mutex_trylock_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -246,15 +246,19 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_MUTEX_TIMEDLOCK:
-#if THINKOS_MUTEX_MAX > 0 && THINKOS_ENABLE_TIMED_CALLS
+#if (THINKOS_MUTEX_MAX > 0)
+  #if THINKOS_ENABLE_TIMED_CALLS
 		thinkos_mutex_timedlock_svc(arg);
+  #else
+		thinkos_mutex_lock_svc(arg);
+  #endif
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
 	case THINKOS_MUTEX_UNLOCK:
-#if THINKOS_MUTEX_MAX > 0
+#if (THINKOS_MUTEX_MAX > 0)
 		thinkos_mutex_unlock_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -266,7 +270,7 @@ void cm3_svc_isr(void)
  * --------------------------------------------- */
 
 	case THINKOS_SEM_INIT:
-#if THINKOS_SEMAPHORE_MAX > 0
+#if (THINKOS_SEMAPHORE_MAX > 0)
 		thinkos_sem_init_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -274,7 +278,7 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_SEM_WAIT:
-#if THINKOS_SEMAPHORE_MAX > 0
+#if (THINKOS_SEMAPHORE_MAX > 0)
 		thinkos_sem_wait_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -282,7 +286,7 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_SEM_TRYWAIT:
-#if THINKOS_SEMAPHORE_MAX > 0
+#if (THINKOS_SEMAPHORE_MAX > 0)
 		thinkos_sem_trywait_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -290,15 +294,19 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_SEM_TIMEDWAIT:
-#if THINKOS_SEMAPHORE_MAX > 0 && THINKOS_ENABLE_TIMED_CALLS
+#if (THINKOS_SEMAPHORE_MAX > 0)
+  #if THINKOS_ENABLE_TIMED_CALLS
 		thinkos_sem_timedwait_svc(arg);
+  #else
+		thinkos_sem_wait_svc(arg);
+  #endif
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
 	case THINKOS_SEM_POST:
-#if THINKOS_SEMAPHORE_MAX > 0
+#if (THINKOS_SEMAPHORE_MAX > 0)
 		thinkos_sem_post_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -311,7 +319,7 @@ void cm3_svc_isr(void)
  * --------------------------------------------- */
 
 	case THINKOS_COND_WAIT:
-#if THINKOS_COND_MAX > 0
+#if (THINKOS_COND_MAX > 0)
 		thinkos_cond_wait_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -319,15 +327,19 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_COND_TIMEDWAIT:
-#if THINKOS_COND_MAX > 0 && THINKOS_ENABLE_TIMED_CALLS
+#if (THINKOS_COND_MAX > 0)
+  #if THINKOS_ENABLE_TIMED_CALLS
 		thinkos_cond_timedwait_svc(arg);
+  #else
+		thinkos_cond_wait_svc(arg);
+  #endif
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
 	case THINKOS_COND_SIGNAL:
-#if THINKOS_COND_MAX > 0
+#if (THINKOS_COND_MAX > 0)
 		thinkos_cond_signal_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -335,7 +347,7 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_COND_BROADCAST:
-#if THINKOS_COND_MAX > 0
+#if (THINKOS_COND_MAX > 0)
 		thinkos_cond_broadcast_svc(arg);
 #else
 		thinkos_nosys(arg);
@@ -355,8 +367,12 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_FLAG_TIMEDTAKE:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_TIMED_CALLS
+#if (THINKOS_FLAG_MAX > 0)
+  #if THINKOS_ENABLE_TIMED_CALLS
 		thinkos_flag_timedtake_svc(arg);
+  #else
+		thinkos_flag_take_svc(arg);
+  #endif
 #else
 		thinkos_nosys(arg);
 #endif
@@ -379,8 +395,12 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_GATE_TIMEDWAIT:
-#if (THINKOS_GATE_MAX > 0) && THINKOS_ENABLE_TIMED_CALLS
+#if (THINKOS_GATE_MAX > 0)
+  #if THINKOS_ENABLE_TIMED_CALLS
 		thinkos_gate_timedwait_svc(arg);
+  #else
+		thinkos_gate_wait_svc(arg);
+  #endif
 #else
 		thinkos_nosys(arg);
 #endif
@@ -443,9 +463,12 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_FLAG_TIMEDWATCH:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_WATCH && \
-		THINKOS_ENABLE_TIMED_CALLS
+#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_WATCH
+  #if THINKOS_ENABLE_TIMED_CALLS
 		thinkos_flag_timedwatch_svc(arg);
+  #else
+		thinkos_flag_watch_svc(arg);
+  #endif
 #else
 		thinkos_nosys(arg);
 #endif
@@ -464,8 +487,12 @@ void cm3_svc_isr(void)
 		break;
 
 	case THINKOS_EVENT_TIMEDWAIT:
-#if (THINKOS_EVENT_MAX > 0) && THINKOS_ENABLE_TIMED_CALLS
+#if (THINKOS_EVENT_MAX > 0)
+  #if THINKOS_ENABLE_TIMED_CALLS
 		thinkos_ev_timedwait_svc(arg);
+  #else
+		thinkos_ev_wait_svc(arg);
+  #endif
 #else
 		thinkos_nosys(arg);
 #endif

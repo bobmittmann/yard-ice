@@ -68,11 +68,9 @@ const char type_nm[8][4] = {
 	"RSY",
 	"NAK" };
 
-struct sdu_link  * sdu_buf;
-
 void sdu_decode(uint32_t ts, uint8_t * buf, unsigned int buf_len)
 {
-	struct sdu_link * dev = sdu_buf; 
+	struct sdu_link * dev = (struct sdu_link *)&protocol_buf;
 	uint8_t * cp;
 	uint8_t * msg;
 	uint8_t sum;
@@ -240,15 +238,19 @@ void sdu_trace_show_pkt(bool en)
 	trace_opt = opt | (en ? SHOW_PKT : 0);
 }
 
-void sdu_trace_init(void * buf)
+void sdu_trace_init(void)
 {
-	struct sdu_link * lnk = (struct sdu_link *)buf;
-	sdu_buf = lnk;
+	struct sdu_link * lnk = (struct sdu_link *)&protocol_buf;
 	lnk->rx.timeout = false;
 	lnk->rx.stuff = 0;
 	lnk->rx.pos = 0;
 	lnk->rx.tot_len = 0;
 	lnk->rx.addr = 0;
 	tracef(profclk_get(), "--- SDU trace ---------"); 
+}
+
+void trace_sdu_pkt(struct packet * pkt)
+{
+	sdu_decode(pkt->clk, pkt->data, pkt->cnt);
 }
 

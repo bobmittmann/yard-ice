@@ -35,10 +35,7 @@
 extern "C" {
 #endif
 
-void RX(uint8_t * buf, unsigned int len);
-void TX(uint8_t * buf, unsigned int len);
-
-void sdu_trace_init(void * buf);
+void sdu_trace_init(void);
 void sdu_decode(uint32_t ts, uint8_t * buf, unsigned int buf_len);
 
 void sdu_trace_show_supv(bool en);

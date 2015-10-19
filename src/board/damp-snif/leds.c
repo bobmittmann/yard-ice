@@ -25,7 +25,7 @@
 #include <sys/dcclog.h>
 
 struct {
-	uint8_t led_tmr[2];
+	volatile uint8_t led_tmr[2];
 } io_drv;
 
 #define IO_POLL_PERIOD_MS 10
@@ -57,45 +57,25 @@ void led_flash(unsigned int id, unsigned int ms)
 	led_on(id);
 }
 
-#ifndef LEDDRV_FLAG_NO
-int8_t led_flag;
-#endif
-
-#ifdef LEDDRV_FLAG_NO
-#define LED_FLAG (THINKOS_FLAG_BASE + LEDDRV_FLAG_NO)
-#else
-#define LED_FLAG led_flag
-#endif
-
-uint32_t clk_time = 0;
-
 void __attribute__((noreturn)) led_task(void)
 {
-	uint32_t clk = __thinkos_ticks();
-	uint32_t clk_sec = clk + 1000;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
 	for (;;) {
-		int i;
+		unsigned int tmr;
 
-		clk += IO_POLL_PERIOD_MS;
-		thinkos_alarm(clk);
-
-		/* update clock time */
-		if ((int32_t)(clk - clk_sec) >= 1000) {
-			clk_time++;
-			clk_sec += 1000;
-		}
+		thinkos_sleep(IO_POLL_PERIOD_MS);
 
 		/* process led timers */
-		for (i = 0; i < 2; ++i) {
-			if (io_drv.led_tmr[i] == 0)
-				continue;
-			if (--io_drv.led_tmr[i] == 0) 
-				led_off(i);
+		if ((tmr = io_drv.led_tmr[0]) != 0) {
+			if (--tmr == 0) 
+				led_off(0);
+			io_drv.led_tmr[0] = tmr;
 		}
 
+		if ((tmr = io_drv.led_tmr[1]) != 0) {
+			if (--tmr == 0) 
+				led_off(1);
+			io_drv.led_tmr[1] = tmr;
+		}
 	}
 }
 

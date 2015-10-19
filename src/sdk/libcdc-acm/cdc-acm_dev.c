@@ -92,6 +92,10 @@ struct usb_cdc_acm_dev {
 #undef CTL_FLAG 
 #endif
 
+#ifdef RX_FLAG 
+#undef RX_FLAG 
+#endif
+
 #ifdef TX_DONE
 #undef TX_DONE
 #endif

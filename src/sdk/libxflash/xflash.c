@@ -24,21 +24,9 @@
 #include <sys/param.h>
 #include <stdint.h>
 #include <crc.h>
+#include "xflash.h"
 
 #define FLASH_WR_BLK_SIZE 128
-
-void flash_unlock(void);
-int flash_write(uint32_t offs, const void * buf, unsigned int len);
-int flash_erase(uint32_t offs, unsigned int len);
-
-void uart_reset(void * uart);
-void uart_drain(void * uart);
-int uart_send(void * uart, const void * buf, unsigned int len);
-int uart_recv(void * uart, void * buf, unsigned int len, unsigned int msec);
-
-int usb_send(int ep_id, const void * buf, unsigned int len);
-int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec);
-int usb_drain(int ep_id);
 
 static void reset(void)
 {
@@ -49,11 +37,10 @@ static void reset(void)
 static void delay(unsigned int msec)
 {
 	while (msec > 0) {
-		if (CM3_SYSTICK->ctrl & SYSTICK_CTRL_COUNTFLAG)
+		if (CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG)
 			msec--;
 	}
 }
-
 
 #ifndef ENABLE_XMODEM_CKS
 #define ENABLE_XMODEM_CKS 1
@@ -278,57 +265,130 @@ timeout:
 	return ret;
 }
 
-int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
-												  unsigned int blk_size)
+struct magic_rec {
+	uint16_t mask;
+	uint16_t comp;
+};
+
+struct magic_hdr {
+	uint16_t pos;
+	uint16_t cnt;
+};
+
+struct magic {
+	struct magic_hdr hdr;
+	struct magic_rec rec[];
+};
+
+#define MAGIC_REC_MAX 8
+
+bool magic_match(struct magic * magic, int pos, uint8_t * buf, int len)
 {
+	int j;
+
+	if (magic->hdr.pos < pos)
+		return false;
+
+	magic->hdr.cnt;
+
+	if (magic->hdr.pos > pos + len)
+		return false;
+
+	for (j = 0; j < magic->hdr.cnt; ++j) {
+		uint32_t data;
+		int k;
+		/* check whether the magic record is in this
+		   data block */
+		if ((k = (cnt < rec[i].offs)) < 0)
+			continue;
+
+		if ((k + sizeof(uint32_t)) > n)
+			continue;
+
+		data = buf[k] + (buf[k + 1] << 8) + 
+			(buf[k + 2] << 16) + (buf[k + 3] << 24);
+
+		if ((data & rec[j].mask) != rec[j].comp) {
+			ret = -1;
+			usb_send(CDC_TX_EP, "\r\nInvalid!", 10);
+			break;
+		}
+	}	
+}
+
+int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
+												  unsigned int blk_size,
+												  struct magic * magic)
+{
+	struct {
+		struct magic_hdr hdr;
+		struct magic_rec rec[MAGIC_REC_MAX];
+	} magic_buf;
 	struct xmodem_rcv rx;
 	unsigned int cnt;
 	uint32_t offs;
 	int ret;
+	int i;
+
+	if (magic != 0) {
+		/* copy magic check block */
+		cnt = magic->cnt > MAGIC_REC_MAX ? MAGIC_REC_MAX : magic->cnt;
+		for (i = 0; i < cnt; ++i)
+			magic_buf.rec[i] = magic->rec[i];
+		magic_buf.hdr.cnt = cnt;
+		magic_buf.hdr.pos = magic->hdr.pos;
+	}
 
 	flash_unlock();
 
 	do {
-		usb_send(CDC_TX_EP, "\r\nErasing...", 12);
+		usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
 
-		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
+		usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+		offs = blk_offs;
+		cnt = 0;
 
-			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+		ret = usb_xmodem_rcv_pkt(&rx);
 
-			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
-			offs = blk_offs;
-			cnt = 0;
+		while (ret > 0) {
+			uint8_t * buf = rx.pkt.data;
+			int rem = ret;
+
+			while (rem > 0) {
+				int n;
+
+				n = MIN(rem, FLASH_WR_BLK_SIZE);
+				n = MIN(n, blk_size - cnt);
+				if (n == 0)
+					break;
+
+
+				flash_erase(offs, n);
+				flash_write(offs, buf, n);
+
+				offs += n;
+				src += n;
+				cnt += n;
+				rem -= n;
+			}
 
 			ret = usb_xmodem_rcv_pkt(&rx);
+		} 
 
-			while (ret > 0) {
-				unsigned char * src = rx.pkt.data;
-				int rem = ret;
-
-				while (rem > 0) {
-					int n;
-
-					n = MIN(rem, FLASH_WR_BLK_SIZE);
-					n = MIN(n, blk_size - cnt);
-					if (n == 0)
-						break;
-
-					flash_write(offs, src, n);
-
-					offs += n;
-					src += n;
-					cnt += n;
-					rem -= n;
+		if (ret >= 0) {
+			for (i = 0; i < magic_cnt; ++i) {
+				uint32_t data = *rec[i].addr;
+				if ((data & rec[i].mask) != rec[i].comp) {
+					ret = -1;
+					usb_send(CDC_TX_EP, "\r\nInvalid!", 10);
+					break;
 				}
-
-				ret = usb_xmodem_rcv_pkt(&rx);
-			} 
-
+			}	
 		}
 
 	} while ((ret < 0) || (cnt == 0));
 
-	usb_send(CDC_TX_EP, "\r\nDone.", 7);
+	usb_send(CDC_TX_EP, "\r\nDone.\r\n", 9);
 
 	usb_drain(CDC_TX_EP);
 

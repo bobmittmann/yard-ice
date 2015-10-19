@@ -59,6 +59,7 @@ static int stm32f10x_flash_blk_erase(struct stm32_flash * flash, uint32_t addr)
 	return 0;
 }
 
+/* erase flash blocks */
 int flash_erase(uint32_t offs, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
@@ -68,7 +69,8 @@ int flash_erase(uint32_t offs, unsigned int len)
 	int rem;
 	int cnt;
 
-	blk_offs = offs & ~(FLASH_BLOCK_SIZE - 1);
+	/* get the nearest block. */
+	blk_offs = (offs + FLASH_BLOCK_SIZE - 1) & ~(FLASH_BLOCK_SIZE - 1);
 	addr = STM32_FLASH_ADDR + blk_offs;
 
 	cnt = 0;

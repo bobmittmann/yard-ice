@@ -66,9 +66,6 @@ static const char type_nm[8][4] = {
 	"RSY",
 	"NAK" };
 
-struct damp_link  * damp_buf;
-
-
 #define CMD_FLASH_ON                       0x10
 #define CMD_FLASH_OFF                      0x11
 #define CMD_PAGE_CONTROL                   0x12
@@ -112,7 +109,7 @@ struct damp_link  * damp_buf;
 
 void damp_decode(uint32_t ts, uint8_t * buf, unsigned int buf_len)
 {
-	struct damp_link * dev = damp_buf; 
+	struct damp_link * dev = (struct damp_link *)&protocol_buf;
 	char xs[64];
 	uint8_t * cp;
 	uint8_t * msg;
@@ -327,16 +324,20 @@ void damp_trace_show_pkt(bool en)
 	trace_opt = opt | (en ? SHOW_PKT : 0);
 }
 
-void damp_trace_init(void * buf)
+void damp_trace_init(void)
 {
-	struct damp_link * lnk = buf;
+	struct damp_link * lnk = (struct damp_link *)&protocol_buf;
 
-	damp_buf = buf; 
 	lnk->rx.timeout = false;
 	lnk->rx.stuff = 0;
 	lnk->rx.pos = 0;
 	lnk->rx.tot_len = 0;
 	lnk->rx.addr = 0;
 	tracef(profclk_get(), "--- DAMP trace ---------"); 
+}
+
+void trace_damp_pkt(struct packet * pkt)
+{
+	damp_decode(pkt->clk, pkt->data, pkt->cnt);
 }
 
