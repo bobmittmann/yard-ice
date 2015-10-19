@@ -1,9 +1,9 @@
 /* 
- * File:	 led.h
+ * File:	 usb-test.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
- * Copyright(c) 2003-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,36 +20,29 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __LED_H__
-#define __LED_H__
+#include "board.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void led_lock(void);
-
-void led_unlock(void);
-
-void led1_flash(unsigned int cnt);
-
-void led2_flash(unsigned int cnt);
-
-void led_flash_all(unsigned int cnt);
-
-void led1_on(void);
-
-void led1_off(void);
-
-void led2_on(void);
-
-void led2_off(void);
-
-void leds_init(void);
-
-#ifdef __cplusplus
+void usb_vbus(bool on)
+{
+	if (on)
+		stm32_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
+	else
+		stm32_gpio_mode(USB_FS_VBUS, INPUT, 0);
 }
-#endif
 
-#endif /* __LED_H__ */
+void io_init(void)
+{
+	struct stm32_rcc * rcc = STM32_RCC;
+
+	stm32_gpio_clock_en(STM32_GPIOA);
+	stm32_gpio_clock_en(STM32_GPIOB);
+
+	/* Enable Alternate Functions IO clock */
+	rcc->apb2enr |= RCC_AFIOEN;
+
+	/* USB */
+	stm32_gpio_mode(USB_FS_VBUS, INPUT, 0);
+	stm32_gpio_set(USB_FS_VBUS);
+
+}
 

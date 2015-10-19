@@ -30,7 +30,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define PACKET_DATA_MAX 512
+#define PACKET_DATA_MAX 256
 
 struct packet {
 	uint32_t clk;

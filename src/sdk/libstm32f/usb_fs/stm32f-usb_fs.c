@@ -76,7 +76,7 @@ void stm32f_usb_vbus_connect(bool connect)
 
 void stm32f_usb_power_on(struct stm32f_usb * usb)
 {
-	DCC_LOG(LOG_TRACE, "Enabling USB device clock...");
+	DCC_LOG(LOG_INFO, "Enabling USB device clock...");
 
 #if (STM32_USB_DEV_VBUS_CTRL)
 	stm32f_usb_vbus_connect(true);
@@ -108,7 +108,7 @@ void stm32f_usb_power_off(struct stm32f_usb * usb)
 
 	usb->cntr = USB_FRES | USB_PDWN;
 
-	DCC_LOG(LOG_TRACE, "Disabling USB device clock...");
+	DCC_LOG(LOG_INFO, "Disabling USB device clock...");
 	stm32_clk_disable(STM32_RCC, STM32_CLK_USB);
 
 	/* disabling IO pins */

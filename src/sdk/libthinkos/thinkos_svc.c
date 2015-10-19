@@ -152,7 +152,7 @@ void thinkos_nosys(int32_t * arg)
 	uint8_t * pc = (uint8_t *)arg[6];
 	/* get the immediate data from instruction */
 	int svc = pc[-2];
-	DCC_LOG1(LOG_ERROR, "svc=%d!!!", svc);
+	DCC_LOG1(LOG_INFO, "svc=%d!!!", svc);
 #endif
 	arg[0] = THINKOS_ENOSYS;
 }

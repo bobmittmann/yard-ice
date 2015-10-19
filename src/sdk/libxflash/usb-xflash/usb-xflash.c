@@ -1,9 +1,9 @@
 /* 
- * File:	 profclk.h
+ * File:	 xflash.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
- * Copyright(c) 2003-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,24 +20,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __PROFCLK_H__
-#define __PROFCLK_H__
+#include <stdint.h>
+#include <stdbool.h>
+#include "xflash.h"
 
-#include <arch/cortex-m3.h>
-
-static inline uint32_t profclk_get(void) {
-	return CM3_DWT->cyccnt;
+int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
+												  unsigned int blk_size, 
+												  const struct magic * magic)
+{
+//	return xflash(blk_offs, blk_size, magic);
+	return yflash(blk_offs, blk_size, magic);
 }
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void profclk_init(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __PROFCLK_H__ */
 

@@ -23,6 +23,21 @@
 #ifndef __XFLASH_H__
 #define __XFLASH_H__
 
+struct magic_rec {
+	uint32_t mask;
+	uint32_t comp;
+};
+
+struct magic_hdr {
+	uint16_t pos;
+	uint16_t cnt;
+};
+
+struct magic {
+	struct magic_hdr hdr;
+	struct magic_rec rec[];
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,6 +54,12 @@ int uart_recv(void * uart, void * buf, unsigned int len, unsigned int msec);
 int usb_send(int ep_id, const void * buf, unsigned int len);
 int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec);
 int usb_drain(int ep_id);
+
+int xflash(uint32_t blk_offs, unsigned int blk_size, 
+		   const struct magic * magic);
+
+int yflash(uint32_t blk_offs, unsigned int blk_size, 
+		   const struct magic * magic);
 
 #ifdef __cplusplus
 }

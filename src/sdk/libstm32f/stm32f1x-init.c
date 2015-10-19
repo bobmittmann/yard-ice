@@ -109,7 +109,7 @@ const uint32_t sysclk_hz[] = {
 
 #endif
 
-void _init(void)
+void __attribute__((section(".init"))) _init(void)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32_flash * flash = STM32_FLASH;

@@ -318,13 +318,13 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		DCC_LOG3(LOG_MSG, "CDC SetCtrl: idx=%d val=%d len=%d",
 				 index, value, len);
 
-		DCC_LOG2(LOG_TRACE, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d >>>>",
+		DCC_LOG2(LOG_INFO, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d >>>>",
 				(value & CDC_DTE_PRESENT) ? 1 : 0,
 				(value & CDC_ACTIVATE_CARRIER) ? 1 : 0);
 		break;
 
 	default:
-		DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d",
+		DCC_LOG5(LOG_INFO, "CDC t=%x r=%x v=%x i=%d l=%d",
 				req->type, req->request, value, index, len);
 		break;
 	}
@@ -435,13 +435,13 @@ FIXME: Flexnet pannel do not set DTE_PRESENT nor ACTIVATE_CARRIER ....
 		DCC_LOG1(LOG_MSG, "ptr=%p wakeup.", ptr);
 
 		if ((n = usb_dev_ep_pkt_xmit(dev->usb, dev->in_ep, ptr, rem)) < 0) {
-			DCC_LOG(LOG_WARNING, "usb_dev_ep_pkt_xmit() failed!!");
+			DCC_LOG(LOG_INFO, "usb_dev_ep_pkt_xmit() failed!!");
 			thinkos_flag_give(TX_LOCK);
 			return n;
 		}
 
 		if (n == 0) {
-			DCC_LOG(LOG_WARNING, "n == 0!!");
+			DCC_LOG(LOG_INFO, "n == 0!!");
 		}
 
 		/* wait for end of transmission */
@@ -501,7 +501,7 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 	}
 
 read_from_buffer:
-	DCC_LOG(LOG_TRACE, "reading from buffer");
+	DCC_LOG(LOG_INFO, "reading from buffer");
 	n = MIN(n, len);
 	__memcpy(buf, &dev->rx_buf[dev->rx_pos], n);
 	dev->rx_pos += n;
@@ -651,7 +651,7 @@ int usb_cdc_status_set(usb_cdc_class_t * cl, struct serial_status * stat)
 	if (dev->acm.status != status) {
 		int ret;
 
-		DCC_LOG(LOG_TRACE, "status update");
+		DCC_LOG(LOG_INFO, "status update");
 
 		pkt = (struct cdc_notification *)buf;
 		/* bmRequestType */
@@ -671,7 +671,7 @@ int usb_cdc_status_set(usb_cdc_class_t * cl, struct serial_status * stat)
 		ret = usb_dev_ep_pkt_xmit(dev->usb, dev->int_ep, pkt, 
 								  sizeof(struct cdc_notification));
 		if (ret < 0) {
-			DCC_LOG(LOG_WARNING, "usb_dev_ep_tx_start() failed!");
+			DCC_LOG(LOG_INFO, "usb_dev_ep_tx_start() failed!");
 			return ret;
 		}
 

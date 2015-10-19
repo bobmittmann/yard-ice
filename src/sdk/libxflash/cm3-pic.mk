@@ -33,9 +33,9 @@ OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork -fpic
 LDSCRIPT = $(THISDIR)/cm3-pic.ld
 INCPATH	:= $(INCPATH) $(realpath $(THISDIR)/include) $(realpath $(BASEDIR)/sdk/include) 
 
-override SFLAGS :=  -Wall $(OPTIONS)
-override CFLAGS :=  -Wall $(OPTIONS) -Os -g
-override LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
+override SFLAGS := -Wall $(OPTIONS)
+override CFLAGS := -Wall $(OPTIONS) -Os -g -ffunction-sections -fdata-sections
+override LDFLAGS := $(OPTIONS) -nostdlib -T $(LDSCRIPT) -Xlinker --gc-sections
 override CROSS_COMPILE = arm-none-eabi-
 
 CC = $(CROSS_COMPILE)gcc

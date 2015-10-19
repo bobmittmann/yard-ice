@@ -42,7 +42,11 @@ endif
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-LDFLAGS = -nostdlib -T $(MACH).ld
+ifdef LDSCRIPT
+LDFLAGS += -nostdlib -T $(LDSCRIPT)
+else
+LDFLAGS += -nostdlib -T $(MACH).ld
+endif
 
 include $(THISDIR)/prog.mk
 

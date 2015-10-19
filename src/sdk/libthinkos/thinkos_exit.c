@@ -25,7 +25,7 @@
 
 void __thinkos_thread_abort(int thread_id)
 {
-	DCC_LOG1(LOG_TRACE, "<%d> ....", thread_id); 
+	DCC_LOG1(LOG_INFO, "<%d> ....", thread_id); 
 
 #if THINKOS_ENABLE_TIMESHARE
 	{
@@ -57,14 +57,14 @@ void __thinkos_thread_abort(int thread_id)
 
 	if (thread_id == thinkos_rt.active) {
 #if THINKOS_ENABLE_THREAD_VOID 
-		DCC_LOG(LOG_TRACE, "set active thread to void!"); 
+		DCC_LOG(LOG_INFO, "set active thread to void!"); 
 		/* pretend we are somebody else */
 		thinkos_rt.active = THINKOS_THREAD_VOID;
 #else
 		DCC_LOG(LOG_PANIC, "abort current thread won't clear context!"); 
 #endif
 	} else {
-		DCC_LOG1(LOG_TRACE, "active thread=%d", thinkos_rt.active); 
+		DCC_LOG1(LOG_INFO, "active thread=%d", thinkos_rt.active); 
 	}
 
 	/* clear context. */
@@ -73,7 +73,7 @@ void __thinkos_thread_abort(int thread_id)
 	__thinkos_suspend(thread_id);
 
 
-	DCC_LOG1(LOG_TRACE, "ready=%08x", thinkos_rt.wq_ready);
+	DCC_LOG1(LOG_INFO, "ready=%08x", thinkos_rt.wq_ready);
 
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
@@ -83,7 +83,7 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 {
 	int self = thinkos_rt.active;
 
-	DCC_LOG2(LOG_TRACE, "<%d> code=%d", self, code); 
+	DCC_LOG2(LOG_INFO, "<%d> code=%d", self, code); 
 
 	/* disable interrupts */
 	cm3_cpsid_i();
@@ -99,7 +99,7 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 		int stat;
 		/* update the thread status */
 		stat = thinkos_rt.th_stat[self];
-		DCC_LOG1(LOG_TRACE, "wq=%d", stat >> 1); 
+		DCC_LOG1(LOG_INFO, "wq=%d", stat >> 1); 
 		thinkos_rt.th_stat[self] = 0;
 		/* remove from other wait queue, if any */
 		__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], self, 0);  
@@ -120,13 +120,13 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 		int th;
 
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			DCC_LOG2(LOG_TRACE, "<%d> wakeup from join %d.", th, wq);
+			DCC_LOG2(LOG_INFO, "<%d> wakeup from join %d.", th, wq);
 			/* wakeup from the join wait queue */
 			__thinkos_wakeup(wq, th);
 			thinkos_rt.ctx[th]->r0 = code;
 			/* wakeup all remaining threads */
 			while ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-				DCC_LOG2(LOG_TRACE, "<%d> wakeup from join %d.", th, wq);
+				DCC_LOG2(LOG_INFO, "<%d> wakeup from join %d.", th, wq);
 				__thinkos_wakeup(wq, th);
 				thinkos_rt.ctx[th]->r0 = code;
 			}
@@ -148,14 +148,14 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 #if THINKOS_ENABLE_EXIT
 void thinkos_exit_svc(struct cm3_except_context * ctx)
 {
-	DCC_LOG2(LOG_TRACE, "<%d> exit with code %d!", 
+	DCC_LOG2(LOG_INFO, "<%d> exit with code %d!", 
 			 thinkos_rt.active, ctx->r0); 
 
 #if THINKOS_ENABLE_JOIN
 	int self = thinkos_rt.active;
 
 	if (thinkos_rt.wq_join[self] == 0) {
-		DCC_LOG1(LOG_TRACE, "<%d> canceled...", self); 
+		DCC_LOG1(LOG_INFO, "<%d> canceled...", self); 
 		/* insert into the canceled wait queue and wait for a join call */ 
 		__thinkos_wq_insert(THINKOS_WQ_CANCELED, self);
 		cm3_cpsid_i();

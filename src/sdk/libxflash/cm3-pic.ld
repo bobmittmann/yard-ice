@@ -53,16 +53,15 @@ SECTIONS
 
 	.init :
 	{
-		*(.init)
+		KEEP (*(.init .init.*)) 
 	}
 
 	/* Code sections */ 
 	.text :          
 	{
 		*(.boot)
-		*(.init .init.*) 
 		/* all .text sections (code)  */
-		*(.text)
+		*(.text .text.*)
 		/* all .glue_7 sections (interworking arm helpers) */
 		*(.glue_7)
 		/* all .glue_7t sections (interworking thumb helpers) */
@@ -75,14 +74,14 @@ SECTIONS
 	.data :
 	{
 		/* all .data sections  */
-		*(.data)
+		*(.data .data*)
 	}
 
 	/* uninitialized .bss sections */
 	.bss :
 	{
 		/* all .bss sections  */
-		*(.bss)
+		*(.bss .bss*)
 	}
 }
 

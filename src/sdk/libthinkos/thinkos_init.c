@@ -278,7 +278,7 @@ static int __thinkos_init_main(uint32_t opt)
 	thinkos_rt.active = self;
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);
 
-	DCC_LOG3(LOG_TRACE, "<%d> threads_max=%d ready=%08x", 
+	DCC_LOG3(LOG_INFO, "<%d> threads_max=%d ready=%08x", 
 			 self, THINKOS_THREADS_MAX, thinkos_rt.wq_ready);
 
 #if THINKOS_ENABLE_PAUSE
@@ -308,52 +308,52 @@ int thinkos_init(uint32_t opt)
 	int self;
 
 #if (THINKOS_MUTEX_MAX > 0)
-	DCC_LOG3(LOG_TRACE, "    mutex: %2d (%2d .. %2d)", THINKOS_MUTEX_MAX,
+	DCC_LOG3(LOG_INFO, "    mutex: %2d (%2d .. %2d)", THINKOS_MUTEX_MAX,
 			 THINKOS_MUTEX_BASE,
 			 THINKOS_MUTEX_BASE + THINKOS_MUTEX_MAX - 1);
 #endif
 #if (THINKOS_COND_MAX > 0)
-	DCC_LOG3(LOG_TRACE, "  condvar: %2d (%2d .. %2d)", THINKOS_COND_MAX,
+	DCC_LOG3(LOG_INFO, "  condvar: %2d (%2d .. %2d)", THINKOS_COND_MAX,
 			 THINKOS_COND_BASE,
 			 THINKOS_COND_BASE + THINKOS_COND_MAX - 1);
 #endif
 #if (THINKOS_SEMAPHORE_MAX > 0)
-	DCC_LOG3(LOG_TRACE, "semaphore: %2d (%2d .. %2d)", THINKOS_SEMAPHORE_MAX,
+	DCC_LOG3(LOG_INFO, "semaphore: %2d (%2d .. %2d)", THINKOS_SEMAPHORE_MAX,
 			 THINKOS_SEM_BASE,
 			 THINKOS_SEM_BASE + THINKOS_SEMAPHORE_MAX - 1);
 #endif
 #if (THINKOS_EVENT_MAX > 0)
-	DCC_LOG3(LOG_TRACE, "    evset: %2d (%2d .. %2d)", THINKOS_EVENT_MAX,
+	DCC_LOG3(LOG_INFO, "    evset: %2d (%2d .. %2d)", THINKOS_EVENT_MAX,
 			 THINKOS_EVENT_BASE,
 			 THINKOS_EVENT_BASE + THINKOS_EVENT_MAX - 1);
 #endif
 #if (THINKOS_FLAG_MAX > 0)
-	DCC_LOG3(LOG_TRACE, "     flag: %2d (%2d .. %2d)", THINKOS_FLAG_MAX,
+	DCC_LOG3(LOG_INFO, "     flag: %2d (%2d .. %2d)", THINKOS_FLAG_MAX,
 			 THINKOS_FLAG_BASE,
 			 THINKOS_FLAG_BASE + THINKOS_FLAG_MAX - 1);
 #endif
 #if (THINKOS_GATE_MAX > 0)
-	DCC_LOG3(LOG_TRACE, "     gate: %2d (%2d .. %2d)", THINKOS_GATE_MAX,
+	DCC_LOG3(LOG_INFO, "     gate: %2d (%2d .. %2d)", THINKOS_GATE_MAX,
 			 THINKOS_GATE_BASE,
 			 THINKOS_GATE_BASE + THINKOS_GATE_MAX - 1);
 #endif
 #if THINKOS_ENABLE_JOIN
-	DCC_LOG3(LOG_TRACE, "     join: %2d (%2d .. %2d)", THINKOS_THREADS_MAX,
+	DCC_LOG3(LOG_INFO, "     join: %2d (%2d .. %2d)", THINKOS_THREADS_MAX,
 			 THINKOS_JOIN_BASE,
 			 THINKOS_JOIN_BASE + THINKOS_THREADS_MAX - 1);
 #endif
 #if THINKOS_ENABLE_CONSOLE
-	DCC_LOG2(LOG_TRACE, "  console: (wr:%2d rd:%2d)", 
+	DCC_LOG2(LOG_INFO, "  console: (wr:%2d rd:%2d)", 
 			THINKOS_WQ_CONSOLE_WR,  THINKOS_WQ_CONSOLE_RD); 
 #endif
 #if THINKOS_ENABLE_PAUSE
-	DCC_LOG1(LOG_TRACE, "   paused: (%2d)", THINKOS_WQ_PAUSED); 
+	DCC_LOG1(LOG_INFO, "   paused: (%2d)", THINKOS_WQ_PAUSED); 
 #endif
 #if THINKOS_ENABLE_JOIN
-	DCC_LOG1(LOG_TRACE, " canceled: (%2d)", THINKOS_WQ_CANCELED); 
+	DCC_LOG1(LOG_INFO, " canceled: (%2d)", THINKOS_WQ_CANCELED); 
 #endif
 #if THINKOS_ENABLE_DEBUG_FAULT
-	DCC_LOG1(LOG_TRACE, "    fault: (%2d)", THINKOS_WQ_FAULT); 
+	DCC_LOG1(LOG_INFO, "    fault: (%2d)", THINKOS_WQ_FAULT); 
 #endif
 
 	/* disable interrupts */
@@ -372,7 +372,7 @@ int thinkos_init(uint32_t opt)
 	msp = (uint32_t)&thinkos_idle.ctx.r0;
 	cm3_msp_set(msp);
 
-	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
+	DCC_LOG2(LOG_INFO, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
 #if THINKOS_ENABLE_EXCEPTIONS
 	thinkos_exception_init();
@@ -386,7 +386,7 @@ int thinkos_init(uint32_t opt)
 
 	self = __thinkos_init_main(opt);
 
-	DCC_LOG(LOG_TRACE, "enabling interrupts!");
+	DCC_LOG(LOG_INFO, "enabling interrupts!");
 
 	/* configure the use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
@@ -394,7 +394,7 @@ int thinkos_init(uint32_t opt)
 	/* enable interrupts */
 	cm3_cpsie_i();
 
-	DCC_LOG4(LOG_TRACE, "<%d> msp=%08x psp=%08x ctrl=%08x", 
+	DCC_LOG4(LOG_INFO, "<%d> msp=%08x psp=%08x ctrl=%08x", 
 			 self, cm3_msp_get(), cm3_psp_get(), cm3_control_get());
 
 	return self;

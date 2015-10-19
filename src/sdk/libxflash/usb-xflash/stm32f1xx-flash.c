@@ -24,8 +24,10 @@
  */ 
 
 #define STM32F1X
+#include <arch/cortex-m3.h>
 #include <stm32f/stm32f-flash.h>
 #include <sys/param.h>
+#include <sys/dcclog.h>
 
 #define STM32_BASE_FLASH   0x40022000
 #define STM32_FLASH ((struct stm32_flash *)STM32_BASE_FLASH)
@@ -36,9 +38,12 @@
 
 #define FLASH_ERR (FLASH_WRPRTERR | FLASH_PGPERR)
 
-static int stm32f10x_flash_blk_erase(struct stm32_flash * flash, uint32_t addr)
+static uint32_t stm32f10x_flash_blk_erase(struct stm32_flash * flash, 
+										  uint32_t addr)
 {
 	uint32_t sr;
+
+	DCC_LOG1(LOG_TRACE, "addr=%08x", addr);
 
 	flash->cr = FLASH_SER;
 	do {
@@ -47,16 +52,27 @@ static int stm32f10x_flash_blk_erase(struct stm32_flash * flash, uint32_t addr)
 	flash->ar = addr;
 	flash->cr = FLASH_STRT | FLASH_SER;
 
+/* 2.11 Flash memory BSY bit delay versus STRT bit setting
+  Description
+  When the STRT bit in the Flash memory control register is set (to launch 
+  an erase operation), the BSY bit in the Flash memory status register 
+  goes high one cycle later.
+  Therefore, if the FLASH_SR register is read immediately after the FLASH_CR 
+  register is written (STRT bit set), the BSY bit is read as 0.
+  Workaround
+  Read the BSY bit at least one cycle after setting the STRT bit.
+*/
+	__nop();
+	__nop();
+
 	do {
 		sr = flash->sr;
 	} while (sr & FLASH_BSY);
 
 	flash->cr = 0;
 
-	if (sr & FLASH_ERR)
-		return -1;
+	return sr;
 
-	return 0;
 }
 
 /* erase flash blocks */
@@ -65,7 +81,7 @@ int flash_erase(uint32_t offs, unsigned int len)
 	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t addr;
 	uint32_t blk_offs;
-	int ret;
+	uint32_t sr;
 	int rem;
 	int cnt;
 
@@ -76,12 +92,12 @@ int flash_erase(uint32_t offs, unsigned int len)
 	cnt = 0;
 	rem = len + (offs - blk_offs);
 
+
 	while (rem > 0) {
-
-		ret = stm32f10x_flash_blk_erase(flash, addr);
-
-		if (ret < 0) {
-			cnt = ret;
+	
+		sr = stm32f10x_flash_blk_erase(flash, addr);
+		if (sr & FLASH_ERR) {
+			cnt = -1;
 			break;
 		}
 

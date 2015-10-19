@@ -47,6 +47,22 @@ int __attribute__((section (".data#")))
 	flash->ar = addr;
 	flash->cr = FLASH_STRT | FLASH_SER;
 
+#if defined(STM32F1X) 
+/* STM32F10xx4 STM32F10xx6 Errata sheet
+  2.11 Flash memory BSY bit delay versus STRT bit setting
+  Description
+  When the STRT bit in the Flash memory control register is set (to launch 
+  an erase operation), the BSY bit in the Flash memory status register 
+  goes high one cycle later.
+  Therefore, if the FLASH_SR register is read immediately after the FLASH_CR 
+  register is written (STRT bit set), the BSY bit is read as 0.
+  Workaround
+  Read the BSY bit at least one cycle after setting the STRT bit.
+*/
+	__nop();
+	__nop();
+#endif
+
 	do {
 		sr = flash->sr;
 	} while (sr & FLASH_BSY);

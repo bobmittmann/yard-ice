@@ -20,28 +20,28 @@
 # 
 
 
-PROG = usb-serial
+PROG = xftest
 
-CFILES = usb-serial.c serial.c profclk.c board.c io.c leds.c \
-		 xflash.c xflash_pic.c shell.c
+CFILES = xftest.c board.c ../xflash.c ../usb-xflash/stm32-usb_fs.c \
+		 ../usb-xflash/stm32f1xx-flash.c
 
-LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
-		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
-		  ../sdk/libdrv ../sdk/libcdc-acm ../sdk/libtty ../sdk/libxmodem \
-		  ../sdk/libshell
+LIBDIRS = ../../../sdk/libstm32f ../../../sdk/libcm3 ../../../sdk/libutil \
+		  ../../../sdk/libthinkos ../../../sdk/libc ../../../sdk/libice-comm \
+		  ../../../sdk/libcdc-acm 
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty xmodem shell
+LIBS = stm32f cm3 util thinkos c ice-comm cdc-acm 
 
-INCPATH = ../sdk/include 
+INCPATH = ../../../sdk/include ../include
 
-CDEFS = CONFIG_H
-CFLAGS = -g -O2
+CDEFS = CONFIG_H NDEBUG
+#CM3_RAM_VECTORS
+CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
+LDFLAGS = -Xlinker --gc-sections 
 
 JTAGTOOL_ADDR = 192.168.10.50
 #JTAG_TARGET = stm32
 
+LDSCRIPT = stm32f103_ram.ld 
 MACH = stm32f103x6
-include ../mk/stm32f103.mk
-
-#include ../mk/stm32f207.mk
+include ../../../mk/stm32f103.mk
 

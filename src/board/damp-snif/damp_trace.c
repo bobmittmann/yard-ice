@@ -207,75 +207,134 @@ void damp_decode(uint32_t ts, uint8_t * buf, unsigned int buf_len)
 
 		switch (cmd) {
 		case CMD_FLASH_ON:
-			tracef(ts, "> %02x LED ON", addr);
+			tracef(ts, "> %02x RATE %d ON", addr, msg[1]);
 			break;
 		case CMD_FLASH_OFF:
-			tracef(ts, "> %02x LED OFF", addr);
+			tracef(ts, "> %02x RATE %d OFF", addr, msg[1]);
 			break;
 		case CMD_PAGE_CONTROL:
 			tracef(ts, "> %02x PAG CTL", addr);
 			break;
 
 		case CMD_GET_VER:
-			tracef(ts, "> %02x GET VER", addr);
+		case CMD_GET_VER + 1:
+		case CMD_GET_VER + 2:
+		case CMD_GET_VER + 3:
+			tracef(ts, "> %02x.%d GET VER%d", addr, cmd & 3, msg[1]);
 			break;
 		case CMD_LED_RATE:
-			tracef(ts, "> %02x LED RATE", addr);
+		case CMD_LED_RATE + 1:
+		case CMD_LED_RATE + 2:
+		case CMD_LED_RATE + 3:
+			tracef(ts, "> %02x LED%d RATE=%d", addr, msg[1] >> 5, 
+				   msg[1] & 0x1f);
 			break;
 		case CMD_LAMP_TEST:
 			tracef(ts, "> %02x LAMP TST", addr);
 			break;
 
 		case CMD_HIBERNATE_AMPLIFIER:
-			tracef(ts, "> %02x HIBERN", addr);
+		case CMD_HIBERNATE_AMPLIFIER + 1:
+		case CMD_HIBERNATE_AMPLIFIER + 2:
+		case CMD_HIBERNATE_AMPLIFIER + 3:
+			tracef(ts, "> %02x.%d HIBERN", addr, cmd & 3);
 			break;
 		case CMD_ACTIVATE_AMPLIFIER_SUPPLY:
-			tracef(ts, "> %02x PWR", addr);
+		case CMD_ACTIVATE_AMPLIFIER_SUPPLY + 1:
+		case CMD_ACTIVATE_AMPLIFIER_SUPPLY + 2:
+		case CMD_ACTIVATE_AMPLIFIER_SUPPLY + 3:
+			tracef(ts, "> %02x.%d PWR", addr, cmd & 3);
 			break;
 		case CMD_RETURN_LINE_SUPERVISION:
-			tracef(ts, "> %02x LIN SPV", addr);
+		case CMD_RETURN_LINE_SUPERVISION + 1:
+		case CMD_RETURN_LINE_SUPERVISION + 2:
+		case CMD_RETURN_LINE_SUPERVISION + 3:
+			tracef(ts, "> %02x.%d LIN SPV %d", addr, cmd & 3, msg[1]);
 			break;
 		case CMD_SET_SUPERVISION_COMPARATOR:
-			tracef(ts, "> %02x SET SPV CMP", addr);
+		case CMD_SET_SUPERVISION_COMPARATOR + 1:
+		case CMD_SET_SUPERVISION_COMPARATOR + 2:
+		case CMD_SET_SUPERVISION_COMPARATOR + 3:
+			tracef(ts, "> %02x.%d SET SPV CMP=%d", addr, cmd & 3, msg[1]);
 			break;
 		case CMD_START_SIGNAL_TRANSITION_COUNT:
-			tracef(ts, "> %02x CNT START", addr);
+		case CMD_START_SIGNAL_TRANSITION_COUNT + 1:
+		case CMD_START_SIGNAL_TRANSITION_COUNT + 2:
+		case CMD_START_SIGNAL_TRANSITION_COUNT + 3:
+			tracef(ts, "> %02x.%d CNT START", addr, cmd & 3);
 			break;
 		case CMD_RETURN_SIGNAL_TRANSITION_COUNT:
-			tracef(ts, "> %02x CNT GET", addr);
+		case CMD_RETURN_SIGNAL_TRANSITION_COUNT + 1:
+		case CMD_RETURN_SIGNAL_TRANSITION_COUNT + 2:
+		case CMD_RETURN_SIGNAL_TRANSITION_COUNT + 3:
+			tracef(ts, "> %02x.%d CNT GET", addr, cmd & 3);
 			break;
 		case CMD_RETURN_EMERGENCY_SIGNAL_STATUS:
-			tracef(ts, "> %02x EMGCY", addr);
+		case CMD_RETURN_EMERGENCY_SIGNAL_STATUS + 1:
+		case CMD_RETURN_EMERGENCY_SIGNAL_STATUS + 2:
+		case CMD_RETURN_EMERGENCY_SIGNAL_STATUS + 3:
+			tracef(ts, "> %02x.%d EMGCY", addr, cmd & 3);
 			break;
 		case CMD_RETURN_AMPLIFIER_STATE:
-			tracef(ts, "> %02x AMP STATE", addr);
+		case CMD_RETURN_AMPLIFIER_STATE + 1:
+		case CMD_RETURN_AMPLIFIER_STATE + 2:
+		case CMD_RETURN_AMPLIFIER_STATE + 3:
+			tracef(ts, "> %02x.%d AMP STATE", addr, cmd & 3);
 			break;
 		case CMD_SPEAKER_OUTPUT_CONNECTION:
-			tracef(ts, "> %02x SPK CON", addr);
+		case CMD_SPEAKER_OUTPUT_CONNECTION + 1:
+		case CMD_SPEAKER_OUTPUT_CONNECTION + 2:
+		case CMD_SPEAKER_OUTPUT_CONNECTION + 3:
+			tracef(ts, "> %02x.%d SPK CON", addr, cmd & 3);
 			break;
 		case CMD_AMPLIFIER_TRANSFER:
-			tracef(ts, "> %02x AMP XFER", addr);
+		case CMD_AMPLIFIER_TRANSFER + 1:
+		case CMD_AMPLIFIER_TRANSFER + 2:
+		case CMD_AMPLIFIER_TRANSFER + 3:
+			tracef(ts, "> %02x.%d AMP XFER", addr, cmd & 3);
 			break;
 		case CMD_SELECT_AMPLIFIER_SIGNAL:
-			tracef(ts, "> %02x AMP SIG SEL", addr);
+		case CMD_SELECT_AMPLIFIER_SIGNAL + 1:
+		case CMD_SELECT_AMPLIFIER_SIGNAL + 2:
+		case CMD_SELECT_AMPLIFIER_SIGNAL + 3:
+			tracef(ts, "> %02x.%d AMP SIG SEL", addr, cmd & 3);
 			break;
 		case CMD_RETURN_SIGNAL_SELECTED:
-			tracef(ts, "> %02x AMP SIG GET", addr);
+		case CMD_RETURN_SIGNAL_SELECTED + 1:
+		case CMD_RETURN_SIGNAL_SELECTED + 2:
+		case CMD_RETURN_SIGNAL_SELECTED + 3:
+			tracef(ts, "> %02x.%d AMP SIG GET", addr, cmd & 3);
 			break;
 		case CMD_AMPLIFIER_GAIN_CONTROL:
-			tracef(ts, "> %02x AMP GAIN", addr);
+		case CMD_AMPLIFIER_GAIN_CONTROL + 1:
+		case CMD_AMPLIFIER_GAIN_CONTROL + 2:
+		case CMD_AMPLIFIER_GAIN_CONTROL + 3:
+			tracef(ts, "> %02x.%d AMP GAIN=%d", addr, cmd & 3, msg[1]);
 			break;
 		case CMD_SHORT_CIRCUIT_CONTROL:
-			tracef(ts, "> %02x SHORT CTL", addr);
+		case CMD_SHORT_CIRCUIT_CONTROL + 1:
+		case CMD_SHORT_CIRCUIT_CONTROL + 2:
+		case CMD_SHORT_CIRCUIT_CONTROL + 3:
+			tracef(ts, "> %02x.%d SHORT CTL=%d", addr, cmd & 3, msg[1]);
 			break;
 		case CMD_VOLTAGE_SELECT:
-			tracef(ts, "> %02x VOUT ", addr);
+		case CMD_VOLTAGE_SELECT + 1:
+		case CMD_VOLTAGE_SELECT + 2:
+		case CMD_VOLTAGE_SELECT + 3:
+			tracef(ts, "> %02x.%d VOUT=%d", addr, cmd & 3, 
+				   msg[1] == 0xaa ? 70 : 25);
 			break;
 		case CMD_SET_INTERNAL_SUPERVISION_LVL:
-			tracef(ts, "> %02x SPV LVL", addr);
+		case CMD_SET_INTERNAL_SUPERVISION_LVL + 1:
+		case CMD_SET_INTERNAL_SUPERVISION_LVL + 2:
+		case CMD_SET_INTERNAL_SUPERVISION_LVL + 3:
+			tracef(ts, "> %02x.%d SPV LVL=%d", addr, cmd & 3, msg[1]);
 			break;
 		case CMD_RETURN_SIGNAL_PEAK_COUNT:
-			tracef(ts, "> %02x PEAK CNT", addr);
+		case CMD_RETURN_SIGNAL_PEAK_COUNT + 1:
+		case CMD_RETURN_SIGNAL_PEAK_COUNT + 2:
+		case CMD_RETURN_SIGNAL_PEAK_COUNT + 3:
+			tracef(ts, "> %02x.%d PEAK CNT", addr, cmd & 3);
 			break;
 
 		case CMD_CHRG_CTRL:

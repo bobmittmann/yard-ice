@@ -86,7 +86,7 @@ static const uint8_t serial_str[SERIAL_STR_SZ] = {
 #define INTERFACE_STR_SZ         16
 static const uint8_t interface_str[INTERFACE_STR_SZ] = {
 	INTERFACE_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Interface 0: "ST VCOM" */
+	/* Interface 0: "ST SINF" */
 	'S', 0, 'T', 0, ' ', 0, 'V', 0, 'C', 0, 'O', 0, 'M', 0
 };
 
@@ -105,16 +105,14 @@ const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
    ------------------------------------------------------------------------- */
 
 enum {
-	VCOM_MODE_STANDBY   = 0,
-	VCOM_MODE_RAW_TRACE  = 1,
-	VCOM_MODE_DAMP_TRACE = 2,
-	VCOM_MODE_SDU_TRACE  = 3,
-	VCOM_MODE_MSTP_TRACE = 4
+	SINF_MODE_STANDBY   = 0,
+	SINF_MODE_RAW_TRACE  = 1,
+	SINF_MODE_DAMP_TRACE = 2,
+	SINF_MODE_SDU_TRACE  = 3,
+	SINF_MODE_MSTP_TRACE = 4
 };
 
-struct vcom {
-	volatile uint8_t mode;
-};
+volatile uint8_t snif_mode;
 
 /* -------------------------------------------------------------------------
    Firmware update 
@@ -124,18 +122,51 @@ extern const uint8_t usb_xflash_pic[];
 extern const unsigned int sizeof_usb_xflash_pic;
 extern uint32_t __data_start[]; 
 
+struct magic {
+	struct {
+		uint16_t pos;
+		uint16_t cnt;
+	} hdr;
+	struct {
+	    uint32_t mask;
+		uint32_t comp;
+	} rec[];
+};
+
+const struct magic firmware_magic = {
+	.hdr = {
+		.pos = 0,
+		.cnt = 10
+	},
+	.rec = {
+		{  0xffffffff, 0x20002800 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+
+		{  0xffffffff, 0x00000000 },
+		{  0xffff0000, 0x08000000 }
+	}
+};
+
 void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len)
 {
 	uint32_t * xflash_code = __data_start;
-	int (* xflash_ram)(uint32_t, uint32_t) = ((void *)xflash_code) + 1;
+	int (* xflash_ram)(uint32_t, uint32_t, const struct magic *);
 
 	DCC_LOG3(LOG_TRACE, "sp=%08x offs=%08x len=%d", cm3_sp_get(), offs, len);
 
-	cm3_cpsid_i();
+	cm3_cpsid_f();
 
 	memcpy(xflash_code, usb_xflash_pic, sizeof_usb_xflash_pic);
 
-	xflash_ram(offs, len);
+	xflash_ram = ((void *)xflash_code) + 1;
+	xflash_ram(offs, len, &firmware_magic);
 
 	cm3_sysrst();
 }
@@ -143,6 +174,34 @@ void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len)
 /* -------------------------------------------------------------------------
    Debug and trace 
    ------------------------------------------------------------------------- */
+#define SINF_BUF_SIZE 8
+
+void __attribute__((noreturn)) capture_task(void)
+{
+	for (;;) {
+		struct packet * pkt;
+
+		pkt = capture_pkt_recv();
+		if (pkt == NULL) {
+			continue;
+		}
+
+		led_flash(LED_AMBER, 50);
+
+		if (snif_mode == SINF_MODE_RAW_TRACE)
+			trace_raw_pkt(pkt);
+		else if (snif_mode == SINF_MODE_DAMP_TRACE)
+			trace_damp_pkt(pkt);
+		else if (snif_mode == SINF_MODE_SDU_TRACE)
+			trace_sdu_pkt(pkt);
+		else if (snif_mode == SINF_MODE_MSTP_TRACE)
+			trace_mstp_pkt(pkt);
+	}
+}
+
+
+uint32_t led_stack[32];
+uint32_t capture_stack[128];
 
 void show_menu(void)
 {
@@ -165,12 +224,56 @@ void show_menu(void)
 	usb_printf("[DAMP-SNIFFER %d.%d]: ", FW_VERSION_MAJOR, FW_VERSION_MINOR);
 };
 
-#define VCOM_BUF_SIZE 8
 
-void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
+int __attribute__((noreturn)) main(int argc, char ** argv)
 {
-	struct usb_cdc_class * cdc = usb_cdc;
+	struct usb_cdc_class * cdc;
 	uint8_t c;
+	int i;
+
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
+
+	/* calibrate usecond delay loop */
+	cm3_udelay_calibrate();
+
+	DCC_LOG(LOG_TRACE, "1. io_init()");
+	io_init();
+
+	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
+	thinkos_init(THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
+
+	profclk_init();
+
+	leds_init();
+
+	capture_init();
+
+	cdc = usb_cdc_init(&stm32f_usb_fs_dev, cdc_acm_str, 
+					   cdc_acm_strcnt);
+	usb_cdc = cdc;
+
+	snif_mode = SINF_MODE_STANDBY;
+
+	thinkos_thread_create((void *)led_task, (void *)NULL,
+						  led_stack, sizeof(led_stack) |
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+
+	thinkos_thread_create((void *)capture_task, (void *)NULL,
+						  capture_stack, sizeof(capture_stack) |
+						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
+	usb_vbus(true);
+
+	for (i = 0; i < 5; ++i) {
+		led_on(LED_AMBER);
+		thinkos_sleep(100);
+		led_off(LED_AMBER);
+		led_on(LED_RED);
+		thinkos_sleep(100);
+		led_off(LED_RED);
+	}
+
 
 	for (;;) {
 		if (usb_cdc_read(cdc, &c, 1, 1000) != 1) {
@@ -215,7 +318,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 		case 'S':
 			usb_printf(" - SDU trace ...\r\n");
 			capture_stop();
-			vcom->mode = VCOM_MODE_SDU_TRACE;
+			snif_mode = SINF_MODE_SDU_TRACE;
 			sdu_trace_init();
 			capture_start();
 			break;
@@ -223,7 +326,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 		case 'D':
 			usb_printf(" - DAMP trace ...\r\n");
 			capture_stop();
-			vcom->mode = VCOM_MODE_DAMP_TRACE;
+			snif_mode = SINF_MODE_DAMP_TRACE;
 			damp_trace_init();
 			capture_start();
 			break;
@@ -231,14 +334,14 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 		case 'M':
 			usb_printf(" - MSTP trace ...\r\n");
 			capture_stop();
-			vcom->mode = VCOM_MODE_MSTP_TRACE;
+			snif_mode = SINF_MODE_MSTP_TRACE;
 			mstp_trace_init();
 			capture_start();
 			break;
 
 		case 'R':
 			usb_printf(" - Raw data trace ...\r\n");
-			vcom->mode = VCOM_MODE_RAW_TRACE;
+			snif_mode = SINF_MODE_RAW_TRACE;
 			capture_start();
 			break;
 
@@ -247,12 +350,12 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 		case 's':
 		case 'm':
 			capture_stop();
-			vcom->mode = VCOM_MODE_STANDBY;
+			snif_mode = SINF_MODE_STANDBY;
 			usb_printf(" - Standby ...\r\n");
 			break;
 
 		case 'F':
-			if (vcom->mode == VCOM_MODE_STANDBY) {
+			if (snif_mode == SINF_MODE_STANDBY) {
 				usb_printf(" - Firmware update...\r\n");
 				usb_xflash(0, 32 * 1024);
 			}
@@ -291,80 +394,6 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 		default:
 			show_menu();
 		}
-	}
-}
-
-uint32_t led_stack[24];
-uint32_t usb_recv_stack[96];
-
-int __attribute__((noreturn)) main(int argc, char ** argv)
-{
-	struct usb_cdc_class * cdc;
-	struct vcom vcom;
-	int i;
-
-	DCC_LOG_INIT();
-	DCC_LOG_CONNECT();
-
-	/* calibrate usecond delay loop */
-	cm3_udelay_calibrate();
-
-	DCC_LOG(LOG_TRACE, "1. io_init()");
-	io_init();
-
-	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
-	thinkos_init(THINKOS_OPT_PRIORITY(3) | THINKOS_OPT_ID(3));
-
-	profclk_init();
-
-	leds_init();
-
-	capture_init();
-
-	cdc = usb_cdc_init(&stm32f_usb_fs_dev, cdc_acm_str, 
-					   cdc_acm_strcnt);
-	usb_cdc = cdc;
-
-	vcom.mode = VCOM_MODE_STANDBY;
-
-	thinkos_thread_create((void *)led_task, (void *)NULL,
-						  led_stack, sizeof(led_stack) |
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
-
-	thinkos_thread_create((void *)usb_recv_task, 
-						  (void *)&vcom,
-						  usb_recv_stack, sizeof(usb_recv_stack) |
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-
-	usb_vbus(true);
-
-	for (i = 0; i < 5; ++i) {
-		led_on(LED_AMBER);
-		thinkos_sleep(100);
-		led_off(LED_AMBER);
-		led_on(LED_RED);
-		thinkos_sleep(100);
-		led_off(LED_RED);
-	}
-
-	for (;;) {
-		struct packet * pkt;
-
-		pkt = capture_pkt_recv();
-		if (pkt == NULL) {
-			continue;
-		}
-
-		led_flash(LED_AMBER, 50);
-
-		if (vcom.mode == VCOM_MODE_RAW_TRACE)
-			trace_raw_pkt(pkt);
-		else if (vcom.mode == VCOM_MODE_DAMP_TRACE)
-			trace_damp_pkt(pkt);
-		else if (vcom.mode == VCOM_MODE_SDU_TRACE)
-			trace_sdu_pkt(pkt);
-		else if (vcom.mode == VCOM_MODE_MSTP_TRACE)
-			trace_mstp_pkt(pkt);
 	}
 }
 

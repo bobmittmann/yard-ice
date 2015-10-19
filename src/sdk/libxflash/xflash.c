@@ -23,12 +23,13 @@
 #include <arch/cortex-m3.h>
 #include <sys/param.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <crc.h>
 #include "xflash.h"
 
 #define FLASH_WR_BLK_SIZE 128
 
-static void reset(void)
+static void __attribute__((noreturn)) reset(void)
 {
 	CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
 	for(;;);
@@ -96,6 +97,18 @@ static int usb_xmodem_rcv_init(struct xmodem_rcv * rx, int mode)
 #define CDC_TX_EP 2
 #define CDC_RX_EP 1
 
+void xmodem_rcv_cancel(struct xmodem_rcv * rx)
+{
+	unsigned char * pkt = rx->pkt.hdr;
+
+	pkt[0] = CAN;
+	pkt[1] = CAN;
+	pkt[3] = CAN;
+
+	usb_send(CDC_TX_EP, pkt, 3);
+	usb_drain(CDC_TX_EP);
+}
+
 int usb_xmodem_rcv_pkt(struct xmodem_rcv * rx)
 {
 	unsigned char * pkt = rx->pkt.hdr;
@@ -154,8 +167,6 @@ int usb_xmodem_rcv_pkt(struct xmodem_rcv * rx)
 				return 0;
 			}
 		}
-
-		
 
 		cp = pkt + 1;
 		for (i = 0; i < rem; ++i)
@@ -258,67 +269,50 @@ timeout:
 
 	pkt[0] = CAN;
 	pkt[1] = CAN;
-	pkt[2] = CAN;
 
-	usb_send(CDC_TX_EP, pkt, 3);
+	usb_send(CDC_TX_EP, pkt, 2);
 
 	return ret;
 }
 
-struct magic_rec {
-	uint16_t mask;
-	uint16_t comp;
-};
+#define MAGIC_REC_MAX 16
 
-struct magic_hdr {
-	uint16_t pos;
-	uint16_t cnt;
-};
-
-struct magic {
-	struct magic_hdr hdr;
-	struct magic_rec rec[];
-};
-
-#define MAGIC_REC_MAX 8
-
-bool magic_match(struct magic * magic, int pos, uint8_t * buf, int len)
+static bool magic_match(struct magic * magic, int pos, uint8_t * buf, int len)
 {
+	int sz = magic->hdr.cnt * sizeof(struct magic_rec);
+	int k;
 	int j;
 
+	/* check whether the magic record is in this
+	   data block */
 	if (magic->hdr.pos < pos)
 		return false;
 
-	magic->hdr.cnt;
-
-	if (magic->hdr.pos > pos + len)
+	if ((magic->hdr.pos + sz) > (pos + len))
 		return false;
 
+	k = magic->hdr.pos - pos;
 	for (j = 0; j < magic->hdr.cnt; ++j) {
 		uint32_t data;
-		int k;
-		/* check whether the magic record is in this
-		   data block */
-		if ((k = (cnt < rec[i].offs)) < 0)
-			continue;
-
-		if ((k + sizeof(uint32_t)) > n)
-			continue;
 
 		data = buf[k] + (buf[k + 1] << 8) + 
 			(buf[k + 2] << 16) + (buf[k + 3] << 24);
 
-		if ((data & rec[j].mask) != rec[j].comp) {
-			ret = -1;
-			usb_send(CDC_TX_EP, "\r\nInvalid!", 10);
-			break;
+		if ((data & magic->rec[j].mask) != magic->rec[j].comp) {
+			return false;
 		}
+
+		k += sizeof(uint32_t);
 	}	
+
+	return true;
 }
 
-int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
-												  unsigned int blk_size,
-												  struct magic * magic)
+static const char s_xmodem[] = "\r\nXmodem (^D to cancel)... ";
+static const char s_invalid[] = "\r\nInvalid file!";
+
+int __attribute__((noreturn)) xflash(uint32_t blk_offs, unsigned int blk_size, 
+									 const struct magic * magic)
 {
 	struct {
 		struct magic_hdr hdr;
@@ -332,18 +326,25 @@ int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs,
 
 	if (magic != 0) {
 		/* copy magic check block */
-		cnt = magic->cnt > MAGIC_REC_MAX ? MAGIC_REC_MAX : magic->cnt;
-		for (i = 0; i < cnt; ++i)
+		cnt = magic->hdr.cnt > MAGIC_REC_MAX ? MAGIC_REC_MAX : magic->hdr.cnt;
+		for (i = 0; i < cnt; ++i) {
+//			usb_send(CDC_TX_EP, "\r\nmagic.", 8);
 			magic_buf.rec[i] = magic->rec[i];
+		}	
 		magic_buf.hdr.cnt = cnt;
 		magic_buf.hdr.pos = magic->hdr.pos;
+	} else {
+		magic_buf.hdr.cnt = 0;
+		magic_buf.hdr.pos = 0;
 	}
 
 	flash_unlock();
 
 	do {
-		usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+//		usb_send(CDC_TX_EP, "\r\nErasing...", 12);
+//		flash_erase(blk_offs, blk_size);
 
+		usb_send(CDC_TX_EP, s_xmodem, sizeof(s_xmodem) - 1);
 		usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
 		offs = blk_offs;
 		cnt = 0;
@@ -354,6 +355,21 @@ int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs,
 			uint8_t * buf = rx.pkt.data;
 			int rem = ret;
 
+			if (cnt == 0) {
+				if (!magic_match((struct magic *)&magic_buf, cnt, buf, rem)) {
+					xmodem_rcv_cancel(&rx);
+					delay(1000);
+					usb_send(CDC_TX_EP, s_invalid, sizeof(s_invalid) - 1);
+					ret = -1;
+					break;
+				}
+			}
+
+			/* XXX: STM32F103: wait at least 50ms between erasing 
+				   and start writing to the flash!!! */
+			flash_erase(offs, rem);
+//			delay(64);
+
 			while (rem > 0) {
 				int n;
 
@@ -362,30 +378,16 @@ int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs,
 				if (n == 0)
 					break;
 
-
-				flash_erase(offs, n);
 				flash_write(offs, buf, n);
 
 				offs += n;
-				src += n;
+				buf += n;
 				cnt += n;
 				rem -= n;
 			}
 
 			ret = usb_xmodem_rcv_pkt(&rx);
 		} 
-
-		if (ret >= 0) {
-			for (i = 0; i < magic_cnt; ++i) {
-				uint32_t data = *rec[i].addr;
-				if ((data & rec[i].mask) != rec[i].comp) {
-					ret = -1;
-					usb_send(CDC_TX_EP, "\r\nInvalid!", 10);
-					break;
-				}
-			}	
-		}
-
 	} while ((ret < 0) || (cnt == 0));
 
 	usb_send(CDC_TX_EP, "\r\nDone.\r\n", 9);
@@ -395,7 +397,5 @@ int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs,
 	delay(3000);
 
 	reset();
-
-	return 0;
 }
 
