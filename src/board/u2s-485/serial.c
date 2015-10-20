@@ -415,7 +415,7 @@ struct serial_dev * serial2_open(void)
 	uart->cr3 |= USART_EIE;
 
 	/* configure interrupts */
-	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_REGULAR);
+	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_HIGHEST);
 	/* enable interrupts */
 	cm3_irq_enable(STM32_IRQ_USART2);
 

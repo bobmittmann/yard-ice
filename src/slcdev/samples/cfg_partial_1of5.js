@@ -3,7 +3,7 @@
 		"author" : "Bob",
 		"tag" : "1 of 5", 
 		"desc" : "2 Photo and 2 Monitor", 
-		"version" : [0, 1, 1]
+		"version" : [0, 2, 0]
 	},
 
 	"sensor" : { 
@@ -41,22 +41,7 @@
 
 	"sw1": { 
 		"up" : [ 
-			'module[1].trouble = 1;',
-		],
-
-		"off" : [ 
-			'module[1].trouble = 0;',
-			'module[1].alarm = 0;',
-		],
-
-		"down" : [
-			'module[1].alarm = 1;',
-		],
-	},
-
-	"sw2": { 
-		"up" : [ 
-			'sensor[1].trouble = 1;'
+			'sensor[1].trouble = 1;',
 		],
 
 		"off" : [ 
@@ -66,6 +51,21 @@
 
 		"down" : [
 			'sensor[1].alarm = 3;',
+		],
+	},
+
+	"sw2": { 
+		"up" : [ 
+			'module[1].trouble = 1;'
+		],
+
+		"off" : [ 
+			'module[1].trouble = 0;',
+			'module[1].alarm = 0;',
+		],
+
+		"down" : [
+			'module[1].alarm = 1;',
 		],
 	},
 

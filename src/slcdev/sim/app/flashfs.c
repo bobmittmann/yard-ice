@@ -154,6 +154,8 @@ bool fs_dirent_get_next(struct fs_dirent * ep)
 
 bool fs_file_unlink(struct fs_dirent * ep)
 {
+	DCC_LOG2(LOG_TRACE, "offs=0x%04x size=%d", ep->blk_offs, ep->blk_size);
+
 	if (stm32_flash_erase(ep->blk_offs, ep->blk_size) < 0) {
 		return false;
 	};

@@ -119,7 +119,22 @@
 
 	"sw1": { 
 		"up" : [ 
-			'module[9].trouble = 1;',
+			'sensor[9].trouble = 1;',
+		],
+
+		"off" : [ 
+			'sensor[9].trouble = 0;',
+			'sensor[9].alarm = 0;',
+		],
+
+		"down" : [
+			'sensor[9].alarm = 3;',
+		],
+	},
+
+	"sw2": { 
+		"up" : [ 
+			'module[9].trouble = 1;'
 		],
 
 		"off" : [ 
@@ -128,22 +143,7 @@
 		],
 
 		"down" : [
-			'module[9].alarm = 3;',
-		],
-	},
-
-	"sw2": { 
-		"up" : [ 
-			'sensor[10].trouble = 1;'
-		],
-
-		"off" : [ 
-			'sensor[10].trouble = 0;',
-			'sensor[10].alarm = 0;',
-		],
-
-		"down" : [
-			'sensor[10].alarm = 3;',
+			'module[9].alarm = 1;',
 		],
 	},
 

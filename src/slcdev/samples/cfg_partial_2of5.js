@@ -41,22 +41,7 @@
 
 	"sw1": { 
 		"up" : [ 
-			'module[3].trouble = 1;',
-		],
-
-		"off" : [ 
-			'module[3].trouble = 0;',
-			'module[3].alarm = 0;',
-		],
-
-		"down" : [
-			'module[3].alarm = 1;',
-		],
-	},
-
-	"sw2": { 
-		"up" : [ 
-			'sensor[3].trouble = 1;'
+			'sensor[3].trouble = 1;',
 		],
 
 		"off" : [ 
@@ -66,6 +51,21 @@
 
 		"down" : [
 			'sensor[3].alarm = 3;',
+		],
+	},
+
+	"sw2": { 
+		"up" : [ 
+			'module[3].trouble = 2;'
+		],
+
+		"off" : [ 
+			'module[3].trouble = 0;',
+			'module[3].alarm = 0;',
+		],
+
+		"down" : [
+			'module[3].alarm = 1;',
 		],
 	},
 

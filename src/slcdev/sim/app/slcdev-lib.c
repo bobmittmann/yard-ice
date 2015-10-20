@@ -611,7 +611,7 @@ int32_t __dev_imode(void * env, int32_t argv[], int argc)
 	if (argc > 1) {
 		unsigned int val = argv[1];
 
-		if (val > 25)
+		if (val > 63)
 			return -EXCEPT_INVALID_VALUE;
 
 		icfg = ISINK_MODE(val, ISINK_RATE(icfg));

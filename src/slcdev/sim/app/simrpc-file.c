@@ -115,9 +115,12 @@ void simrpc_file_create_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		return;
 	}
 
-	fs_file_unlink(&entry);
+	if (fs_file_unlink(&entry) < 0) {
+		DCC_LOG(LOG_WARNING, "fs_file_unlink() failed!.");
+		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -1);
+		return;
+	}
 
-	DCC_LOG(LOG_TRACE, "reply OK...");
 	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 
 	simrpc_file.entry = entry;

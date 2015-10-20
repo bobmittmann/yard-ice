@@ -3,7 +3,7 @@
 		"author" : "Bob",
 		"tag" : "3 of 5", 
 		"desc" : "2 Photo and 2 Monitor", 
-		"version" : [0, 1, 3]
+		"version" : [0, 2, 3]
 	},
 
 	"sensor" : { 
@@ -41,7 +41,22 @@
 
 	"sw1": { 
 		"up" : [ 
-			'module[5].trouble = 1;',
+			'sensor[5].trouble = 1;',
+		],
+
+		"off" : [ 
+			'sensor[5].trouble = 0;',
+			'sensor[5].alarm = 0;',
+		],
+
+		"down" : [
+			'sensor[5].alarm = 3;',
+		],
+	},
+
+	"sw2": { 
+		"up" : [ 
+			'module[5].trouble = 1;'
 		],
 
 		"off" : [ 
@@ -54,20 +69,13 @@
 		],
 	},
 
-	"sw2": { 
-		"up" : [ 
-			'sensor[6].trouble = 1;'
+	"events": { 
+		"init" : [
+			'printf("\n----------------------\n");',
+			'printf("Config partial 3 of 5\n");',
+			'printf("----------------------\n");',
 		],
-
-		"off" : [ 
-			'sensor[6].trouble = 0;',
-			'sensor[6].alarm = 0;',
-		],
-
-		"down" : [
-			'sensor[6].alarm = 3;',
-		],
-	},
+	}
 
 }
 

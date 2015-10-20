@@ -109,15 +109,15 @@ time_t time(time_t * __timer)
 	return now;
 }
 
-#define SW1_OFF (0 << 0)
-#define SW1_A   (1 << 0)
-#define SW1_B   (2 << 0)
-#define SW1_MSK (3 << 0)
+#define SW1_OFF (0 << 2)
+#define SW1_A   (1 << 2)
+#define SW1_B   (2 << 2)
+#define SW1_MSK (3 << 2)
 
-#define SW2_OFF (0 << 2)
-#define SW2_A   (1 << 2)
-#define SW2_B   (2 << 2)
-#define SW2_MSK (3 << 2)
+#define SW2_OFF (0 << 0)
+#define SW2_A   (1 << 0)
+#define SW2_B   (2 << 0)
+#define SW2_MSK (3 << 0)
 
 void __attribute__((noreturn)) io_event_task(void)
 {
