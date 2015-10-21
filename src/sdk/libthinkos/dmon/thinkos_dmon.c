@@ -859,8 +859,8 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 			DCC_LOG(LOG_TRACE, "3. console reset...");
 			__console_reset();
 #endif
-#if 0
 			DCC_LOG(LOG_TRACE, "4. exception reset...");
+#if (THINKOS_ENABLE_EXCEPTIONS)
 			__exception_reset();
 #endif
 #if (THINKOS_ENABLE_DEBUG_STEP)

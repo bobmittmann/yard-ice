@@ -255,7 +255,8 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		cm3_primask_set(pri);
 
 		if (sr & FLASH_ERR) {
-			DCC_LOG(LOG_WARNING, "stm32f2x_flash_sect_erase() failed!");
+			DCC_LOG1(LOG_WARNING, "stm32f2x_flash_sect_erase() failed"
+					 " sr=%08x!", sr);
 			return -1;
 		}
 

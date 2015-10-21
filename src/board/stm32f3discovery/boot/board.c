@@ -176,7 +176,7 @@ const struct thinkos_board this_board = {
 	},
 	.sw_ver = {
 		.major = 0,
-		.minor = 1,
+		.minor = 2,
 	},
 	.memory = {
 		.ram = &sram_desc,

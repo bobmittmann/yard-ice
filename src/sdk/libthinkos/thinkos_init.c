@@ -294,11 +294,107 @@ static int __thinkos_init_main(uint32_t opt)
 	return self;
 }
 
+/* 
+
+  */
+#define STRONGLY_ORDERED MPU_RASR_TEX(0) 
+#define SHARED_DEVICE    MPU_RASR_TEX(0) | MPU_RASR_B
+#define WRITE_THROUGH    MPU_RASR_TEX(0) | MPU_RASR_C
+#define WRITE_BACK       MPU_RASR_TEX(0) | MPU_RASR_C | MPU_RASR_B
+#define NONCACHEABLE     MPU_RASR_TEX(0)
+#define WRITE_ALLOCATE   MPU_RASR_TEX(1)
+#define NONSHARED_DEVICE MPU_RASR_TEX(2)
+
+#define SHAREABLE        MPU_RASR_S
+
+#define DATA_ONLY        MPU_RASR_XN
+
+#define NO_ACCESS        MPU_RASR_AP_NO_ACCESS
+#define PRIV_RW          MPU_RASR_AP_PRIV_RW
+#define USER_RO          MPU_RASR_AP_USER_RO
+#define USER_RW          MPU_RASR_AP_USER_RW
+#define PRIV_RO          MPU_RASR_AP_PRIV_RO
+#define READ_ONLY        MPU_RASR_AP_READ_ONLY
+
+
+/* Normal memory, Non-shareable, write-through */
+#define M_FLASH         (WRITE_THROUGH)
+/* Normal memory, Shareable, write-through */
+#define M_SRAM          (WRITE_THROUGH | SHAREABLE)
+#define M_CCM           (WRITE_THROUGH | SHAREABLE | DATA_ONLY)
+/* Normal memory, Shareable, write-back, write-allocate */
+#define M_EXTERN        (WRITE_BACK | SHAREABLE)
+/* Device memory, Shareable */
+#define M_PERIPHERAL    (SHARED_DEVICE | SHAREABLE | DATA_ONLY)  
+/* System peripherals */
+#define M_SYSTEM        (STRONGLY_ORDERED | SHAREABLE | DATA_ONLY)  
+
+void mpu_region_cfg(int region, uint32_t addr, uint32_t attr)
+{
+	struct cm3_mpu * mpu = CM3_MPU;
+
+	/* Region Base Address Register */
+	mpu->rbar = MPU_RBAR_ADDR(addr) | MPU_RBAR_VALID | MPU_RBAR_REGION(region);
+	/* Region Attribute and Size Register */
+	mpu->rasr = attr; 
+}
+
 #if THINKOS_ENABLE_MPU
 void __thinkos_mpu_init(void)
 {
 	struct cm3_mpu * mpu = CM3_MPU;
-	(void)mpu;
+
+	DCC_LOG(LOG_TRACE, "MPU enable...");
+
+	mpu_region_cfg(0, 0, 0); 
+
+	mpu_region_cfg(1, 0, 0); 
+
+	/* Vectors */
+	mpu_region_cfg(2, 0x00000000, 
+				   M_FLASH | USER_RO | 
+				   MPU_RASR_SIZE_512 | 
+				   MPU_RASR_ENABLE);
+
+	/* FLASH */
+	mpu_region_cfg(3, 0x08000000, 
+				   M_FLASH | USER_RW | 
+				   MPU_RASR_SIZE_512K | 
+				   MPU_RASR_ENABLE);
+
+	/* SRAM and Bitbanding */
+	mpu_region_cfg(4, 0x20000000, 
+				   M_SRAM | USER_RW | 
+				   MPU_RASR_SIZE_64M | 
+				   MPU_RASR_SRD(0x0e) |
+				   MPU_RASR_ENABLE);
+	/* CCM */
+	mpu_region_cfg(5, 0x10000000, 
+				   M_CCM | USER_RW | 
+				   MPU_RASR_SIZE_64K | 
+				   MPU_RASR_ENABLE);
+
+	/* Peripheral */
+	mpu_region_cfg(6, 0x40000000, 
+				   M_PERIPHERAL | USER_RW | 
+				   MPU_RASR_SIZE_512M | 
+				   MPU_RASR_ENABLE);
+
+	mpu_region_cfg(7, 0, 0); 
+#if 0
+	/* System */
+	mpu_region_cfg(7, 0xe0000000, 
+				   M_SYSTEM | USER_RW | 
+				   MPU_RASR_SIZE_1M | 
+				   MPU_RASR_ENABLE);
+#endif
+
+	/* Enable MPU with no background mapping */
+	mpu->ctrl = MPU_CTRL_ENABLE;
+	/* Enable MPU with background mapping */
+//	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_ENABLE;
+	/* Control Register */
+//	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_HFNMIENA | MPU_CTRL_ENABLE;
 }
 #endif
 
@@ -365,34 +461,55 @@ int thinkos_init(uint32_t opt)
 					   sizeof(thinkos_idle.except_stack));
 #endif
 
+
+	__thinkos_reset();
+
+#if THINKOS_ENABLE_EXCEPTIONS
+	thinkos_exception_init();
+#endif
+	self = __thinkos_init_main(opt);
+
+	/* Cortex-M configuration */
+
+	/* System Control Register
+	   The SCR controls features of entry to and exit from low power state. */
+	CM3_SCB->scr = 0; 
+
+	/* Configuration and Control Register
+		The CCR controls entry to Thread mode and enables:
+		- the handlers for NMI, hard fault and faults escalated by FAULTMASK 
+		  to ignore BusFaults
+		- trapping of divide by zero and unaligned accesses
+		- access to the STIR by unprivileged software.
+		*/
+	CM3_SCB->ccr = SCB_CCR_UNALIGN_TRP | SCB_CCR_USERSETMPEND; 
+
 	/* configure the thread stack */
 	cm3_psp_set(cm3_sp_get());
-
 	/* configure the main stack */
 	msp = (uint32_t)&thinkos_idle.ctx.r0;
 	cm3_msp_set(msp);
 
 	DCC_LOG2(LOG_INFO, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
-#if THINKOS_ENABLE_EXCEPTIONS
-	thinkos_exception_init();
-#endif
-
-#if THINKOS_ENABLE_MPU
-	__thinkos_mpu_init();
-#endif
-
-	__thinkos_reset();
-
-	self = __thinkos_init_main(opt);
-
-	DCC_LOG(LOG_INFO, "enabling interrupts!");
 
 	/* configure the use of PSP in thread mode */
-	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
-
+#if THINKOS_ENABLE_MPU
+	DCC_LOG(LOG_INFO, "configuring MPU");
+	__thinkos_mpu_init();
 	/* enable interrupts */
+	DCC_LOG(LOG_TRACE, "enabling interrupts!");
 	cm3_cpsie_i();
+	DCC_LOG(LOG_TRACE, "control set!");
+	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
+//	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_USER);
+#else
+	DCC_LOG(LOG_TRACE, "enabling interrupts!");
+	cm3_cpsie_i();
+	DCC_LOG(LOG_TRACE, "control set!");
+	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
+#endif
+
 
 	DCC_LOG4(LOG_INFO, "<%d> msp=%08x psp=%08x ctrl=%08x", 
 			 self, cm3_msp_get(), cm3_psp_get(), cm3_control_get());

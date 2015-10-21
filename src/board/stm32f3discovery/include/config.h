@@ -94,10 +94,12 @@
 #define THINKOS_ENABLE_BUSFAULT       1
 #define THINKOS_ENABLE_USAGEFAULT     1
 
-#define THINKOS_ENABLE_MPU            0
+#define THINKOS_ENABLE_MPU            1
 #define THINKOS_ENABLE_FPU            0
 #define THINKOS_ENABLE_CTL            1
 
+#define THINKOS_ENABLE_THREAD_VOID    1
+#define THINKOS_ENABLE_DMCLOCK        1
 
 /* -------------------------------------------------------------------------
    USB 

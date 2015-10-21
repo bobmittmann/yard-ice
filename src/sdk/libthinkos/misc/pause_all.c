@@ -28,6 +28,7 @@ void __thinkos_pause_all(void)
 
 	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
 		if (thinkos_rt.ctx[th] != NULL) {
+			DCC_LOG1(LOG_JABBER, "th=%d", th);
 			__thinkos_thread_pause(th);
 		}
 	}

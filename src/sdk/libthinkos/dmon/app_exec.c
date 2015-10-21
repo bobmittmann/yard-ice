@@ -49,14 +49,14 @@ bool dmon_app_exec(uint32_t addr, bool paused)
 	uint32_t * app = (uint32_t *)addr;
 	int thread_id = 0;
 
-	DCC_LOG1(LOG_TRACE, "app=%p", app);
-
 	if ((app[0] != 0x0a0de004) ||
 		(app[1] != 0x6e696854) ||
 		(app[2] != 0x00534f6b)) {
-		DCC_LOG(LOG_WARNING, "invalid application signature!");
+		DCC_LOG1(LOG_WARNING, "invalid signature at %p!", app);
 		return false;
 	}
+
+	DCC_LOG1(LOG_TRACE, "app=%p", app);
 
 	__thinkos_exec(thread_id, (void *)app_bootstrap, (void *)app, paused);
 

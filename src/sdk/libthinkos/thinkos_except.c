@@ -210,7 +210,7 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 	__idump(__func__, ipsr);
 
 	/* reset reentry counter */
-	if (++xcpt->count > 4) {
+	if (++xcpt->unroll > 4) {
 		DCC_LOG(LOG_ERROR, "too many reentries...");
 		for(;;);
 	}
@@ -379,8 +379,6 @@ void __hard_fault(struct thinkos_except * xcpt)
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t hfsr;
 
-	xcpt->type = CM3_EXCEPT_HARD_FAULT;
-
 	hfsr = scb->hfsr;
 
 	DCC_LOG3(LOG_ERROR, "Hard fault:%s%s%s", 
@@ -388,18 +386,22 @@ void __hard_fault(struct thinkos_except * xcpt)
 			 (hfsr & SCB_HFSR_FORCED) ?  " FORCED" : "",
 			 (hfsr & SCB_HFSR_VECTTBL) ? " VECTTBL" : "");
 	__xdump(xcpt);
-	DCC_LOG1(LOG_ERROR, "HFSR=%08x", scb->hfsr);
-	DCC_LOG1(LOG_ERROR, "CFSR=%08x", scb->cfsr);
-	DCC_LOG1(LOG_ERROR, "BFAR=%08x", scb->bfar);
+	DCC_LOG1(LOG_ERROR, " HFSR=%08x", scb->hfsr);
+	DCC_LOG1(LOG_ERROR, " CFSR=%08x", scb->cfsr);
+	DCC_LOG1(LOG_ERROR, " BFAR=%08x", scb->bfar);
+	DCC_LOG1(LOG_ERROR, "MMFAR=%08x", scb->mmfar);
 
 	if (hfsr & SCB_HFSR_FORCED) {
+		uint32_t mmfsr;
 		uint32_t bfsr;
 		uint32_t ufsr;
 
 		bfsr = SCB_CFSR_BFSR_GET(scb->cfsr);
 		ufsr = SCB_CFSR_UFSR_GET(scb->cfsr);
+		mmfsr = SCB_CFSR_MMFSR_GET(scb->cfsr);
 		(void)bfsr;
 		(void)ufsr;
+		(void)mmfsr ;
 
 		DCC_LOG1(LOG_ERROR, "BFSR=%08X", bfsr);
 		if (bfsr) {
@@ -423,7 +425,25 @@ void __hard_fault(struct thinkos_except * xcpt)
 					 (ufsr & UFSR_INVSTATE)  ? " INVSTATE" : "",
 					 (ufsr & UFSR_UNDEFINSTR)  ? " UNDEFINSTR" : "");
 		}
+		DCC_LOG1(LOG_ERROR, "MMFSR=%08X", mmfsr);
+		if (mmfsr) {
+			DCC_LOG6(LOG_ERROR, "    %s%s%s%s%s%s", 
+					 (mmfsr & MMFSR_MMARVALID)  ? " MMARVALID" : "",
+					 (mmfsr & MMFSR_MLSPERR)  ? " MLSPERR" : "",
+					 (mmfsr & MMFSR_MSTKERR)  ? " MSTKERR" : "",
+					 (mmfsr & MMFSR_MUNSTKERR)  ? " MUNSTKERR" : "",
+					 (mmfsr & MMFSR_DACCVIOL)  ? " DACCVIOL" : "",
+					 (mmfsr & MMFSR_IACCVIOL)  ? " IACCVIOL" : "");
+		}
 	}
+
+	if (xcpt->type) {
+//	if (xcpt->unroll) {
+		DCC_LOG(LOG_ERROR, "unhandled exception ...");
+		for(;;);
+	}
+
+	xcpt->type = CM3_EXCEPT_HARD_FAULT;
 
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
@@ -524,7 +544,21 @@ void __usage_fault(struct thinkos_except * xcpt)
 #if THINKOS_ENABLE_MPU
 void __mem_manag(struct thinkos_except * xcpt)
 {
+	struct cm3_scb * scb = CM3_SCB;
+	uint32_t mmfsr = SCB_CFSR_MMFSR_GET(scb->cfsr);
+	(void)mmfsr ;
 	DCC_LOG(LOG_ERROR, "Mem Management!");
+	DCC_LOG2(LOG_ERROR, "MMFSR=%08X MMFAR=%08x", mmfsr, scb->mmfar);
+	if (mmfsr) {
+		DCC_LOG6(LOG_ERROR, "    %s%s%s%s%s%s", 
+				 (mmfsr & MMFSR_MMARVALID)  ? " MMARVALID" : "",
+				 (mmfsr & MMFSR_MLSPERR)  ? " MLSPERR" : "",
+				 (mmfsr & MMFSR_MSTKERR)  ? " MSTKERR" : "",
+				 (mmfsr & MMFSR_MUNSTKERR)  ? " MUNSTKERR" : "",
+				 (mmfsr & MMFSR_DACCVIOL)  ? " DACCVIOL" : "",
+				 (mmfsr & MMFSR_IACCVIOL)  ? " IACCVIOL" : "");
+	}
+
 	__xdump(xcpt);
 
 #if THINKOS_STDERR_FAULT_DUMP
@@ -647,14 +681,18 @@ void thinkos_exception_dsr(struct thinkos_except *)
 	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
 
-#if THINKOS_ENABLE_EXCEPT_RESET
 void __exception_reset(void)
 {
+	DCC_LOG(LOG_WARNING, "!!!!");
+#if THINKOS_ENABLE_EXCEPT_CLEAR
 	__thinkos_memset32(&thinkos_except_buf, 0x00000000,
 					   sizeof(struct thinkos_except));
+#else
+	thinkos_except_buf.type = 0;
+	thinkos_except_buf.unroll = 0;
+#endif
 	thinkos_except_buf.thread_id = -1;
 }
-#endif
 
 void thinkos_exception_init(void)
 {
@@ -672,12 +710,7 @@ void thinkos_exception_init(void)
 #endif
 		;
 
-#if THINKOS_ENABLE_EXCEPT_RESET
 	__exception_reset();
-#else
-	thinkos_except_buf.count = 0;
-	thinkos_except_buf.thread_id = -1;
-#endif
 }
 
 #endif /* THINKOS_ENABLE_EXCEPTIONS */

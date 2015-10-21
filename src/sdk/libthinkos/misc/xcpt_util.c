@@ -153,6 +153,9 @@ void __xdump(struct thinkos_except * xcpt)
 				 (icsr & SCB_ICSR_VECTPENDING) >> 12,
 				 (icsr & SCB_ICSR_VECTACTIVE));
 
+	DCC_LOG2(LOG_ERROR, "thread_id=%d active=%d", xcpt->thread_id,
+			 thinkos_rt.active); 
+
 #if (THINKOS_ENABLE_MONITOR)
 	if (ipsr == CM3_EXCEPT_DEBUG_MONITOR) {
 		DCC_LOG2(LOG_ERROR, "DMON stack free: %d/%6d", 

@@ -197,7 +197,7 @@ static void monitor_ymodem_recv(struct dmon_comm * comm,
 {
 	dmon_comm_send(comm, ymodem_rcv_msg, sizeof(ymodem_rcv_msg) - 1);
 	dmon_soft_reset(comm);
-	if (dmon_app_load_ymodem(comm, addr, size) < 0) {
+	if (dmon_ymodem_flash(comm, addr, size) < 0) {
 		dmon_comm_send(comm, ymodem_err_msg, sizeof(ymodem_err_msg) - 1);
 		return;
 	}	

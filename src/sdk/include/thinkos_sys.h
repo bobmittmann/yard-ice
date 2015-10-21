@@ -241,8 +241,8 @@
 #define THINKOS_ENABLE_DEBUG_FAULT      0
 #endif
 
-#ifndef THINKOS_ENABLE_EXCEPT_RESET
-#define THINKOS_ENABLE_EXCEPT_RESET     1
+#ifndef THINKOS_ENABLE_EXCEPT_CLEAR
+#define THINKOS_ENABLE_EXCEPT_CLEAR     1
 #endif
 
 #ifndef THINKOS_ENABLE_MPU 
@@ -716,9 +716,9 @@ struct thinkos_except {
 	uint32_t icsr;
 
 	uint8_t ipsr;
-	uint8_t type; /* exception type */
 	int8_t thread_id;
-	uint8_t count;
+	uint8_t type;   /* exception type */
+	uint8_t unroll; /* unroll count */
 };
 
 /* -------------------------------------------------------------------------- 
