@@ -332,11 +332,18 @@ static int __thinkos_init_main(uint32_t opt)
 void mpu_region_cfg(int region, uint32_t addr, uint32_t attr)
 {
 	struct cm3_mpu * mpu = CM3_MPU;
-
 	/* Region Base Address Register */
-	mpu->rbar = MPU_RBAR_ADDR(addr) | MPU_RBAR_VALID | MPU_RBAR_REGION(region);
+	uint32_t rbar;
 	/* Region Attribute and Size Register */
-	mpu->rasr = attr; 
+	uint32_t rasr;
+	
+	rbar = MPU_RBAR_ADDR(addr) | MPU_RBAR_VALID | MPU_RBAR_REGION(region);
+	rasr = attr; 
+	DCC_LOG3(LOG_TRACE, "region=%d rbar=%08x rasr=%08x", region, rbar, rasr);
+	/* Region Base Address Register */
+	mpu->rbar = rbar;
+	/* Region Attribute and Size Register */
+	mpu->rasr = rasr;
 }
 
 #if THINKOS_ENABLE_MPU
@@ -380,14 +387,18 @@ void __thinkos_mpu_init(void)
 				   MPU_RASR_SIZE_512M | 
 				   MPU_RASR_ENABLE);
 
-	mpu_region_cfg(7, 0, 0); 
-#if 0
 	/* System */
-	mpu_region_cfg(7, 0xe0000000, 
+/*	mpu_region_cfg(7, 0xe0000000, 
 				   M_SYSTEM | USER_RW | 
 				   MPU_RASR_SIZE_1M | 
 				   MPU_RASR_ENABLE);
-#endif
+*/
+
+	mpu_region_cfg(7, 0xe0000000, 
+				   M_SYSTEM | NO_ACCESS | 
+				   MPU_RASR_SIZE_1M | 
+				   MPU_RASR_ENABLE);
+
 
 	/* Enable MPU with no background mapping */
 	mpu->ctrl = MPU_CTRL_ENABLE;
@@ -497,6 +508,7 @@ int thinkos_init(uint32_t opt)
 #if THINKOS_ENABLE_MPU
 	DCC_LOG(LOG_INFO, "configuring MPU");
 	__thinkos_mpu_init();
+	__mpudump();
 	/* enable interrupts */
 	DCC_LOG(LOG_TRACE, "enabling interrupts!");
 	cm3_cpsie_i();

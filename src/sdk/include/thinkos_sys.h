@@ -1032,6 +1032,8 @@ void __idump(const char * s, uint32_t ipsr);
 
 void __tdump(void);
 
+void __mpudump(void);
+
 int __xcpt_next_active_irq(int this_irq);
 
 void __xcpt_irq_disable_all(void);

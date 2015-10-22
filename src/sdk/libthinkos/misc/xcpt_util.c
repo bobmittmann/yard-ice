@@ -227,6 +227,53 @@ void __idump(const char * s, uint32_t ipsr)
 #endif
 }
 
+void __mpudump(void)
+{
+#ifdef DEBUG
+	struct cm3_mpu * mpu = CM3_MPU;
+	uint32_t rbar;
+	uint32_t rasr;
+	int i;
+
+	DCC_LOG(LOG_TRACE, "MPU _________________________________"); 
+	DCC_LOG(LOG_TRACE, "ctrl=%08x", mpu->ctrl);
+
+	for (i = 0; i < 8; ++i) {
+		uint32_t size;
+
+		mpu->rnr = i;
+		rasr = mpu->rasr;
+		rbar = mpu->rbar;
+		DCC_LOG4(LOG_TRACE, "%d rbar=%08x rasr=%08x ADDR=%08x", i, 
+				 rbar, rasr, rbar & 0xffffffe0);
+
+		size = (1 << (((rasr >> 1) & 0x1f) + 1)) / 1024;
+		if (size > 1024)  
+			DCC_LOG9(LOG_TRACE, "  %sAP=%d TEX=%d %s%s%sSRD=%02x %dMB %s",
+					 (rasr & (1 << 28)) ? "XN " : "",
+					 (rasr >> 24) & 7,
+					 (rasr >> 19) & 7,
+					 (rasr & (1 << 18)) ? "S " : "",
+					 (rasr & (1 << 17)) ? "C " : "",
+					 (rasr & (1 << 16)) ? "B " : "",
+					 (rasr >> 8) & 0xff,
+					 size / 1024,
+					 (rasr & 1) ? "enabled" : "disabled");
+		else
+			DCC_LOG9(LOG_TRACE, "  %sAP=%d TEX=%d %s%s%sSRD=%02x %dKB %s",
+					 (rasr & (1 << 28)) ? "XN " : "",
+					 (rasr >> 24) & 7,
+					 (rasr >> 19) & 7,
+					 (rasr & (1 << 18)) ? "S " : "",
+					 (rasr & (1 << 17)) ? "C " : "",
+					 (rasr & (1 << 16)) ? "B " : "",
+					 (rasr >> 8) & 0xff,
+					 size,
+					 (rasr & 1) ? "enabled" : "disabled");
+	}
+#endif
+}
+
 /* Return the an active interrupt wich is different from the 
    interrupt in the current irq. Otherwise returns -16  */
 
