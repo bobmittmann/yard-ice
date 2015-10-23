@@ -106,7 +106,13 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
-	__thinkos_thread_abort(0);
+	DCC_LOG(LOG_TRACE, "5. thinkos_userland()");
+	thinkos_userland();
+
+	thinkos_sleep(1000);
+
+	DCC_LOG(LOG_TRACE, "6. thinkos_abort()");
+	thinkos_abort();
 
 #if 0
 	for (;;) {

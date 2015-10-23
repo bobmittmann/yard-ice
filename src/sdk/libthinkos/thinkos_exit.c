@@ -83,7 +83,7 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 {
 	int self = thinkos_rt.active;
 
-	DCC_LOG2(LOG_INFO, "<%d> code=%d", self, code); 
+	DCC_LOG2(LOG_TRACE, "<%d> code=%d", self, code); 
 
 	/* disable interrupts */
 	cm3_cpsid_i();
@@ -148,14 +148,14 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 #if THINKOS_ENABLE_EXIT
 void thinkos_exit_svc(struct cm3_except_context * ctx)
 {
-	DCC_LOG2(LOG_INFO, "<%d> exit with code %d!", 
+	DCC_LOG2(LOG_TRACE, "<%d> exit with code %d!", 
 			 thinkos_rt.active, ctx->r0); 
 
 #if THINKOS_ENABLE_JOIN
 	int self = thinkos_rt.active;
 
 	if (thinkos_rt.wq_join[self] == 0) {
-		DCC_LOG1(LOG_INFO, "<%d> canceled...", self); 
+		DCC_LOG1(LOG_TRACE, "<%d> canceled...", self); 
 		/* insert into the canceled wait queue and wait for a join call */ 
 		__thinkos_wq_insert(THINKOS_WQ_CANCELED, self);
 		cm3_cpsid_i();

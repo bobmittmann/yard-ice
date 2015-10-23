@@ -59,7 +59,6 @@ _Pragma ("GCC optimize (\"O2\")")
 
 #endif
 
-
 struct thinkos_except thinkos_except_buf __attribute__((section(".heap")));
 
 static inline void __attribute__((always_inline)) __xcpt_context_save(void)
@@ -98,7 +97,33 @@ static inline void __attribute__((always_inline)) __xcpt_context_save(void)
 	xcpt->icsr = CM3_SCB->icsr;
 	/* record the current thread */
 	xcpt->thread_id = thinkos_rt.active;
+	/* disable interrupts */
+	cm3_cpsid_i();
 }
+
+#if 0
+static inline void __attribute__((always_inline, noreturn)) 
+__xcpt_context_restore(struct thinkos_except * xcpt)
+{
+	register uint32_t * ctx asm("r0");
+	register uint32_t sp asm("r1");
+	register uint32_t lr asm("r3");
+
+	ctx = (uint32_t *)&xcpt->ctx;
+	sp = (xcpt->ret == CM3_EXC_RET_THREAD_PSP) ? xcpt->psp : xcpt->msp;
+	lr = xcpt->ret;
+
+	asm volatile ("add    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "stmia  %0, {r4-r11}\n"
+				  "sub    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "mov    lr, %1\n"
+				  "bx     lr\n"
+				  : : "r" (sp), "r" (lr), "r" (ctx) );
+	for(;;);
+}
+#endif
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
 
@@ -106,19 +131,202 @@ static inline void __attribute__((always_inline)) __xcpt_context_save(void)
 #error "Need THINKOS_ENABLE_THREAD_VOID"
 #endif
 
-void __void_task(struct thinkos_except * xcpt)
-{
-	DCC_LOG(LOG_TRACE, "=============");
-	for(;;);
-}
-
-void __xcpt_thinkos_process(struct thinkos_except * xcpt)
+void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 {
 	uint32_t icsr;
 	int ipsr;
 
+	cm3_cpsid_i();
+
 	__idump(__func__, cm3_ipsr_get());
 
+	DCC_LOG(LOG_TRACE, "__tdump()");
+	__tdump();
+
+	/* suspend all threads */
+	DCC_LOG(LOG_TRACE, "__thinkos_pause_all()");
+	__thinkos_pause_all();
+
+	ipsr = xcpt->ctx.xpsr & 0x1ff;
+	icsr = xcpt->icsr;
+	if ((icsr & SCB_ICSR_RETTOBASE) || (ipsr == CM3_EXCEPT_SVC)) {
+		if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
+			/* record the current thread */
+			xcpt->thread_id = thinkos_rt.active;
+#if THINKOS_ENABLE_DEBUG_FAULT
+			/* flag the thread as faulty */
+			__bit_mem_wr(&thinkos_rt.wq_fault, thinkos_rt.active, 1);
+#endif
+		} else {
+			DCC_LOG(LOG_ERROR, "invalid active thread ...");
+			xcpt->thread_id = -1;
+		}
+	} else {
+		xcpt->thread_id = -1;
+	}
+
+	/* set the active thread to void */
+	thinkos_rt.active = THINKOS_THREAD_VOID;
+	/* reset the IDLE thread */
+	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
+	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
+	thinkos_idle.ctx.xpsr = 0x01000000;
+
+#if ((THINKOS_THREADS_MAX) < 32) 
+	if (thinkos_rt.wq_ready != (1 << (THINKOS_THREADS_MAX))) {
+#else
+	if (thinkos_rt.wq_ready != 0) {
+#endif
+		DCC_LOG1(LOG_TRACE, "wq_ready=%08x, ready queue not empty!", 
+				 thinkos_rt.wq_ready);
+		thinkos_rt.wq_ready = 0;
+	}
+
+#if THINKOS_ENABLE_TIMESHARE
+	if (thinkos_rt.wq_tmshare != 0) {
+		DCC_LOG1(LOG_TRACE, "wq_tmshare=%08x, timeshare queue not empty!", 
+				 thinkos_rt.wq_tmshare);
+		thinkos_rt.wq_tmshare = 0;
+	}
+#endif
+
+	thinkos_exception_dsr(xcpt);
+
+#if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+#else
+	__xcpt_systick_int_enable();
+	cm3_cpsie_i();
+	for(;;);
+#endif
+}
+
+void __attribute__((naked)) __xcpt_null_thread(struct thinkos_except * xcpt)
+{
+	DCC_LOG(LOG_TRACE, ".....................");
+
+	__idump(__func__, cm3_ipsr_get());
+
+#if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+#else
+//	__xcpt_systick_int_enable();
+//	cm3_cpsie_i();
+	for(;;);
+#endif
+}
+
+#if 1
+void __attribute__((naked)) __xcpt_exit(void)
+{
+	struct thinkos_except * xcpt = &thinkos_except_buf;
+	struct cm3_except_context * sf;
+	uint32_t icsr;
+	uint32_t ret;
+	int ipsr;
+
+	__idump(__func__, cm3_ipsr_get());
+
+//	cm3_cpsid_i();
+//	__xcpt_irq_disable_all();
+//	__xcpt_systick_int_disable();
+
+	/* reset reentry counter */
+	if (++xcpt->unroll > 4) {
+		DCC_LOG(LOG_ERROR, "too many reentries...");
+		for(;;);
+	}
+
+	__tdump();
+
+	/* suspend all threads */
+	DCC_LOG(LOG_TRACE, "__thinkos_pause_all()");
+	__thinkos_pause_all();
+
+	ipsr = xcpt->ctx.xpsr & 0x1ff;
+	icsr = xcpt->icsr;
+	if ((icsr & SCB_ICSR_RETTOBASE) || (ipsr == CM3_EXCEPT_SVC)) {
+		if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
+			/* record the current thread */
+			xcpt->thread_id = thinkos_rt.active;
+#if THINKOS_ENABLE_DEBUG_FAULT
+			/* flag the thread as faulty */
+			__bit_mem_wr(&thinkos_rt.wq_fault, thinkos_rt.active, 1);
+#endif
+		} else {
+			DCC_LOG(LOG_ERROR, "invalid active thread ...");
+			xcpt->thread_id = -1;
+		}
+	} else {
+		xcpt->thread_id = -1;
+	}
+
+	/* set the active thread to void */
+	thinkos_rt.active = THINKOS_THREAD_VOID;
+	/* reset the IDLE thread */
+	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
+	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
+	thinkos_idle.ctx.xpsr = 0x01000000;
+
+#if ((THINKOS_THREADS_MAX) < 32) 
+	if (thinkos_rt.wq_ready != (1 << (THINKOS_THREADS_MAX))) {
+#else
+	if (thinkos_rt.wq_ready != 0) {
+#endif
+		DCC_LOG1(LOG_TRACE, "wq_ready=%08x, ready queue not empty!", 
+				 thinkos_rt.wq_ready);
+		thinkos_rt.wq_ready = 0;
+	}
+
+#if THINKOS_ENABLE_TIMESHARE
+	if (thinkos_rt.wq_tmshare != 0) {
+		DCC_LOG1(LOG_TRACE, "wq_tmshare=%08x, timeshare queue not empty!", 
+				 thinkos_rt.wq_tmshare);
+		thinkos_rt.wq_tmshare = 0;
+	}
+#endif
+
+	thinkos_exception_dsr(&thinkos_except_buf);
+
+	sf = (struct cm3_except_context *)&thinkos_idle.ctx;
+	sf->r0 = (uint32_t)xcpt;
+	cm3_msp_set((uint32_t)sf);
+
+	icsr = CM3_SCB->icsr;
+	CM3_SCB->icsr = SCB_ICSR_PENDSVCLR | SCB_ICSR_PENDSTCLR;
+	if (icsr & SCB_ICSR_RETTOBASE) {
+		sf->xpsr = 0x01000000;
+		sf->pc = (uint32_t)__xcpt_null_thread;
+		cm3_psp_set((uint32_t)sf);
+		ret = CM3_EXC_RET_THREAD_PSP;
+	} else {
+		DCC_LOG(LOG_ERROR, "!!!!! RETTOBASE not set !!!!!!");
+		sf->xpsr = 0x01000000;
+		sf->pc = (uint32_t)__xcpt_null_thread;
+		cm3_psp_set((uint32_t)sf);
+		ret = CM3_EXC_RET_THREAD_PSP;
+	} 
+
+//	__xcpt_systick_int_enable();
+	cm3_cpsie_i();
+
+	/* return */
+	asm volatile ("bx   %0\n" : : "r" (ret)); 
+
+//	asm volatile ("mov  r0, %0\n"
+//				  "bx   lr\n" : : "r" (ret)); 
+}
+#endif
+
+void __xcpt_thinkos_handler(struct thinkos_except * xcpt)
+{
+	uint32_t icsr;
+	int ipsr;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	__idump(__func__, cm3_ipsr_get());
+	DCC_LOG(LOG_TRACE, "__tdump()");
 	__tdump();
 
 	/* suspend all threads */
@@ -167,24 +375,13 @@ void __xcpt_thinkos_process(struct thinkos_except * xcpt)
 	}
 #endif
 
-	thinkos_exception_dsr(xcpt);
-
 	__xcpt_systick_int_enable();
 	cm3_cpsie_i();
-
-#if 0
-#if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
-#else
-	__xcpt_systick_int_enable();
-	cm3_cpsie_i();
-	for(;;);
-#endif
-#endif
 }
 
-void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
+void __attribute__((naked)) __xcpt_unroll(void)
 {
+	struct thinkos_except * xcpt = &thinkos_except_buf;
 	struct cm3_except_context * sf;
 	uint32_t icsr;
 	uint32_t ret;
@@ -192,6 +389,8 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 	uint32_t shcsr;
 	int ipsr;
 	int irq;
+
+	DCC_LOG(LOG_ERROR, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
 
 	ipsr = cm3_ipsr_get();
 	__idump(__func__, ipsr);
@@ -204,7 +403,6 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 
 	if ((irq = __xcpt_next_active_irq(ipsr - 16)) >= 0) {
 		xpsr = 0x01000000 + irq + 16;
-		DCC_LOG1(LOG_TRACE, "IRQ %d", irq);
 	} else if ((shcsr = CM3_SCB->shcsr) & (SCB_SHCSR_SYSTICKACT | 
 										   SCB_SHCSR_PENDSVACT | 
 										   SCB_SHCSR_MONITORACT | 
@@ -212,40 +410,19 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 										   SCB_SHCSR_USGFAULTACT |  
 										   SCB_SHCSR_BUSFAULTACT |
 										   SCB_SHCSR_MEMFAULTACT)) {
-
-		if (ipsr == CM3_EXCEPT_BUS_FAULT && shcsr & SCB_SHCSR_BUSFAULTACT) {
-			/* currently servicing bus fault */
-			shcsr &= ~SCB_SHCSR_BUSFAULTACT;
-		}
-		if (ipsr == CM3_EXCEPT_USAGE_FAULT && shcsr & SCB_SHCSR_USGFAULTACT) {
-			/* currently servicing usage fault */
-			shcsr &= ~SCB_SHCSR_USGFAULTACT;
-		}
-		if (ipsr == CM3_EXCEPT_MEM_MANAGE && shcsr & SCB_SHCSR_MEMFAULTACT) {
-			/* currently servicing memory management fault */
-			shcsr &= ~SCB_SHCSR_MEMFAULTACT;
-		}
-
 		if (shcsr & SCB_SHCSR_MEMFAULTACT) {
 			xpsr = 0x01000000 + CM3_EXCEPT_MEM_MANAGE;
-			DCC_LOG(LOG_TRACE, "MEM_MANAGE");
 		} else if (shcsr & SCB_SHCSR_BUSFAULTACT) {
 			xpsr = 0x01000000 + CM3_EXCEPT_BUS_FAULT;
-			DCC_LOG(LOG_TRACE, "BUS_FAULT");
 		} else if (shcsr & SCB_SHCSR_USGFAULTACT) {
-			DCC_LOG(LOG_TRACE, "USAGE_FAULT");
 			xpsr = 0x01000000 + CM3_EXCEPT_USAGE_FAULT;
 		} else if (shcsr & SCB_SHCSR_SVCALLACT) {
-			DCC_LOG(LOG_TRACE, "SVC");
 			xpsr = 0x01000000 + CM3_EXCEPT_SVC;
 		} else if (shcsr & SCB_SHCSR_MONITORACT) {
-			DCC_LOG(LOG_TRACE, "DEBUG_MONITOR");
 			xpsr = 0x01000000 + CM3_EXCEPT_DEBUG_MONITOR;
 		} else if (shcsr & SCB_SHCSR_PENDSVACT) {
-			DCC_LOG(LOG_TRACE, "PENDSV");
 			xpsr = 0x01000000 + CM3_EXCEPT_PENDSV;
 		} else if (shcsr & SCB_SHCSR_SYSTICKACT) {
-			DCC_LOG(LOG_TRACE, "SYSTICK");
 			xpsr = 0x01000000 + CM3_EXCEPT_SYSTICK;
 		} else 
 			xpsr = 0x01000000;
@@ -253,18 +430,22 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 		xpsr = 0x01000000;
 	}
 
+	DCC_LOG1(LOG_TRACE, "xpsr=%08x", xpsr);
+		
 	sf = (struct cm3_except_context *)&thinkos_idle.ctx;
+	sf->lr = 0;
 	sf->r0 = (uint32_t)xcpt;
-
 	icsr = CM3_SCB->icsr;
+	CM3_SCB->icsr = SCB_ICSR_PENDSVCLR | SCB_ICSR_PENDSTCLR;
 	if (icsr & SCB_ICSR_RETTOBASE) {
-		__xcpt_thinkos_process(xcpt);
+		DCC_LOG(LOG_ERROR, "2..");
+//		__xcpt_thinkos_handler(xcpt);
 		sf->xpsr = 0x01000000;
-		sf->pc = (uint32_t)__void_task;
+		sf->pc = (uint32_t)__xcpt_null_thread;
 		cm3_psp_set((uint32_t)sf);
 		ret = CM3_EXC_RET_THREAD_PSP;
 	} else {
-
+		DCC_LOG(LOG_ERROR, "3..");
 		sf->xpsr = xpsr;
 		sf->pc = (uint32_t)__xcpt_unroll;
 		cm3_msp_set((uint32_t)sf);
@@ -274,6 +455,7 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 	/* return */
 	asm volatile ("bx   %0\n" : : "r" (ret)); 
 }
+
 #endif /* THINKOS_UNROLL_EXCEPTIONS */
 
 #if THINKOS_STDERR_FAULT_DUMP
@@ -495,6 +677,7 @@ void __bus_fault(void)
 
 	xcpt->type = CM3_EXCEPT_BUS_FAULT;
 
+	DCC_LOG1(LOG_TRACE, "xcpt=%08x", xcpt);
 	DCC_LOG(LOG_ERROR, "!!! Bus fault !!!");
 	DCC_LOG2(LOG_ERROR, "BFSR=%08X BFAR=%08x", bfsr, scb->bfar);
 	if (bfsr) {
@@ -596,12 +779,22 @@ void __mem_manag(void)
    Fault handlers 
    ------------------------------------------------------------------------- */
 
-struct thinkos_except thinkos_except_buf __attribute__((section(".heap")));
-
 struct thinkos_except * __thinkos_except_buf(void)
 {
 	return &thinkos_except_buf;
 }
+
+void __xcpt_handler(void)
+{
+	__xcpt_irq_disable_all();
+	__xcpt_systick_int_disable();
+	thinkos_exception_dsr(&thinkos_except_buf);
+
+#if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+#endif
+}
+
 
 void __attribute__((naked, noreturn)) __xcpt_process(void)
 {
@@ -610,7 +803,8 @@ void __attribute__((naked, noreturn)) __xcpt_process(void)
 	cm3_cpsid_i();
 	__xcpt_irq_disable_all();
 	__xcpt_systick_int_disable();
-	__xcpt_unroll(&thinkos_except_buf);
+
+	__xcpt_unroll();
 #endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 
@@ -619,17 +813,10 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
 	__xcpt_context_save();
 	__bus_fault();
-
-#if (THINKOS_UNROLL_EXCEPTIONS) 
-	__xcpt_process();
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
+	__xcpt_exit();
+//	__xcpt_unroll();
+//	__xcpt_process();
 	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
@@ -638,17 +825,8 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 {
 	__xcpt_context_save();
 	__usage_fault();
-
-#if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_process();
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
 	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
@@ -657,18 +835,8 @@ void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 {
 	__xcpt_context_save();
 	__mem_manag();
-#if (THINKOS_UNROLL_EXCEPTIONS) 
-	__xcpt_irq_disable_all();
-	__xcpt_systick_int_disable();
-	__xcpt_unroll(&thinkos_except_buf);
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
+	__xcpt_process();
 	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
@@ -676,19 +844,7 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	__xcpt_context_save();
 	__hard_fault();
-
-#if (THINKOS_UNROLL_EXCEPTIONS) 
-	__xcpt_irq_disable_all();
-	__xcpt_systick_int_disable();
-	__xcpt_unroll(&thinkos_except_buf);
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
 	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 
 /* -------------------------------------------------------------------------
@@ -716,9 +872,16 @@ void __exception_reset(void)
 	thinkos_except_buf.thread_id = -1;
 }
 
+extern int __heap_start;
+extern int __heap_base;
+extern int __heap_end;
+
 void thinkos_exception_init(void)
 {
 	struct cm3_scb * scb = CM3_SCB;
+
+	DCC_LOG2(LOG_TRACE, "heap_base=%08x heap_end=%08x", 
+			 &__heap_base, &__heap_end);
 
 	scb->shcsr = 0
 #if	THINKOS_ENABLE_USAGEFAULT 

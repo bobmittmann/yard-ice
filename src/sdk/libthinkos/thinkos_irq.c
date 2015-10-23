@@ -125,3 +125,48 @@ void thinkos_irq_register_svc(int32_t * arg)
 
 #endif
 
+#ifdef THINKOS_ENABLE_IRQ_CTL
+void thinkos_irq_ctl_svc(int32_t * arg)
+{
+	unsigned int req = arg[0];
+	unsigned int irq = arg[1];
+
+	arg[0] = 0;
+	
+	switch (req) {
+	case THINKOS_IRQ_ENABLE:
+		DCC_LOG1(LOG_TRACE, "enabling IRQ %d", irq);
+		/* clear pending interrupt */
+		cm3_irq_enable(irq);
+		break;
+
+	case THINKOS_IRQ_DISABLE:
+		cm3_irq_disable(irq);
+		break;
+
+	case THINKOS_IRQ_PRIORITY_SET:
+		{
+			int priority = arg[2];
+
+			if (priority > IRQ_PRIORITY_VERY_LOW)
+				priority = IRQ_PRIORITY_VERY_LOW;
+			else if (priority < IRQ_PRIORITY_VERY_HIGH)
+				priority = IRQ_PRIORITY_VERY_HIGH;
+
+			/* set the interrupt priority */
+			cm3_irq_pri_set(irq, priority);
+		}
+		break;
+
+//	case THINKOS_IRQ_SVC_SET:
+//		break;
+
+	default:
+		DCC_LOG1(LOG_ERROR, "invalid IRQ ctl request %d!", req);
+		arg[0] = THINKOS_EINVAL;
+		break;
+	}
+}
+
+#endif
+

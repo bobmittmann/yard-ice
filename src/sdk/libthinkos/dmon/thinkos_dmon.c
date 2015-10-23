@@ -583,7 +583,6 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 		/* clear the fault */
 		CM3_SCB->dfsr = dfsr;
 
-
 		DCC_LOG5(LOG_INFO, "DFSR=(EXT=%c)(VCATCH=%c)"
 				 "(DWTRAP=%c)(BKPT=%c)(HALT=%c)", 
 				 dfsr & SCB_DFSR_EXTERNAL ? '1' : '0',
@@ -753,7 +752,7 @@ step_done:
 	/* Process monitor events */
 	if ((sigset & sigmsk) != 0) {
 		DCC_LOG1(LOG_MSG, "<%08x>", sigset);
-		DCC_LOG1(LOG_INFO, "monitor ctx=%08x", thinkos_dmon_rt.ctx);
+		DCC_LOG1(LOG_MSG, "monitor ctx=%08x", thinkos_dmon_rt.ctx);
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 	} else {
 		DCC_LOG1(LOG_JABBER, "Unhandled signal <%08x>", sigset);
@@ -876,6 +875,9 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 #endif
 		dmon_signal(DMON_EXCEPT);
 	}
+
+	DCC_LOG(LOG_TRACE, "this_board.comm_irqen().");
+	this_board.comm_irqen();
 }
 
 /* -------------------------------------------------------------------------
@@ -903,11 +905,30 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 #if THINKOS_ENABLE_DEBUG_STEP
 	/* clear the step request */
 	demcr &= ~DCB_DEMCR_MON_STEP;
+	/* enable the FPB unit */
+	CM3_FPB->ctrl = FP_KEY | FP_ENABLE;
 #endif
 	/* enable monitor and send the reset event */
 	demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
 
 	dcb->demcr = demcr;
+}
+
+void thinkos_dbgmon_svc(int32_t * arg)
+{
+	unsigned int req = arg[0];
+
+	if (req == DBGMON_SIGNAL_IDLE) {
+		struct cm3_dcb * dcb = CM3_DCB;
+		uint32_t demcr;
+		/* DEbug monitor request semaphore */
+		if ((demcr = CM3_DCB->demcr) & DCB_DEMCR_MON_REQ) {
+			DCC_LOG(LOG_TRACE, "<<< Idle >>>");
+			__bit_mem_wr((uint32_t *)&thinkos_dmon_rt.events, DMON_IDLE, 1);  
+			dcb->demcr = (demcr & ~DCB_DEMCR_MON_REQ) | DCB_DEMCR_MON_PEND;
+			asm volatile ("isb\n" :  :  : );
+		}
+	}
 }
 
 #endif /* THINKOS_ENABLE_MONITOR */

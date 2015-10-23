@@ -357,32 +357,34 @@ void __thinkos_mpu_init(void)
 
 	mpu_region_cfg(1, 0, 0); 
 
+	mpu_region_cfg(2, 0, 0); 
+
 	/* Vectors */
-	mpu_region_cfg(2, 0x00000000, 
+	mpu_region_cfg(3, 0x00000000, 
 				   M_FLASH | USER_RO | 
 				   MPU_RASR_SIZE_512 | 
 				   MPU_RASR_ENABLE);
 
 	/* FLASH */
-	mpu_region_cfg(3, 0x08000000, 
+	mpu_region_cfg(4, 0x08000000, 
 				   M_FLASH | USER_RW | 
 				   MPU_RASR_SIZE_512K | 
 				   MPU_RASR_ENABLE);
 
 	/* SRAM and Bitbanding */
-	mpu_region_cfg(4, 0x20000000, 
+	mpu_region_cfg(5, 0x20000000, 
 				   M_SRAM | USER_RW | 
 				   MPU_RASR_SIZE_64M | 
 				   MPU_RASR_SRD(0x0e) |
 				   MPU_RASR_ENABLE);
 	/* CCM */
-	mpu_region_cfg(5, 0x10000000, 
+	mpu_region_cfg(6, 0x10000000, 
 				   M_CCM | USER_RW | 
 				   MPU_RASR_SIZE_64K | 
 				   MPU_RASR_ENABLE);
 
 	/* Peripheral */
-	mpu_region_cfg(6, 0x40000000, 
+	mpu_region_cfg(7, 0x40000000, 
 				   M_PERIPHERAL | USER_RW | 
 				   MPU_RASR_SIZE_512M | 
 				   MPU_RASR_ENABLE);
@@ -394,16 +396,11 @@ void __thinkos_mpu_init(void)
 				   MPU_RASR_ENABLE);
 */
 
-	mpu_region_cfg(7, 0xe0000000, 
-				   M_SYSTEM | NO_ACCESS | 
-				   MPU_RASR_SIZE_1M | 
-				   MPU_RASR_ENABLE);
-
 
 	/* Enable MPU with no background mapping */
-	mpu->ctrl = MPU_CTRL_ENABLE;
+//	mpu->ctrl = MPU_CTRL_ENABLE;
 	/* Enable MPU with background mapping */
-//	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_ENABLE;
+	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_ENABLE;
 	/* Control Register */
 //	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_HFNMIENA | MPU_CTRL_ENABLE;
 }
@@ -493,7 +490,14 @@ int thinkos_init(uint32_t opt)
 		- trapping of divide by zero and unaligned accesses
 		- access to the STIR by unprivileged software.
 		*/
-	CM3_SCB->ccr = SCB_CCR_UNALIGN_TRP | SCB_CCR_USERSETMPEND; 
+	CM3_SCB->ccr = SCB_CCR_UNALIGN_TRP | SCB_CCR_USERSETMPEND;
+//		| SCB_CCR_NONBASETHRDENA;
+	/*  NONBASETHRDENA
+		Indicates how the processor enters Thread mode:
+		0 = processor can enter Thread mode only when no exception is active.
+		1 = processor can enter Thread mode from any level under the 
+		control of an
+		EXC_RETURN value, see Exception return on page 2-28. */
 
 	/* configure the thread stack */
 	cm3_psp_set(cm3_sp_get());
@@ -509,18 +513,13 @@ int thinkos_init(uint32_t opt)
 	DCC_LOG(LOG_INFO, "configuring MPU");
 	__thinkos_mpu_init();
 	__mpudump();
-	/* enable interrupts */
-	DCC_LOG(LOG_TRACE, "enabling interrupts!");
-	cm3_cpsie_i();
-	DCC_LOG(LOG_TRACE, "control set!");
-	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
-//	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_USER);
-#else
-	DCC_LOG(LOG_TRACE, "enabling interrupts!");
-	cm3_cpsie_i();
-	DCC_LOG(LOG_TRACE, "control set!");
-	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 #endif
+
+	DCC_LOG(LOG_TRACE, "control set!");
+	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
+
+	DCC_LOG(LOG_TRACE, "enabling interrupts!");
+	cm3_cpsie_i();
 
 
 	DCC_LOG4(LOG_INFO, "<%d> msp=%08x psp=%08x ctrl=%08x", 
@@ -528,6 +527,13 @@ int thinkos_init(uint32_t opt)
 
 	return self;
 }
+
+#if THINKOS_ENABLE_MPU
+void thinkos_userland(void)
+{
+	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_USER);
+}
+#endif
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
 

@@ -226,24 +226,24 @@
 #define STM32F_IRQ_OTG_HS_EP1_OUT 74 /* USB OTG HS End Point 1 Out global interrupt */
 #define STM32F_IRQ_OTG_HS_EP1_IN 75 /* USB OTG HS End Point 1 In global interrupt */
 #define STM32F_IRQ_OTG_HS_WKUP 76 /* USB OTG HS Wakeup through EXTI interrupt */
-#define STM32F_IRQ_OTG_HS 77 /* USB OTG HS global interrupt */
-#define STM32F_IRQ_DCMI 78 /* DCMI global interrupt */
-#define STM32F_IRQ_CRYP 79 /* CRYP crypto global interrupt */
-#define STM32F_IRQ_HASH_RNG 80 /* Hash and Rng global interrupt */
+#define STM32F_IRQ_OTG_HS      77 /* USB OTG HS global interrupt */
+#define STM32F_IRQ_DCMI        78 /* DCMI global interrupt */
+#define STM32F_IRQ_CRYP        79 /* CRYP crypto global interrupt */
+#define STM32F_IRQ_HASH_RNG    80 /* Hash and Rng global interrupt */
 
-#define STM32_IRQ_FPU 81 /* FPU global Interrupt */
+#define STM32_IRQ_FPU          81 /* FPU global Interrupt */
 
-#define STM32_IRQ_UART7 82 /* UART7 global Interrupt */
-#define STM32_IRQ_UART8 83 /* UART8 global Interrupt */
+#define STM32_IRQ_UART7        82 /* UART7 global Interrupt */
+#define STM32_IRQ_UART8        83 /* UART8 global Interrupt */
 
-#define STM32F_IRQ_SPI4 84 /* SPI4 global Interrupt */
-#define STM32F_IRQ_SPI5 85 /* SPI5 global Interrupt */
-#define STM32F_IRQ_SPI6 86 /* SPI6 global Interrupt */
+#define STM32F_IRQ_SPI4        84 /* SPI4 global Interrupt */
+#define STM32F_IRQ_SPI5        85 /* SPI5 global Interrupt */
+#define STM32F_IRQ_SPI6        86 /* SPI6 global Interrupt */
 
-#define STM32F_IRQ_SAI1 87 /* SAI1 global Interrupt */
-#define STM32F_IRQ_LCD 88 /* LCD-TFT global Interrupt */
-#define STM32F_IRQ_LCD_ERR 89 /* LCD-TFT global error Interrupt */
-#define STM32F_IRQ_DMA2D 90 /* DMA2D global Interrupt */
+#define STM32F_IRQ_SAI1        87 /* SAI1 global Interrupt */
+#define STM32F_IRQ_LCD         88 /* LCD-TFT global Interrupt */
+#define STM32F_IRQ_LCD_ERR     89 /* LCD-TFT global error Interrupt */
+#define STM32F_IRQ_DMA2D       90 /* DMA2D global Interrupt */
 
 #ifndef __ASSEMBLER__
 

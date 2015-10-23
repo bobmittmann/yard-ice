@@ -76,52 +76,62 @@
 
 #define THINKOS_IRQ_WAIT        37
 #define THINKOS_IRQ_REGISTER    38
+#define THINKOS_IRQ_CTL         39
 
-#define THINKOS_MUTEX_ALLOC     39
-#define THINKOS_MUTEX_FREE      40
+#define THINKOS_MUTEX_ALLOC     40
+#define THINKOS_MUTEX_FREE      41
 
-#define THINKOS_SEM_ALLOC       41
-#define THINKOS_SEM_FREE        42
+#define THINKOS_SEM_ALLOC       42
+#define THINKOS_SEM_FREE        43
 
-#define THINKOS_COND_ALLOC      43
-#define THINKOS_COND_FREE       44
+#define THINKOS_COND_ALLOC      44
+#define THINKOS_COND_FREE       45
 
-#define THINKOS_FLAG_ALLOC      45
-#define THINKOS_FLAG_FREE       46
+#define THINKOS_FLAG_ALLOC      46
+#define THINKOS_FLAG_FREE       47
 
-#define THINKOS_EVENT_ALLOC     47
-#define THINKOS_EVENT_FREE      48
+#define THINKOS_EVENT_ALLOC     48
+#define THINKOS_EVENT_FREE      49
 
-#define THINKOS_GATE_ALLOC      49
-#define THINKOS_GATE_FREE       50
+#define THINKOS_GATE_ALLOC      50
+#define THINKOS_GATE_FREE       51
 
-#define THINKOS_JOIN            51
-#define THINKOS_PAUSE           52
-#define THINKOS_RESUME          53
-#define THINKOS_CANCEL          54
+#define THINKOS_JOIN            52
+#define THINKOS_PAUSE           53
+#define THINKOS_RESUME          54
+#define THINKOS_CANCEL          55
 
-#define THINKOS_EXIT            55
+#define THINKOS_EXIT            56
 
-#define THINKOS_CTL             56
+#define THINKOS_CTL             57
 
-#define THINKOS_COMM            57
+#define THINKOS_COMM            58
 
-#define CONSOLE_WRITE     0
-#define CONSOLE_READ      1
-#define CONSOLE_TIMEDREAD 2
-#define CONSOLE_OPEN      3
-#define CONSOLE_CLOSE     4
-#define CONSOLE_DRAIN     5
-#define CONSOLE_IOCTL     6
+#define THINKOS_DBGMON          59
 
-#define COMM_SEND         0
-#define COMM_RECV         1
+#define CONSOLE_WRITE             0
+#define CONSOLE_READ              1
+#define CONSOLE_TIMEDREAD         2
+#define CONSOLE_OPEN              3
+#define CONSOLE_CLOSE             4
+#define CONSOLE_DRAIN             5
+#define CONSOLE_IOCTL             6
+
+#define COMM_SEND                 0
+#define COMM_RECV                 1
 
 #define THINKOS_CTL_ABORT         0
 #define THINKOS_CTL_UDELAY_FACTOR 1
 #define THINKOS_CTL_CLOCKS        2
 #define THINKOS_CTL_SNAPSHOT      3
 #define THINKOS_CTL_TRACE         4
+
+#define THINKOS_IRQ_DISABLE       0
+#define THINKOS_IRQ_ENABLE        1
+#define THINKOS_IRQ_PRIORITY_SET  2
+#define THINKOS_IRQ_SVC_SET       3
+
+#define DBGMON_SIGNAL_IDLE        0
 
 #include <arch/cortex-m3.h>
 
@@ -510,6 +520,21 @@ static inline int __attribute__((always_inline))
 	return THINKOS_SVC3(THINKOS_IRQ_REGISTER, irq, pri, isr);
 }
 
+static inline int __attribute__((always_inline)) 
+	thinkos_irq_enable(int irq) {
+	return THINKOS_SVC2(THINKOS_IRQ_CTL, THINKOS_IRQ_ENABLE, irq);
+}
+
+static inline int __attribute__((always_inline)) 
+	thinkos_irq_disable(int irq) {
+	return THINKOS_SVC2(THINKOS_IRQ_CTL, THINKOS_IRQ_DISABLE, irq);
+}
+
+static inline int __attribute__((always_inline)) 
+	thinkos_irq_priority_set(int irq, int pri) {
+	return THINKOS_SVC3(THINKOS_IRQ_CTL, 
+						THINKOS_IRQ_PRIORITY_SET, irq, pri);
+}
 /* ---------------------------------------------------------------------------
    Console
    ---------------------------------------------------------------------------*/
@@ -596,6 +621,10 @@ thinkos_comm_recv(uint32_t * hdr, void * buf, unsigned int len) {
 static inline void thinkos_yield(void)  {
 	CM3_SCB->icsr = SCB_ICSR_PENDSVSET; /* PendSV rise */
 	asm volatile ("dsb\n"); /* Data synchronization barrier */
+}
+
+static inline void thinkos_dbgmon(unsigned int sig)  {
+	THINKOS_SVC1(THINKOS_DBGMON, sig);
 }
 
 #ifdef __cplusplus

@@ -139,11 +139,15 @@ void thinkos_irq_wait_svc(int32_t * arg);
 
 void thinkos_irq_register_svc(int32_t * arg);
 
+void thinkos_irq_ctl_svc(int32_t * arg);
+
 void thinkos_console_svc(int32_t * arg);
 
 void thinkos_ctl_svc(int32_t * arg);
 
 void thinkos_comm_svc(int32_t * arg);
+
+void thinkos_dbgmon_svc(int32_t * arg);
 
 void thinkos_nosys(int32_t * arg)
 {
@@ -554,6 +558,15 @@ void cm3_svc_isr(void)
 #endif /* CM3_RAM_VECTORS */
 		break;
 
+	case THINKOS_IRQ_CTL:
+#if THINKOS_ENABLE_IRQ_CTL
+		thinkos_irq_ctl_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif /* CM3_RAM_VECTORS */
+		break;
+
+
 /* ----------------------------------------------
  * Dynamic Resource Allocation 
  * --------------------------------------------- */
@@ -690,6 +703,13 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
+	case THINKOS_DBGMON:
+#if THINKOS_ENABLE_MONITOR          
+		thinkos_dbgmon_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
 
 	default:
 		thinkos_nosys(arg);

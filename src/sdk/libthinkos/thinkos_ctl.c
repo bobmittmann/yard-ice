@@ -74,6 +74,8 @@ void thinkos_ctl_svc(int32_t * arg)
 
 	arg[0] = 0;
 	
+	DCC_LOG(LOG_TRACE, ".........................");
+
 	switch (req) {
 	case THINKOS_CTL_CLOCKS:
 		ptr = (const uint32_t **)arg[1];
@@ -87,9 +89,20 @@ void thinkos_ctl_svc(int32_t * arg)
 
 	case THINKOS_CTL_ABORT:
 		DCC_LOG(LOG_WARNING, "Abort!");
+#if 0
+		{
+			volatile int * ptr = (int *)(0x30000000);
+			int i;
+
+			i = ptr[0];
+			(void)i;
+		}
+#endif
 		__thinkos_pause_all();
 		__thinkos_defer_sched();
+#if THINKOS_ENABLE_MONITOR
 		__bkpt();
+#endif
 		break;
 
 	case THINKOS_CTL_TRACE:

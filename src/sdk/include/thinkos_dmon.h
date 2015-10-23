@@ -34,21 +34,21 @@
 
 #include <sys/usb-dev.h>
 
-enum dmon_ev_no {
-	DMON_COMM_RCV = 0,
-	DMON_COMM_EOT = 1,
-	DMON_COMM_CTL = 2,
+enum dbgmon_event {
+	DMON_COMM_RCV     = 0,
+	DMON_COMM_EOT     = 1,
+	DMON_COMM_CTL     = 2,
 
-	DMON_RX_PIPE  = 3,
-	DMON_TX_PIPE  = 4,
-	DMON_ALARM    = 5,
+	DMON_RX_PIPE      = 3,
+	DMON_TX_PIPE      = 4,
+	DMON_ALARM        = 5,
 
 	DMON_THREAD_STEP  = 8,
 	DMON_THREAD_FAULT = 12,
-	DMON_BREAKPOINT = 16,
-	DMON_IDLE     = 29,
-	DMON_EXCEPT   = 30,
-	DMON_RESET    = 31
+	DMON_BREAKPOINT   = 16,
+	DMON_IDLE         = 29,
+	DMON_EXCEPT       = 30,
+	DMON_RESET        = 31
 };
 
 struct dmon_comm;

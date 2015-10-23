@@ -60,45 +60,67 @@ _Pragma ("GCC optimize (\"O2\")")
 #endif
 
 
-struct thinkos_except thinkos_except_buf __attribute__((section(".heap")));
-
-static inline void __attribute__((always_inline)) __xcpt_context_save(void)
+static inline void __attribute__((always_inline)) 
+__xcpt_context_save(struct thinkos_except * xcpt)
 {
-	register struct thinkos_except * xcpt asm("r0");
-	register uint32_t psp asm("r1");
-	register uint32_t msp asm("r2");
+	register uint32_t * ctx asm("r0");
+	register uint32_t sp asm("r1");
+	register uint32_t tmp asm("r2");
 	register uint32_t lr asm("r3");
 
-	xcpt = &thinkos_except_buf;
+	ctx = (uint32_t *)&xcpt->ctx;
 
-	asm volatile ("mov    %1, %3\n"
-				  "stmia  %1, {r4-r11}\n"
-				  "add    %1, %1, #32\n"
+	asm volatile ("mov    %2, %3\n"
+				  "stmia  %2, {r4-r11}\n"
+				  "add    %2, %2, #32\n"
 				  "tst    lr, #4\n" 
 				  "ite    eq\n" 
 				  "mrseq  %0, MSP\n" 
 				  "mrsne  %0, PSP\n" 
 				  "ldmia  %0, {r4-r11}\n"
-				  "stmia  %1, {r4-r11}\n"
-
-				  "mrs    %0, PSP\n" 
-				  "tst    lr, #4\n" 
-				  "it     ne\n" 
-				  "subne  %0, %0, #32\n"
-
-				  "mrs    %1, MSP\n" 
-				  "sub    %1, %1, #32\n"
-				  "mov    %2, lr\n"
-				  : "=r" (psp), "=r" (msp), "=r" (lr) : "r" (xcpt) );
+				  "stmia  %2, {r4-r11}\n"
+				  "mov    %1, lr\n"
+				  : "=r" (sp), "=r" (lr), "=r" (tmp) : "r" (ctx) );
 
 	xcpt->ret = lr;
-	xcpt->psp = psp;
-	xcpt->msp = msp;
 	xcpt->ipsr = cm3_ipsr_get();
+
+	if (xcpt->ret == CM3_EXC_RET_THREAD_PSP)
+		xcpt->psp = sp - 8 * 4;
+	else
+		xcpt->psp = cm3_psp_get();
+
+	xcpt->msp = cm3_msp_get() - 8 * 4;
+
 	xcpt->icsr = CM3_SCB->icsr;
+
 	/* record the current thread */
 	xcpt->thread_id = thinkos_rt.active;
 }
+
+#if 0
+static inline void __attribute__((always_inline, noreturn)) 
+__xcpt_context_restore(struct thinkos_except * xcpt)
+{
+	register uint32_t * ctx asm("r0");
+	register uint32_t sp asm("r1");
+	register uint32_t lr asm("r3");
+
+	ctx = (uint32_t *)&xcpt->ctx;
+	sp = (xcpt->ret == CM3_EXC_RET_THREAD_PSP) ? xcpt->psp : xcpt->msp;
+	lr = xcpt->ret;
+
+	asm volatile ("add    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "stmia  %0, {r4-r11}\n"
+				  "sub    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "mov    lr, %1\n"
+				  "bx     lr\n"
+				  : : "r" (sp), "r" (lr), "r" (ctx) );
+	for(;;);
+}
+#endif
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
 
@@ -106,16 +128,12 @@ static inline void __attribute__((always_inline)) __xcpt_context_save(void)
 #error "Need THINKOS_ENABLE_THREAD_VOID"
 #endif
 
-void __void_task(struct thinkos_except * xcpt)
-{
-	DCC_LOG(LOG_TRACE, "=============");
-	for(;;);
-}
-
-void __xcpt_thinkos_process(struct thinkos_except * xcpt)
+void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 {
 	uint32_t icsr;
 	int ipsr;
+
+	cm3_cpsid_i();
 
 	__idump(__func__, cm3_ipsr_get());
 
@@ -169,17 +187,12 @@ void __xcpt_thinkos_process(struct thinkos_except * xcpt)
 
 	thinkos_exception_dsr(xcpt);
 
-	__xcpt_systick_int_enable();
-	cm3_cpsie_i();
-
-#if 0
 #if THINKOS_SYSRST_ONFAULT
 	cm3_sysrst();
 #else
 	__xcpt_systick_int_enable();
 	cm3_cpsie_i();
 	for(;;);
-#endif
 #endif
 }
 
@@ -204,7 +217,6 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 
 	if ((irq = __xcpt_next_active_irq(ipsr - 16)) >= 0) {
 		xpsr = 0x01000000 + irq + 16;
-		DCC_LOG1(LOG_TRACE, "IRQ %d", irq);
 	} else if ((shcsr = CM3_SCB->shcsr) & (SCB_SHCSR_SYSTICKACT | 
 										   SCB_SHCSR_PENDSVACT | 
 										   SCB_SHCSR_MONITORACT | 
@@ -212,40 +224,19 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 										   SCB_SHCSR_USGFAULTACT |  
 										   SCB_SHCSR_BUSFAULTACT |
 										   SCB_SHCSR_MEMFAULTACT)) {
-
-		if (ipsr == CM3_EXCEPT_BUS_FAULT && shcsr & SCB_SHCSR_BUSFAULTACT) {
-			/* currently servicing bus fault */
-			shcsr &= ~SCB_SHCSR_BUSFAULTACT;
-		}
-		if (ipsr == CM3_EXCEPT_USAGE_FAULT && shcsr & SCB_SHCSR_USGFAULTACT) {
-			/* currently servicing usage fault */
-			shcsr &= ~SCB_SHCSR_USGFAULTACT;
-		}
-		if (ipsr == CM3_EXCEPT_MEM_MANAGE && shcsr & SCB_SHCSR_MEMFAULTACT) {
-			/* currently servicing memory management fault */
-			shcsr &= ~SCB_SHCSR_MEMFAULTACT;
-		}
-
 		if (shcsr & SCB_SHCSR_MEMFAULTACT) {
 			xpsr = 0x01000000 + CM3_EXCEPT_MEM_MANAGE;
-			DCC_LOG(LOG_TRACE, "MEM_MANAGE");
 		} else if (shcsr & SCB_SHCSR_BUSFAULTACT) {
 			xpsr = 0x01000000 + CM3_EXCEPT_BUS_FAULT;
-			DCC_LOG(LOG_TRACE, "BUS_FAULT");
 		} else if (shcsr & SCB_SHCSR_USGFAULTACT) {
-			DCC_LOG(LOG_TRACE, "USAGE_FAULT");
 			xpsr = 0x01000000 + CM3_EXCEPT_USAGE_FAULT;
 		} else if (shcsr & SCB_SHCSR_SVCALLACT) {
-			DCC_LOG(LOG_TRACE, "SVC");
 			xpsr = 0x01000000 + CM3_EXCEPT_SVC;
 		} else if (shcsr & SCB_SHCSR_MONITORACT) {
-			DCC_LOG(LOG_TRACE, "DEBUG_MONITOR");
 			xpsr = 0x01000000 + CM3_EXCEPT_DEBUG_MONITOR;
 		} else if (shcsr & SCB_SHCSR_PENDSVACT) {
-			DCC_LOG(LOG_TRACE, "PENDSV");
 			xpsr = 0x01000000 + CM3_EXCEPT_PENDSV;
 		} else if (shcsr & SCB_SHCSR_SYSTICKACT) {
-			DCC_LOG(LOG_TRACE, "SYSTICK");
 			xpsr = 0x01000000 + CM3_EXCEPT_SYSTICK;
 		} else 
 			xpsr = 0x01000000;
@@ -258,9 +249,8 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 
 	icsr = CM3_SCB->icsr;
 	if (icsr & SCB_ICSR_RETTOBASE) {
-		__xcpt_thinkos_process(xcpt);
 		sf->xpsr = 0x01000000;
-		sf->pc = (uint32_t)__void_task;
+		sf->pc = (uint32_t)__xcpt_thread;
 		cm3_psp_set((uint32_t)sf);
 		ret = CM3_EXC_RET_THREAD_PSP;
 	} else {
@@ -384,9 +374,8 @@ static void __dump_ufsr(void)
 }
 #endif
 
-void __hard_fault(void)
+void __hard_fault(struct thinkos_except * xcpt)
 {
-	struct thinkos_except * xcpt = &thinkos_except_buf;
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t hfsr;
 
@@ -486,14 +475,11 @@ void __hard_fault(void)
 }
 
 #if	THINKOS_ENABLE_BUSFAULT 
-void __bus_fault(void)
+void __bus_fault(struct thinkos_except * xcpt)
 {
-	struct thinkos_except * xcpt = &thinkos_except_buf;
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t bfsr = SCB_CFSR_BFSR_GET(scb->cfsr);
 	(void)bfsr;
-
-	xcpt->type = CM3_EXCEPT_BUS_FAULT;
 
 	DCC_LOG(LOG_ERROR, "!!! Bus fault !!!");
 	DCC_LOG2(LOG_ERROR, "BFSR=%08X BFAR=%08x", bfsr, scb->bfar);
@@ -523,14 +509,11 @@ void __bus_fault(void)
 #endif /* THINKOS_ENABLE_BUSFAULT  */
 
 #if	THINKOS_ENABLE_USAGEFAULT 
-void __usage_fault(void)
+void __usage_fault(struct thinkos_except * xcpt)
 {
-	struct thinkos_except * xcpt = &thinkos_except_buf;
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t ufsr = SCB_CFSR_UFSR_GET(scb->cfsr);
 	(void)ufsr;
-
-	xcpt->type = CM3_EXCEPT_USAGE_FAULT;
 
 	DCC_LOG(LOG_ERROR, "Usage fault!");
 	DCC_LOG1(LOG_ERROR, "UFSR=%08X", ufsr);
@@ -559,15 +542,11 @@ void __usage_fault(void)
 #endif /* THINKOS_ENABLE_USAGEFAULT  */
 
 #if THINKOS_ENABLE_MPU
-void __mem_manag(void)
+void __mem_manag(struct thinkos_except * xcpt)
 {
-	struct thinkos_except * xcpt = &thinkos_except_buf;
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t mmfsr = SCB_CFSR_MMFSR_GET(scb->cfsr);
 	(void)mmfsr ;
-
-	xcpt->type = CM3_EXCEPT_MEM_MANAGE;
-
 	DCC_LOG(LOG_ERROR, "Mem Management!");
 	DCC_LOG2(LOG_ERROR, "MMFSR=%08X MMFAR=%08x", mmfsr, scb->mmfar);
 	if (mmfsr) {
@@ -603,25 +582,18 @@ struct thinkos_except * __thinkos_except_buf(void)
 	return &thinkos_except_buf;
 }
 
-void __attribute__((naked, noreturn)) __xcpt_process(void)
-{
-	DCC_LOG(LOG_TRACE, "...");
-#if (THINKOS_UNROLL_EXCEPTIONS) 
-	cm3_cpsid_i();
-	__xcpt_irq_disable_all();
-	__xcpt_systick_int_disable();
-	__xcpt_unroll(&thinkos_except_buf);
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
-}
-
 #if	THINKOS_ENABLE_BUSFAULT 
 void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
-	__xcpt_context_save();
-	__bus_fault();
+	cm3_cpsid_i();
+	__xcpt_context_save(&thinkos_except_buf);
+	thinkos_except_buf.type = CM3_EXCEPT_BUS_FAULT;
+	__bus_fault(&thinkos_except_buf);
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
-	__xcpt_process();
+	__xcpt_irq_disable_all();
+	__xcpt_systick_int_disable();
+	__xcpt_unroll(&thinkos_except_buf);
 #else /* THINKOS_UNROLL_EXCEPTIONS */
 	thinkos_exception_dsr(&thinkos_except_buf);
  #if THINKOS_SYSRST_ONFAULT
@@ -636,11 +608,15 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 #if	THINKOS_ENABLE_USAGEFAULT 
 void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 {
-	__xcpt_context_save();
-	__usage_fault();
+	cm3_cpsid_i();
+	__xcpt_context_save(&thinkos_except_buf);
+	thinkos_except_buf.type = CM3_EXCEPT_USAGE_FAULT;
+	__usage_fault(&thinkos_except_buf);
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
-	__xcpt_process();
+	__xcpt_irq_disable_all();
+	__xcpt_systick_int_disable();
+	__xcpt_unroll(&thinkos_except_buf);
 #else /* THINKOS_UNROLL_EXCEPTIONS */
 	thinkos_exception_dsr(&thinkos_except_buf);
  #if THINKOS_SYSRST_ONFAULT
@@ -655,8 +631,10 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 #if THINKOS_ENABLE_MPU
 void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 {
-	__xcpt_context_save();
-	__mem_manag();
+	cm3_cpsid_i();
+	__xcpt_context_save(&thinkos_except_buf);
+	thinkos_except_buf.type = CM3_EXCEPT_MEM_MANAGE;
+	__mem_manag(&thinkos_except_buf);
 #if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_irq_disable_all();
 	__xcpt_systick_int_disable();
@@ -674,8 +652,8 @@ void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
-	__xcpt_context_save();
-	__hard_fault();
+	__xcpt_context_save(&thinkos_except_buf);
+	__hard_fault(&thinkos_except_buf);
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_irq_disable_all();

@@ -1709,8 +1709,5 @@ void gdb_init(void (* shell)(struct dmon_comm * ))
 	if (shell == NULL)
 		shell = gdb_task;
 	gdb->shell_task = shell;
-
-	/* enable the FPB unit */
-	CM3_FPB->ctrl = FP_KEY | FP_ENABLE;
 }
 

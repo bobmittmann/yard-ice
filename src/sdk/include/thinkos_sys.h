@@ -57,6 +57,10 @@
 #define THINKOS_IRQ_MAX                 80
 #endif
 
+#ifndef THINKOS_ENABLE_IRQ_CTL
+#define THINKOS_ENABLE_IRQ_CTL          0
+#endif
+
 #ifndef THINKOS_THREADS_MAX 
 #define THINKOS_THREADS_MAX             8
 #endif

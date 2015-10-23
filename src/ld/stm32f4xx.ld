@@ -214,16 +214,15 @@ SECTIONS
 	. = ALIGN(4);
 	PROVIDE (__bss_end = . );
 
-	/* advance location counter to the next 32-bit boundary */
 	.heap :
 	{
 		PROVIDE (__heap_start = . );
 		/* all .heap sections  */
 		*(.heap .heap*)
-		/* advance location counter to the next 32-bit boundary */
 	} >"DATA"
 
+	/* advance location counter to the next 32-bit boundary */
 	. = ALIGN(4);
-	PROVIDE (__heap_end = . );
+	PROVIDE (__heap_base = . );
 }
 

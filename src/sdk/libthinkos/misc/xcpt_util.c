@@ -236,7 +236,7 @@ void __mpudump(void)
 	int i;
 
 	DCC_LOG(LOG_TRACE, "MPU _________________________________"); 
-	DCC_LOG(LOG_TRACE, "ctrl=%08x", mpu->ctrl);
+	DCC_LOG1(LOG_TRACE, "ctrl=%08x", mpu->ctrl);
 
 	for (i = 0; i < 8; ++i) {
 		uint32_t size;

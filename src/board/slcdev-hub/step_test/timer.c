@@ -43,7 +43,8 @@ void __attribute__((constructor)) usleep_timer_init(void)
 	tim->dier = TIM_UIE; /* Update interrupt enable */
 	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS;
 	tim->sr = 0;
-	cm3_irq_pri_set(STM32F_IRQ_TIM10, IRQ_PRIORITY_HIGH);
+//	cm3_irq_pri_set(STM32F_IRQ_TIM10, IRQ_PRIORITY_HIGH);
+	thinkos_irq_priority_set(STM32F_IRQ_TIM10, IRQ_PRIORITY_HIGH);
 }
 
 void usleep(unsigned int usec)

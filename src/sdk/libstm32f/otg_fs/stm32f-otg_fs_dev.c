@@ -37,6 +37,8 @@
 #include <sys/usb-dev.h>
 #include <sys/param.h>
 
+#include <thinkos.h>
+
 #include <sys/dcclog.h>
 
 #ifndef STM32_ENABLE_OTG_FS 
@@ -674,7 +676,11 @@ void otg_power_on(struct stm32f_otg_fs * otg_fs)
 	otg_vbus_connect(true);
 
 	/* Enable Cortex interrupt */
+#if 0
 	cm3_irq_enable(STM32F_IRQ_OTG_HS);
+#else
+	thinkos_irq_enable(STM32F_IRQ_OTG_HS);
+#endif
 }
 
 void otg_power_off(struct stm32f_otg_fs * otg_fs)
@@ -727,18 +733,14 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 		OTG_FS_SOFM |
 		OTG_FS_MMISM;
 
-//	otg_fs_connect(otg_hs);
 	/* Enable Cortex interrupt */
+#if 0
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+#else
+	thinkos_irq_enable(STM32F_IRQ_OTG_FS);
+#endif
 
 	DCC_LOG(LOG_INFO, "----------------------------------------");
-
-//	mdelay(500);
-
-//	DCC_LOG(LOG_INFO, "........................................");
-
-//	mdelay(500);
-
 	DCC_LOG(LOG_INFO, "Done.");
 
 	return 0;
@@ -946,7 +948,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	uint32_t siz;
 	int i;
 
-	DCC_LOG(LOG_MSG, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+	DCC_LOG(LOG_INFO, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 
 	/* Clear the Remote Wake-up Signaling */
 	otg_fs->dctl &= ~OTG_FS_RWUSIG;
@@ -1367,6 +1369,7 @@ void stm32f_otg_fs_isr(void)
 				 OTG_FS_ENUMSPD_GET(dsts),
 				 otg_fs->pcgcctl & OTG_FS_PHYSUSP ? "PHYSUSP" : "");
 	}
+
 #if DEBUG
 	if (gintsts & OTG_FS_GONAKEFF) {
 		DCC_LOG(LOG_MSG, "<GONAKEFF>");

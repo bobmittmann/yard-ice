@@ -80,36 +80,9 @@ static inline void __attribute__((always_inline)) __wait(void) {
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
-#if (THINKOS_ENABLE_MONITOR)
-	register struct cm3_dcb * dcb asm("r3");
-	register uint32_t * sigptr asm("r2");
-	register uint32_t sigval asm("r1");
-	register uint32_t demcr asm("r0");
-#endif
-
-	DCC_LOG(LOG_TRACE, "<<< Idle >>>");
-
-#if (THINKOS_ENABLE_MONITOR)
-	dcb = CM3_DCB;
-	sigval = 1;
-	sigptr = CM3_BITBAND_MEM(&thinkos_dmon_rt.events, DMON_IDLE);
-#endif
 	for (;;) {
 #if (THINKOS_ENABLE_MONITOR)
-		/* check if the monitor is requesting a notification when
-		   entering IDLE state */
-		asm volatile ("ldr %0, [%1, #12]\n" 
-					  : "=r" (demcr) : "r"(dcb));
-		if (demcr & DCB_DEMCR_MON_REQ) {
-			/* Call the monitor by a pending a monitor interrupt */
-			demcr = (demcr | DCB_DEMCR_MON_PEND) & ~DCB_DEMCR_MON_REQ;
-			asm volatile (
-						  "str %1, [%0]\n" 
-						  "str %3, [%2, #12]\n" 
-						  "isb\n" 
-						  :  : "r"(sigptr), "r"(sigval), "r"(dcb), "r"(demcr) 
-						  : );
-		}
+		thinkos_dbgmon(DBGMON_SIGNAL_IDLE);
 #endif
 #if THINKOS_ENABLE_IDLE_WFI
 		asm volatile ("wfi\n"); /* wait for interrupt */

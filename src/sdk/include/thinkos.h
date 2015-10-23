@@ -107,6 +107,7 @@ extern "C" {
  */
 int thinkos_init(unsigned int opt);
 
+void thinkos_userland(void);
 
 /** @defgroup threads Threads
  *

@@ -41,7 +41,7 @@ void io_init(void)
 	asm volatile ("mov r1, #4\r\n" : : : "r1");
 	asm volatile ("mov r1, #5\r\n" : : : "r1");
 
-	thinkos_sysinfo_udelay_factor(&udelay_factor);
+	thinkos_udelay_factor(&udelay_factor);
 
 	asm volatile ("mov r0, #5\r\n" : : : "r0");
 	asm volatile ("mov r0, #6\r\n" : : : "r0");

@@ -106,7 +106,8 @@ void board_softreset(void)
 bool board_autoboot(uint32_t tick)
 {
 	/* Time window autoboot */
-	return (tick < 40) ? false : true;
+//	return (tick < 40) ? false : true;
+	return (tick == 8) ? true : false;
 }
 
 void board_on_appload(void)
