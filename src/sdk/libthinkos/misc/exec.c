@@ -37,7 +37,7 @@ void __thinkos_exec(int thread_id, void (* func)(void *),
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
 	__thinkos_thread_abort(thread_id);
 
-	DCC_LOG1(LOG_TRACE, "__thinkos_thread_init(arg=%p)", arg);
+	DCC_LOG2(LOG_TRACE, "__thinkos_thread_init(func=%p arg=%p)", func, arg);
 	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, arg);
 
 #if THINKOS_ENABLE_THREAD_INFO

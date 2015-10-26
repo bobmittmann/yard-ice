@@ -91,20 +91,17 @@
 #define THINKOS_ENABLE_PROFILING        1
 
 #define THINKOS_ENABLE_MONITOR          1
-
 #define THINKOS_ENABLE_CONSOLE          1
 
 #define THINKOS_ENABLE_DEBUG_STEP       1
-
 #define THINKOS_ENABLE_DEBUG_FAULT      1
 
 #define THINKOS_ENABLE_BUSFAULT         1
-
 #define THINKOS_ENABLE_USAGEFAULT       1
-
 #define THINKOS_UNROLL_EXCEPTIONS       1
 
 #define THINKOS_ENABLE_MPU              1
+#define THINKOS_ENABLE_ESCALATE         1
 #define THINKOS_ENABLE_FPU              0
     
 #define THINKOS_ENABLE_THREAD_VOID      1

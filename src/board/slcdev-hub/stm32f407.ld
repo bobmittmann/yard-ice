@@ -32,7 +32,7 @@ MEMORY
 	sram0 (rw) : ORIGIN = 0x20000000, LENGTH = 112K
 	sram1 (rw) : ORIGIN = 0x2001c000, LENGTH = 16K
 	sram2 (rw) : ORIGIN = 0x10000000, LENGTH = 64K
-	dcclog (r) : ORIGIN = 0x40000000, LENGTH = 1024K
+	dcclog (r) : ORIGIN = 0x50000000, LENGTH = 1024K
 }
 
 REGION_ALIAS("CODE", flash);

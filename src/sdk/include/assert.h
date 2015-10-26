@@ -29,9 +29,11 @@ extern void __assert_fail(const char *__assertion, const char *__file,
 						  unsigned int __line, const char *__function) 
 			__attribute__ ((__noreturn__));
 
+#ifndef	assert
 #define assert(EXPR) ((EXPR) ? (void)0 : \
 					  __assert_fail(__STRING(EXPR), \
 									__FILE__, __LINE__, __func__))
+#endif
 
 #endif /* NDEBUG.  */
 

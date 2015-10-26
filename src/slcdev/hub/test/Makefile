@@ -53,6 +53,6 @@ LDFLAGS = -Wl,--gc-sections
 MACH = stm32f427
 THINKAPP = 1
 LDSCRIPT = slcdev-hub.ld
-LOAD_ADDR = 0x08010000
+LOAD_ADDR = 0x08020000
 include ../../../mk/stm32f4xx.mk
 

@@ -142,26 +142,25 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 		char *  buf;
 		int n;
 
-		if (content_len == 0) {
-			DCC_LOG(LOG_ERROR, "invalid content length!");
-			return -1;
-		}
-
 		DCC_LOG(LOG_TRACE, "application/x-www-form-urlencoded");
 
-		if ((len = http_content_enqueue(ctl)) <= 0) {
-			return len;
-		}
-		buf = (char *)ctl->rcvq.buf;
+		if (content_len == 0) {
+			DCC_LOG(LOG_WARNING, "zero content length!");
+			n = 0;
+		} else {
+			if ((len = http_content_enqueue(ctl)) <= 0) {
+				return len;
+			}
+			buf = (char *)ctl->rcvq.buf;
 
-		n = http_decode_uri_query(buf, len, ctl->qrylst, HTTPD_QUERY_LST_MAX);
-		if (n < 0) {
-			/* FIXME: return error code */
-			DCC_LOG(LOG_ERROR, "http_decode_uri_query() failed!");
-			return -1;
+			n = http_decode_uri_query(buf, len, ctl->qrylst, HTTPD_QUERY_LST_MAX);
+			if (n < 0) {
+				/* FIXME: return error code */
+				DCC_LOG(LOG_ERROR, "http_decode_uri_query() failed!");
+				return -1;
+			}
 		}
 		ctl->qrycnt = n;
-
 	} else if (content_type == MULTIPART_FORM_DATA) {
 		DCC_LOG(LOG_TRACE, "multipart/form-data");
 

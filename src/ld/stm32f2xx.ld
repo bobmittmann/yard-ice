@@ -21,8 +21,8 @@
 
 _stack_top = ORIGIN(sram2) + LENGTH(sram2);
 _stack = _stack_top - DEFINED(ice_trace_init) * 0x50;
-ice_comm_blk = _stack;
 _stack_limit = ORIGIN(sram2);
+ice_comm_blk = _stack;
 
 EXTERN(_stack)
 EXTERN(_reset)

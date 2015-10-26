@@ -20,7 +20,10 @@
  */
 
 
-_stack = ORIGIN(sram) + LENGTH(sram);
+_stack_top = ORIGIN(sram) + LENGTH(sram);
+_stack = _stack_top - DEFINED(ice_trace_init) * 0x50;
+_stack_limit = ORIGIN(sram);
+ice_comm_blk = _stack;
 
 EXTERN(_stack)
 EXTERN(_reset)

@@ -53,6 +53,7 @@ static int sdp_parse_attribute(struct rtsp_client * rtsp, char * s, int len)
 	if (strncmp(s, "rtpmap", 6) == 0) {
 		unsigned int fmt;
 		char * codec;
+		(void)fmt;
 
 		fmt = strtoul(strtok(&s[6], " "), NULL, 10);
 		codec = strtok(NULL, " ");

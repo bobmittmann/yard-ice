@@ -144,10 +144,9 @@ void __xcpt_thinkos_process(struct thinkos_except * xcpt)
 
 	/* set the active thread to void */
 	thinkos_rt.active = THINKOS_THREAD_VOID;
+
 	/* reset the IDLE thread */
-	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
-	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
-	thinkos_idle.ctx.xpsr = 0x01000000;
+	__thinkos_idle_init();
 
 #if ((THINKOS_THREADS_MAX) < 32) 
 	if (thinkos_rt.wq_ready != (1 << (THINKOS_THREADS_MAX))) {
@@ -190,6 +189,7 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 	uint32_t ret;
 	uint32_t xpsr;
 	uint32_t shcsr;
+	uint32_t sp;
 	int ipsr;
 	int irq;
 
@@ -253,7 +253,8 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 		xpsr = 0x01000000;
 	}
 
-	sf = (struct cm3_except_context *)&thinkos_idle.ctx;
+	sp = (uint32_t)thinkos_except_stack + sizeof(thinkos_except_stack);
+	sf = (struct cm3_except_context *)sp;
 	sf->r0 = (uint32_t)xcpt;
 
 	icsr = CM3_SCB->icsr;

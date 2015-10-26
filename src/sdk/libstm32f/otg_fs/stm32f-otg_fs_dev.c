@@ -740,8 +740,7 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	thinkos_irq_enable(STM32F_IRQ_OTG_FS);
 #endif
 
-	DCC_LOG(LOG_INFO, "----------------------------------------");
-	DCC_LOG(LOG_INFO, "Done.");
+	DCC_LOG(LOG_TRACE, "done ----------------------------------------");
 
 	return 0;
 }

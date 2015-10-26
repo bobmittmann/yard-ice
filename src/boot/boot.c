@@ -98,30 +98,23 @@ int main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
+	udelay(10000);
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	DCC_LOG(LOG_TRACE, "3. board_init().");
+	DCC_LOG(LOG_TRACE, "3. thinkos_mpu_init()");
+	thinkos_mpu_init(0x1000);
+
+	DCC_LOG(LOG_TRACE, "4. board_init().");
 	this_board.init();
 
-	DCC_LOG(LOG_TRACE, "4. monitor_init()");
+	DCC_LOG(LOG_TRACE, "5. monitor_init()");
 	monitor_init();
 
-	DCC_LOG(LOG_TRACE, "5. thinkos_userland()");
+	DCC_LOG(LOG_TRACE, "6. thinkos_userland()");
 	thinkos_userland();
 
-	thinkos_sleep(1000);
-
-	DCC_LOG(LOG_TRACE, "6. thinkos_abort()");
-	thinkos_abort();
-
-#if 0
-	for (;;) {
-		thinkos_sleep(250);
-		stm32_gpio_set(LED1);
-		thinkos_sleep(250);
-		stm32_gpio_clr(LED1);
-	}
-#endif
+	DCC_LOG(LOG_TRACE, "7. thinkos_thread_abort()");
+	thinkos_thread_abort(thinkos_thread_self());
 
 	return 0;
 }

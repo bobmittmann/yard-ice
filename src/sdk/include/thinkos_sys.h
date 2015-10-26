@@ -745,17 +745,13 @@ struct thinkos_except {
  * Idle thread
  * --------------------------------------------------------------------------*/
 
-struct thinkos_except_and_idle {
-	uint32_t except_stack[(THINKOS_EXCEPT_STACK_SIZE - 
-						   sizeof(struct thinkos_context)) / 4];
-	struct thinkos_context ctx;
-} __attribute__ ((aligned (8)));
-
 extern struct thinkos_rt thinkos_rt;
 
-extern struct thinkos_except_and_idle thinkos_idle;
-
 extern struct thinkos_except thinkos_except_buf;
+
+extern uint32_t thinkos_except_stack[THINKOS_EXCEPT_STACK_SIZE / 4];
+
+extern uint32_t thinkos_idle_stack[8];
 
 extern uint32_t * const thinkos_obj_alloc_lut[];
 
@@ -1029,6 +1025,8 @@ void __thinkos_memcpy32(void * __dst, const void * __src,
 						unsigned int __len);
 
 void __thinkos_memset32(void * __dst, uint32_t __val, unsigned int __len);
+
+void __thinkos_idle_init(void);
 
 void __thinkos_reset(void);
 

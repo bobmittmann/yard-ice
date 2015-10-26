@@ -44,7 +44,7 @@ struct thinkos_rt thinkos_rt;
    xpsr, pc, lr, r12. The other registers are not used at any time. We 
    claim the space avalilable for this registers as part of the exception 
    stack. */
-struct thinkos_except_and_idle __attribute__((aligned(8))) thinkos_idle;
+uint32_t thinkos_except_stack[THINKOS_EXCEPT_STACK_SIZE / 4];
 
 #if THINKOS_ENABLE_SCHED_DEBUG
 static inline void __attribute__((always_inline)) 
@@ -73,22 +73,6 @@ static inline void __attribute__((always_inline)) __wait(void) {
 				  "1:\n" : : : "r3"); 
 }
 #endif
-
-/* -------------------------------------------------------------------------- 
- * Idle task
- * --------------------------------------------------------------------------*/
-
-void __attribute__((noreturn, naked)) thinkos_idle_task(void)
-{
-	for (;;) {
-#if (THINKOS_ENABLE_MONITOR)
-		thinkos_dbgmon(DBGMON_SIGNAL_IDLE);
-#endif
-#if THINKOS_ENABLE_IDLE_WFI
-		asm volatile ("wfi\n"); /* wait for interrupt */
-#endif
-	}
-}
 
 /* -------------------------------------------------------------------------- 
  * Scheduler

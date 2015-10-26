@@ -89,7 +89,7 @@ void thinkos_terminate_svc(struct cm3_except_context * ctx)
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (thread_id >= THINKOS_THREADS_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", thread_id);
 		ctx->r0 = THINKOS_EINVAL;
 		return;
 	}

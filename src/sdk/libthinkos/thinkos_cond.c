@@ -75,8 +75,11 @@ void thinkos_cond_wait_svc(int32_t * arg)
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (cond >= THINKOS_COND_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
+		DCC_LOG2(LOG_ERROR, "<%d> invalid conditional variable %d!", self, cwq);
 		arg[0] = THINKOS_EINVAL;
+#if THINKOS_ENABLE_MONITOR
+		__bkpt();
+#endif
 		return;
 	}
 	if (mutex >= THINKOS_MUTEX_MAX) {
@@ -86,8 +89,11 @@ void thinkos_cond_wait_svc(int32_t * arg)
 	}
 #if THINKOS_ENABLE_COND_ALLOC
 	if (__bit_mem_rd(thinkos_rt.cond_alloc, cond) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
+		DCC_LOG2(LOG_ERROR, "<%d> invalid conditional variable %d!", self, cwq);
 		arg[0] = THINKOS_EINVAL;
+#if THINKOS_ENABLE_MONITOR
+		__bkpt();
+#endif
 		return;
 	}
 #endif

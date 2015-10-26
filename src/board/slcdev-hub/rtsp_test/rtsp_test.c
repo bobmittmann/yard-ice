@@ -40,6 +40,7 @@
 
 #include <thinkos.h>
 #include <sys/console.h>
+#include <sys/delay.h>
 
 #include <trace.h>
 
@@ -49,6 +50,12 @@
 void tcpip_init(void);
 int webserver_start(void);
 
+int stm32f_get_esn(void * arg)
+{
+	uint64_t * esn = (uint64_t *)arg;
+	*esn = *((uint64_t *)STM32F_UID);
+	return 0;
+}
 int network_config(void)
 {
 	struct ifnet * ifn;
@@ -63,7 +70,10 @@ int network_config(void)
 	uint64_t esn;
 	int dhcp;
 
-	esn = *((uint64_t *)STM32F_UID);
+	/* The UID register is located in a system area not mapped
+	   in the MPU user region. We need to escalate the privilege to 
+	   have access to this area. */
+	thinkos_escalate(stm32f_get_esn, &esn);
 
 	ethaddr[0] = ((esn >>  0) & 0xfc) | 0x02; /* Locally administered MAC */
 	ethaddr[1] = ((esn >>  8) & 0xff);
@@ -82,7 +92,7 @@ int network_config(void)
 	if (1) {
 		printf("IPCFG not set, using defaults!\n");
 		/* default configuration */
-		strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 0");
+		strcpy(s, "192.168.10.100 255.255.255.0 192.168.10.254 0");
 		/* set the default configuration */
 		setenv("IPCFG", s, 1);
 	} else {
@@ -204,6 +214,8 @@ int main(int argc, char ** argv)
 {
 
 	uint32_t clk;
+
+	thinkos_udelay_factor(&udelay_factor);
 
 	stdio_init();
 

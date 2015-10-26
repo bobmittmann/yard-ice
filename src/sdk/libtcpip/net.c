@@ -36,6 +36,8 @@
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
 
+#include <assert.h>
+
 int32_t net_mutex;
 
 void tcp_init(void);
@@ -44,6 +46,8 @@ void udp_init(void);
 void tcpip_init(void)
 {
 	net_mutex = thinkos_mutex_alloc();
+
+	assert(net_mutex > 0);
 
 	tcpip_net_lock();
 

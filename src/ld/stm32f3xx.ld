@@ -20,9 +20,11 @@
  */
 
 
-_stack = ORIGIN(ccm) + LENGTH(ccm);
+_stack_top = ORIGIN(ccm) + LENGTH(ccm);
+_stack = _stack_top - DEFINED(ice_trace_init) * 0x50;
 _stack_limit = ORIGIN(ccm);
 __heap_end = ORIGIN(sram) + LENGTH(sram);
+ice_comm_blk = _stack;
 
 EXTERN(_stack)
 EXTERN(_reset)
@@ -195,6 +197,16 @@ SECTIONS
 	/* advance location counter to the next 32-bit boundary */
 	. = ALIGN(4);
 	PROVIDE (__bss_end = . );
-	PROVIDE (__heap_start = . );
+
+	.heap :
+	{
+		PROVIDE (__heap_start = . );
+		/* all .heap sections  */
+		*(.heap .heap*)
+	} >"DATA"
+
+	/* advance location counter to the next 32-bit boundary */
+	. = ALIGN(4);
+	PROVIDE (__heap_base = . );
 }
 

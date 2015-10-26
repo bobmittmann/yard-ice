@@ -43,6 +43,7 @@ int jitbuf_init(struct jitbuf *jb, uint32_t tsclk_rate,
 	tbuf = (SNDBUF_LEN * tsclk_rate) / sample_rate;
 
 	cnt = delay / tbuf;
+	(void)cnt;
 
 	INF("delay=%d[ms],%d[TSCLK],%d[bufs]", delay_ms, delay, cnt);
 	DBG("tbuf=%d[TSCLK]", tbuf);

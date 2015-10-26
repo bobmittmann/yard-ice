@@ -34,6 +34,8 @@ static void __attribute__((naked, noreturn)) app_bootstrap(void * arg)
 	int (* app_reset)(int argc, char ** argv);
 	uintptr_t thumb_call = (uintptr_t)arg | 1;
 
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x", cm3_sp_get());
+
 	app_reset = (void *)thumb_call;
 	for (;;) {
 		app_reset(1, (char **)app_argv);
@@ -56,7 +58,8 @@ bool dmon_app_exec(uint32_t addr, bool paused)
 		return false;
 	}
 
-	DCC_LOG1(LOG_TRACE, "app=%p", app);
+	DCC_LOG2(LOG_TRACE, "app=%p paused=%s", app,
+			 paused ? "true" : "false");
 
 	__thinkos_exec(thread_id, (void *)app_bootstrap, (void *)app, paused);
 

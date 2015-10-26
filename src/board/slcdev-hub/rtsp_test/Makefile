@@ -19,22 +19,36 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+
+PROG = rtsp_test
+
+CFILES = audio.c jitbuf.c rtcp.c rtp.c rtsp.c rtsp_hdr.c rtsp_test.c \
+		 sdp.c sndbuf.c webserver.c
+
 SDK = ../../../sdk
 
-LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
-		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
-		   $(SDK)/libtty $(SDK)/libshell $(SDK)/libtrace \
-		   $(SDK)/libtcpip $(SDK)/libcrc $(SDK)/libhttpd \
-		   $(SDK)/libice-comm
+#LIBDIRS = $(SDK)/libcm3 $(SDK)/libice-comm \
+#		  $(SDK)/libstm32f $(SDK)/libstm32drv $(SDK)/libutil \
+#		  $(SDK)/libc $(SDK)/libconsole $(SDK)/libtcpip $(SDK)/libhttpd \
+#		  $(SDK)/libtrace $(SDK)/libcrc
+
+LIBS = gcc cm3 ice-comm stm32f util stm32drv c console tcpip httpd trace crc
 
 INCPATH = $(SDK)/include ../include
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O1 -Wall -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--gc-sections 
+
 RELEASE_DIR := Release
 DEBUG_DIR := Debug
+#LIBPATH = ../sdklibs/Debug
+LIBPATH = ../sdklibs/Release
 
-THINKAPP = 1
+JTAGTOOL_ADDR= 192.168.10.50
+
 MACH = stm32f407
+THINKAPP = 1
+LDSCRIPT = ../stm32f407.ld
+LOAD_ADDR = 0x08010000
 include ../../../mk/stm32f4xx.mk
-
