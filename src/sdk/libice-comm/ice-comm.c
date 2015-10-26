@@ -24,12 +24,12 @@
 #include <arch/cortex-m3.h>
 
 #ifndef THINKAPP
-struct ice_comm_blk ice_comm_blk;
+//struct ice_comm_blk ice_comm_blk;
 #endif
 
 void ice_comm_sync(void) 
 {
-	struct ice_comm_blk * comm = *(struct ice_comm_blk **)(4 * 8);
+	struct ice_comm_blk * comm = ICE_COMM_BLK;
 	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
 
 	cm3_cpsid_f(); /* disable interrupts and faults */
@@ -43,7 +43,7 @@ void ice_comm_sync(void)
 
 void ice_comm_connect(void) 
 {
-	struct ice_comm_blk * comm = *(struct ice_comm_blk **)(4 * 8);
+	struct ice_comm_blk * comm = ICE_COMM_BLK;
 	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
 
 	cm3_cpsid_f(); /* disable interrupts and faults */

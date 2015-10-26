@@ -28,50 +28,49 @@
 
 #include <tcpip/tcp.h>
 
-
-static inline int __enum(int (* __callback)(struct tcp_inf *, void *), 
-						 void * __arg, struct tcp_pcb * __tp) {
-	struct tcp_inf inf;
-	inf.faddr = __tp->t_faddr;
-	inf.laddr = __tp->t_laddr;
-	inf.fport = __tp->t_fport;
-	inf.lport = __tp->t_lport;
-	inf.state = __tp->t_state;
-
-	return __callback(&inf, __arg);
-}
-
 int tcp_enum(int (* __callback)(struct tcp_inf *, void *), void * __arg) 
 {
+	struct tcp_pcb * lst[NET_TCP_PCB_ACTIVE_MAX];
 	struct tcp_pcb * tp = NULL;
-	int n = 0;
+	int cnt = 0;
+	int i;
 	int ret;
 
 	tcpip_net_lock();
 
 	while ((tp = (struct tcp_pcb *)pcb_getnext(&__tcp__.closed, 
 											  (struct pcb *)tp)) != NULL) {
-		if ((ret = __enum(__callback, __arg, tp)) < 0)
-			return ret;
-		n++;
+		lst[cnt++] = tp;
 	}
 
 	while ((tp = (struct tcp_pcb *)pcb_getnext(&__tcp__.listen, 
 											  (struct pcb *)tp)) != NULL) {
-		if ((ret = __enum(__callback, __arg, tp)) < 0)
-			return ret;
-		n++;
+		lst[cnt++] = tp;
 	}
 
 	while ((tp = (struct tcp_pcb *)pcb_getnext(&__tcp__.active, 
 											  (struct pcb *)tp)) != NULL) {
-		if ((ret = __enum(__callback, __arg, tp)) < 0)
-			return ret;
-		n++;
+		lst[cnt++] = tp;
 	}
+
 	tcpip_net_unlock();
 
-	return n;
-}
+	for (i = 0; i < cnt; ++i) {
+		struct tcp_inf inf;
 
+		tp = lst[i];
+		inf.faddr = tp->t_faddr;
+		inf.laddr = tp->t_laddr;
+		inf.fport = tp->t_fport;
+		inf.lport = tp->t_lport;
+		inf.state = tp->t_state;
+
+		if ((ret = __callback(&inf, __arg)) < 0) {
+			DCC_LOG1(LOG_WARNING, "callback ret=%d!", ret);
+			return ret;
+		}
+	}
+
+	return cnt;
+}
 

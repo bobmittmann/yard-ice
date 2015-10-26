@@ -31,6 +31,7 @@
    -------------------------------------------------------------------------- */
 
 #define THINKOS_IRQ_MAX               80
+#define THINKOS_ENABLE_IRQ_CTL        1
 
 #define THINKOS_ENABLE_IDLE_WFI       0
 
@@ -46,7 +47,7 @@
 #define THINKOS_ENABLE_JOIN           0
 #define THINKOS_ENABLE_PAUSE          0
 #define THINKOS_ENABLE_CANCEL         0
-#define THINKOS_ENABLE_EXIT           0
+#define THINKOS_ENABLE_EXIT           1
 
 #define THINKOS_MUTEX_MAX             16
 #define THINKOS_ENABLE_MUTEX_ALLOC    1
@@ -99,7 +100,8 @@
 #define THINKOS_SYSRST_ONFAULT        0
 #define THINKOS_STDERR_FAULT_DUMP     0
 
-#define THINKOS_ENABLE_MPU            0
+#define THINKOS_ENABLE_MPU            1
+#define THINKOS_ENABLE_ESCALATE       1
 #define THINKOS_ENABLE_FPU            0
 
 #define THINKOS_ENABLE_DEBUG_STEP     0

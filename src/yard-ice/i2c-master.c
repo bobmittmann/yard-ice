@@ -54,59 +54,6 @@ struct i2c_xfer xfer;
 #define I2C1_SDA STM32_GPIOB, 7
 #define I2C_IRQ_PRIORITY IRQ_PRIORITY_VERY_HIGH 
 
-void i2c_master_init(unsigned int scl_freq)
-{
-	struct stm32f_i2c * i2c = STM32F_I2C1;
-	struct stm32_rcc * rcc = STM32_RCC;
-	uint32_t pclk = stm32f_apb1_hz;
-
-	stm32_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
-	stm32_gpio_mode(I2C1_SDA, ALT_FUNC, OPEN_DRAIN);
-
-	stm32_gpio_af(I2C1_SCL, GPIO_AF4);
-	stm32_gpio_af(I2C1_SDA, GPIO_AF4);
-
-	/* Enable I2C clock */
-	rcc->apb1enr |= RCC_I2C1EN;
-
-	/* Software reset */
-	i2c->cr1 = I2C_SWRST; 
-
-	DCC_LOG3(LOG_TRACE, "CR1=0x%04x CR2=0x%04x CCR=0x%04x", 
-			 i2c->cr1, i2c->cr2, i2c->ccr);
-
-	DCC_LOG3(LOG_TRACE, "OAR1=0x%04x OAR2=0x%04x TRISE=0x%04x", 
-			 i2c->oar1, i2c->oar2, i2c->trise);
-
-	DCC_LOG2(LOG_TRACE, "SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
-
-	i2c->cr1 = 0;
-
-	/* I2C Control register 2 (I2C_CR2) */
-	i2c->cr2 = I2C_FREQ_SET(pclk / 1000000);
-	/*	I2C Own address register 1 (I2C_OAR1) */
-	i2c->oar1 = 0;
-	/*	I2C Own address register 2 (I2C_OAR2) */
-	i2c->oar2 = 0;
-	/* I2C Clock control register (I2C_CCR) */ 
-	i2c->ccr = I2C_CCR_SET(pclk / scl_freq / 2);
-	/* I2C TRISE register (I2C_TRISE) */
-	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
-
-	xfer.flag = thinkos_flag_alloc();
-
-	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
-	/* set event IRQ to very high priority */
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, I2C_IRQ_PRIORITY);
-	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
-	/* set error IRQ to high priority */
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, I2C_IRQ_PRIORITY);
-
-	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
-	/* enable ACK, events and errors */
-	i2c->cr2 |= I2C_ITERREN | I2C_ITEVTEN | I2C_ITBUFEN;
-}
-
 void i2c_master_enable(void)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
@@ -346,6 +293,66 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 
 	return ret;
 }
+
+void i2c_master_init(unsigned int scl_freq)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	struct stm32_rcc * rcc = STM32_RCC;
+	uint32_t pclk = stm32f_apb1_hz;
+
+	stm32_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
+	stm32_gpio_mode(I2C1_SDA, ALT_FUNC, OPEN_DRAIN);
+
+	stm32_gpio_af(I2C1_SCL, GPIO_AF4);
+	stm32_gpio_af(I2C1_SDA, GPIO_AF4);
+
+	/* Enable I2C clock */
+	rcc->apb1enr |= RCC_I2C1EN;
+
+	/* Software reset */
+	i2c->cr1 = I2C_SWRST; 
+
+	DCC_LOG3(LOG_TRACE, "CR1=0x%04x CR2=0x%04x CCR=0x%04x", 
+			 i2c->cr1, i2c->cr2, i2c->ccr);
+
+	DCC_LOG3(LOG_TRACE, "OAR1=0x%04x OAR2=0x%04x TRISE=0x%04x", 
+			 i2c->oar1, i2c->oar2, i2c->trise);
+
+	DCC_LOG2(LOG_TRACE, "SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
+
+	i2c->cr1 = 0;
+
+	/* I2C Control register 2 (I2C_CR2) */
+	i2c->cr2 = I2C_FREQ_SET(pclk / 1000000);
+	/*	I2C Own address register 1 (I2C_OAR1) */
+	i2c->oar1 = 0;
+	/*	I2C Own address register 2 (I2C_OAR2) */
+	i2c->oar2 = 0;
+	/* I2C Clock control register (I2C_CCR) */ 
+	i2c->ccr = I2C_CCR_SET(pclk / scl_freq / 2);
+	/* I2C TRISE register (I2C_TRISE) */
+	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
+
+	xfer.flag = thinkos_flag_alloc();
+
+#if 0
+	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
+	/* set event IRQ to very high priority */
+	cm3_irq_pri_set(STM32F_IRQ_I2C1_EV, I2C_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
+	/* set error IRQ to high priority */
+	cm3_irq_pri_set(STM32F_IRQ_I2C1_ER, I2C_IRQ_PRIORITY);
+#endif
+	thinkos_irq_register(STM32F_IRQ_I2C1_EV, I2C_IRQ_PRIORITY,
+						 stm32f_i2c1_ev_isr);
+	thinkos_irq_register(STM32F_IRQ_I2C1_ER, I2C_IRQ_PRIORITY,
+						 stm32f_i2c1_er_isr);
+
+	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
+	/* enable ACK, events and errors */
+	i2c->cr2 |= I2C_ITERREN | I2C_ITEVTEN | I2C_ITBUFEN;
+}
+
 
 int i2c_mutex = -1;
 

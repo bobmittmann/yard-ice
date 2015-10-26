@@ -516,6 +516,7 @@ const struct thinkos_board this_board = {
 	.autoboot = board_autoboot,
 	.configure = board_configure,
 	.upgrade = board_upgrade,
-	.on_appload = board_on_appload
+	.on_appload = board_on_appload,
+	.comm_irqen = board_comm_irqen
 };
 

@@ -72,25 +72,39 @@ void __thinkos_thread_abort(int thread_id)
 
 	__thinkos_suspend(thread_id);
 
-
 	DCC_LOG1(LOG_INFO, "ready=%08x", thinkos_rt.wq_ready);
 
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 }
 
-void __attribute__((noreturn)) __thinkos_thread_exit(int code)
+#if THINKOS_ENABLE_TERMINATE
+/* Terminate the target thread */
+void thinkos_terminate_svc(struct cm3_except_context * ctx)
 {
-	int self = thinkos_rt.active;
+	int thread_id = ctx->r1;
+	int code = ctx->r0;
 
-	DCC_LOG2(LOG_TRACE, "<%d> code=%d", self, code); 
+	(void)code;
 
-	/* disable interrupts */
-	cm3_cpsid_i();
+#if THINKOS_ENABLE_ARG_CHECK
+	if (thread_id >= THINKOS_THREADS_MAX) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
+		ctx->r0 = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_THREAD_ALLOC
+	if (__bit_mem_rd(thinkos_rt.th_alloc, thread_id) == 0) {
+		ctx->r0 = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+	DCC_LOG2(LOG_TRACE, "<%d> code=%d", thread_id, code); 
 
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
-	__bit_mem_wr((uint32_t *)&thinkos_rt.wq_tmshare, self, 0);  
+	__bit_mem_wr((uint32_t *)&thinkos_rt.wq_tmshare, thread_id, 0);  
 #endif
 
 #if THINKOS_ENABLE_CANCEL
@@ -98,25 +112,25 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 	{
 		int stat;
 		/* update the thread status */
-		stat = thinkos_rt.th_stat[self];
+		stat = thinkos_rt.th_stat[thread_id];
 		DCC_LOG1(LOG_INFO, "wq=%d", stat >> 1); 
-		thinkos_rt.th_stat[self] = 0;
+		thinkos_rt.th_stat[thread_id] = 0;
 		/* remove from other wait queue, if any */
-		__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], self, 0);  
+		__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], thread_id, 0);  
 	}
 #else
 	{
 		int i;
-		/* remove from other wait queue, if any */
+		/* remove from other wait queues, if any */
 		for (i = 0; i < __wq_idx(thinkos_rt.wq_end); ++i)
-			__bit_mem_wr(&thinkos_rt.wq_lst[i], self, 0);  
+			__bit_mem_wr(&thinkos_rt.wq_lst[i], thread_id, 0);  
 	}
 #endif
 #endif /* THINKOS_ENABLE_CANCEL */
 
 #if THINKOS_ENABLE_JOIN
 	{
-		unsigned int wq = THINKOS_JOIN_BASE + self;
+		unsigned int wq = THINKOS_JOIN_BASE + thread_id;
 		int th;
 
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
@@ -134,16 +148,20 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 			__thinkos_defer_sched();
 		}
 	}
-
 #endif
 
-	__thinkos_thread_abort(self);
+	__thinkos_thread_abort(thread_id);
+}
+#endif /* THINKOS_ENABLE_TERMINATE */
 
-	cm3_cpsie_i();
+void __attribute__((noreturn)) __thinkos_thread_exit(int code)
+{
+	int self = thinkos_rt.active;
+
+	thinkos_terminate(code, self);
 
 	for(;;);
 }
-
 
 #if THINKOS_ENABLE_EXIT
 void thinkos_exit_svc(struct cm3_except_context * ctx)
@@ -158,17 +176,15 @@ void thinkos_exit_svc(struct cm3_except_context * ctx)
 		DCC_LOG1(LOG_TRACE, "<%d> canceled...", self); 
 		/* insert into the canceled wait queue and wait for a join call */ 
 		__thinkos_wq_insert(THINKOS_WQ_CANCELED, self);
-		cm3_cpsid_i();
 		/* remove from the ready wait queue */
 		__thinkos_suspend(self);
-		cm3_cpsie_i();
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
 	}
 #endif /* THINKOS_ENABLE_JOIN */
 
 	/* adjust PC to the exit continuation call */
 	ctx->pc = (uint32_t)__thinkos_thread_exit;
-
-	__thinkos_defer_sched();
 }
-#endif
+#endif /* THINKOS_ENABLE_EXIT */
 

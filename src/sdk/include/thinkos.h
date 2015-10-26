@@ -63,6 +63,11 @@ enum thinkos_obj_kind {
 	THINKOS_OBJ_INVALID
 };
 
+enum thinkos_thread_status {
+	THINKOS_THREAD_CANCELED = 0x7ffffffe,
+	THINKOS_THREAD_ABORTED  = 0x7fffffff
+};
+
 #define IRQ_PRIORITY_HIGHEST   (1 << 5)
 #define IRQ_PRIORITY_VERY_HIGH (2 << 5)
 #define IRQ_PRIORITY_HIGH      (3 << 5)
@@ -107,6 +112,14 @@ extern "C" {
  */
 int thinkos_init(unsigned int opt);
 
+/** @brief Initializes the Cortex-M MPU.
+ *
+ */
+void thinkos_mpu_init(unsigned int size);
+
+/** @brief Switch processor to user mode.
+ *
+ */
 void thinkos_userland(void);
 
 /** @defgroup threads Threads

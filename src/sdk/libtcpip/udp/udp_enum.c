@@ -30,29 +30,36 @@
 
 int udp_enum(int (* __callback)(struct udp_inf *, void *), void * __arg) 
 {
+	struct udp_pcb * lst[NET_TCP_PCB_ACTIVE_MAX];
 	struct udp_pcb * up = NULL;
-	struct udp_inf inf;
-	int n = 0;
+	int cnt = 0;
 	int ret;
+	int i;
 
 	tcpip_net_lock();
 
 	while ((up = (struct udp_pcb *)pcb_getnext(&__udp__.active, 
 											   (struct pcb *)up)) != NULL) {
+		lst[cnt++] = up;
+	}
+
+	tcpip_net_unlock();
+
+	for (i = 0; i < cnt; ++i) {
+		struct udp_inf inf;
+
+		up = lst[i];
 		inf.faddr = up->u_faddr;
 		inf.laddr = up->u_laddr;
 		inf.fport = up->u_fport;
 		inf.lport = up->u_lport;
 
-		if ((ret = __callback(&inf, __arg)) < 0)
+		if ((ret = __callback(&inf, __arg)) < 0) {
+			DCC_LOG1(LOG_WARNING, "callback ret=%d!", ret);
 			return ret;
-
-		n++;
+		}
 	}
 
-	tcpip_net_unlock();
-
-	return n;
+	return cnt;
 }
-
 

@@ -28,7 +28,7 @@
 void ice_tracestr(const struct dcc_trace_entry * __entry, 
 				  const char * __str)
 {
-	struct ice_comm_blk * comm = *(struct ice_comm_blk **)(4 * 8);
+	struct ice_comm_blk * comm = ICE_COMM_BLK;
 	unsigned int head;
 	int fm = cm3_faultmask_get(); /* save fault mask */
 	uint32_t val;

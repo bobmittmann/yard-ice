@@ -523,7 +523,7 @@ void __bus_fault(void)
 #endif /* THINKOS_ENABLE_BUSFAULT  */
 
 #if	THINKOS_ENABLE_USAGEFAULT 
-void __usage_fault(void)
+void __xcpt_usage_fault(void)
 {
 	struct thinkos_except * xcpt = &thinkos_except_buf;
 	struct cm3_scb * scb = CM3_SCB;
@@ -532,7 +532,7 @@ void __usage_fault(void)
 
 	xcpt->type = CM3_EXCEPT_USAGE_FAULT;
 
-	DCC_LOG(LOG_ERROR, "Usage fault!");
+	DCC_LOG(LOG_ERROR, "!!! Usage fault !!!");
 	DCC_LOG1(LOG_ERROR, "UFSR=%08X", ufsr);
 	if (ufsr) {
 		DCC_LOG6(LOG_ERROR, "    %s%s%s%s%s%s", 
@@ -559,7 +559,7 @@ void __usage_fault(void)
 #endif /* THINKOS_ENABLE_USAGEFAULT  */
 
 #if THINKOS_ENABLE_MPU
-void __mem_manag(void)
+void __xcpt_mem_manag(void)
 {
 	struct thinkos_except * xcpt = &thinkos_except_buf;
 	struct cm3_scb * scb = CM3_SCB;
@@ -568,7 +568,7 @@ void __mem_manag(void)
 
 	xcpt->type = CM3_EXCEPT_MEM_MANAGE;
 
-	DCC_LOG(LOG_ERROR, "Mem Management!");
+	DCC_LOG(LOG_ERROR, "!!! Mem Management !!!");
 	DCC_LOG2(LOG_ERROR, "MMFSR=%08X MMFAR=%08x", mmfsr, scb->mmfar);
 	if (mmfsr) {
 		DCC_LOG6(LOG_ERROR, "    %s%s%s%s%s%s", 
@@ -595,14 +595,6 @@ void __mem_manag(void)
 /* -------------------------------------------------------------------------
    Fault handlers 
    ------------------------------------------------------------------------- */
-
-struct thinkos_except thinkos_except_buf __attribute__((section(".heap")));
-
-struct thinkos_except * __thinkos_except_buf(void)
-{
-	return &thinkos_except_buf;
-}
-
 void __attribute__((naked, noreturn)) __xcpt_process(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
@@ -611,6 +603,13 @@ void __attribute__((naked, noreturn)) __xcpt_process(void)
 	__xcpt_irq_disable_all();
 	__xcpt_systick_int_disable();
 	__xcpt_unroll(&thinkos_except_buf);
+#else /* THINKOS_UNROLL_EXCEPTIONS */
+	thinkos_exception_dsr(&thinkos_except_buf);
+ #if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+ #else
+	for(;;);
+ #endif
 #endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 
@@ -619,17 +618,7 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
 	__xcpt_context_save();
 	__bus_fault();
-
-#if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_process();
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
-	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
@@ -637,18 +626,8 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 {
 	__xcpt_context_save();
-	__usage_fault();
-
-#if (THINKOS_UNROLL_EXCEPTIONS) 
+	__xcpt_usage_fault();
 	__xcpt_process();
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
-	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
@@ -656,19 +635,8 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 {
 	__xcpt_context_save();
-	__mem_manag();
-#if (THINKOS_UNROLL_EXCEPTIONS) 
-	__xcpt_irq_disable_all();
-	__xcpt_systick_int_disable();
-	__xcpt_unroll(&thinkos_except_buf);
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
-	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
+	__xcpt_mem_manag();
+	__xcpt_process();
 }
 #endif
 
@@ -676,19 +644,7 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	__xcpt_context_save();
 	__hard_fault();
-
-#if (THINKOS_UNROLL_EXCEPTIONS) 
-	__xcpt_irq_disable_all();
-	__xcpt_systick_int_disable();
-	__xcpt_unroll(&thinkos_except_buf);
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-	thinkos_exception_dsr(&thinkos_except_buf);
- #if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
- #else
-	for(;;);
- #endif
-#endif /* THINKOS_UNROLL_EXCEPTIONS */
+	__xcpt_process();
 }
 
 /* -------------------------------------------------------------------------
@@ -702,6 +658,10 @@ void thinkos_default_exception_dsr(struct thinkos_except * xcpt)
 void thinkos_exception_dsr(struct thinkos_except *) 
 	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
+struct thinkos_except * __thinkos_except_buf(void)
+{
+	return &thinkos_except_buf;
+}
 
 void __exception_reset(void)
 {

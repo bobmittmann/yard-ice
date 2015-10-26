@@ -36,6 +36,8 @@ void thinkos_cancel_svc(int32_t * arg);
 
 void thinkos_exit_svc(int32_t * arg);
 
+void thinkos_terminate_svc(int32_t * arg);
+
 void thinkos_sleep_svc(int32_t * arg);
 
 void thinkos_alarm_svc(int32_t * arg);
@@ -148,6 +150,15 @@ void thinkos_ctl_svc(int32_t * arg);
 void thinkos_comm_svc(int32_t * arg);
 
 void thinkos_dbgmon_svc(int32_t * arg);
+
+#if THINKOS_ENABLE_ESCALATE
+/* Call a function in priviledged service mode. */
+void thinkos_escalate_svc(int32_t * arg)
+{
+	int32_t ( * call)(int32_t) = (void *)arg[0];
+	arg[0] = call(arg[1]);
+}
+#endif
 
 void thinkos_nosys(int32_t * arg)
 {
@@ -683,9 +694,25 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
+	case THINKOS_TERMINATE:
+#if THINKOS_ENABLE_TERMINATE
+		thinkos_terminate_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
+
 	case THINKOS_CTL:
 #if THINKOS_ENABLE_CTL
 		thinkos_ctl_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
+
+	case THINKOS_ESCALATE:
+#if THINKOS_ENABLE_ESCALATE
+		thinkos_escalate_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
@@ -716,70 +743,6 @@ void cm3_svc_isr(void)
 		break;
 	}
 }
-
-#if 0
-void __attribute__((naked)) __cm3_svc_isr(void)
-{
-	asm volatile ("mrs    r0, PSP\n"
-				  "ldr	  r3, [r0, #24]\n"
-				  "ldrb.w r3, [r3, #-2]\n"
-				  "add    r2, r2, pc\n"
-				  "ldr    pc, [r2, r3, lsl #2]\n"
-				  ".word  thinkos_thread_self_svc\n"
-				  ".word  thinkos_thread_create_svc\n"
-				  ".word  thinkos_clock_svc\n"
-				  ".word  thinkos_alarm_svc\n"
-				  ".word  thinkos_sleep_svc\n"
-				  ".word  thinkos_mutex_lock_svc\n"
-				  ".word  thinkos_mutex_trylock_svc\n"
-				  ".word  thinkos_mutex_timedlock_svc\n"
-				  ".word  thinkos_mutex_unlock_svc\n"
-				  ".word  thinkos_sem_init_svc\n"
-				  ".word  thinkos_sem_wait_svc\n"
-				  ".word  thinkos_sem_trywait_svc\n"
-				  ".word  thinkos_sem_timedwait_svc\n"
-				  ".word  thinkos_sem_post_svc\n"
-				  ".word  thinkos_cond_wait_svc\n"
-				  ".word  thinkos_cond_timedwait_svc\n"
-				  ".word  thinkos_cond_signal_svc\n"
-				  ".word  thinkos_cond_broadcast_svc\n"
-				  ".word  thinkos_flag_take_svc\n"
-				  ".word  thinkos_flag_timedtake_svc\n"
-				  ".word  thinkos_flag_give_svc\n"
-				  ".word  thinkos_flag_wait_svc\n"
-				  ".word  thinkos_flag_timedwait_svc\n"
-				  ".word  thinkos_flag_release_svc\n"
-				  ".word  thinkos_flag_val_svc\n"
-				  ".word  thinkos_flag_clr_svc\n"
-				  ".word  thinkos_flag_set_svc\n"
-				  ".word  thinkos_flag_watch_svc\n"
-				  ".word  thinkos_flag_timedwatch_svc\n"
-				  ".word  thinkos_ev_wait_svc\n"
-				  ".word  thinkos_ev_timedwait_svc\n"
-				  ".word  thinkos_ev_raise_svc\n"
-				  ".word  thinkos_ev_mask_svc\n"
-				  ".word  thinkos_ev_unmask_svc\n"
-				  ".word  thinkos_console_svc\n"
-				  ".word  thinkos_irq_wait_svc\n"
-				  ".word  thinkos_irq_register_svc\n"
-				  ".word  thinkos_mutex_alloc_svc\n"
-				  ".word  thinkos_mutex_free_svc\n"
-				  ".word  thinkos_sem_alloc_svc\n"
-				  ".word  thinkos_sem_free_svc\n"
-				  ".word  thinkos_cond_alloc_svc\n"
-				  ".word  thinkos_cond_free_svc\n"
-				  ".word  thinkos_flag_alloc_svc\n"
-				  ".word  thinkos_flag_free_svc\n"
-				  ".word  thinkos_ev_alloc_svc\n"
-				  ".word  thinkos_ev_free_svc\n"
-				  ".word  thinkos_join_svc\n"
-				  ".word  thinkos_pause_svc\n"
-				  ".word  thinkos_resume_svc\n"
-				  ".word  thinkos_cancel_svc\n"
-				  ".word  thinkos_exit_svc\n"
-				  : : : ); 
-}
-#endif
 
 /* FIXME: this is a hack to force linking this file. 
  The linker then will override the weak alias for the cm3_svc_isr() */

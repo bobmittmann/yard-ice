@@ -60,6 +60,8 @@ extern struct ice_comm_blk ice_comm_blk;
 
 extern const struct file ice_comm_file;
 
+#define ICE_COMM_BLK (*(struct ice_comm_blk **)(0x08000000 + 4 * 8))
+
 #ifdef __cplusplus
 extern "C" {
 #endif

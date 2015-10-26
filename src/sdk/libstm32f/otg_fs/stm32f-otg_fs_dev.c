@@ -165,7 +165,7 @@ static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
 
 	/* Number of words in the receive fifo */
 	wcnt = (len + 3) / 4;
-	DCC_LOG1(LOG_INFO, "poping %d words from FIFO.", wcnt);
+	DCC_LOG1(LOG_MSG, "poping %d words from FIFO.", wcnt);
 
 	if (ep->xfr_rem >= len) {
 		/* If we have enough room in the destination buffer
@@ -191,7 +191,7 @@ static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
 
 static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 {
-	DCC_LOG(LOG_INFO, "Send: ZLP");
+	DCC_LOG(LOG_MSG, "Send: ZLP");
 
 	otg_fs->inep[epnum].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
 	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
@@ -514,7 +514,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 		uint32_t depctl;
 
 		if (info->addr & USB_ENDPOINT_IN) {
-			DCC_LOG(LOG_INFO, "IN ENDPOINT");
+			DCC_LOG(LOG_MSG, "IN ENDPOINT");
 
 			if ((info->attr & 0x03) == ENDPOINT_TYPE_BULK) {
 				ep->xfr_max = 6 * mxpktsz;
@@ -525,7 +525,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 			__ep_pktbuf_alloc(drv, ep_id, ep->xfr_max);
 			depctl = otg_fs->inep[ep_id].diepctl;
 		} else {
-			DCC_LOG(LOG_INFO, "OUT ENDPOINT");
+			DCC_LOG(LOG_MSG, "OUT ENDPOINT");
 			depctl = otg_fs->outep[ep_id].doepctl;
 		}
 
@@ -891,7 +891,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		void * dummy = NULL;
 
 		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
-			DCC_LOG1(LOG_INFO, "address=%d",  req->value);
+			DCC_LOG1(LOG_MSG, "address=%d",  req->value);
 			stm32f_otg_fs_addr_set(otg_fs, req->value);
 		}
 		ep->on_setup(drv->cl, req, dummy);
@@ -902,11 +902,11 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
-		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
+		DCC_LOG(LOG_MSG, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
+		DCC_LOG1(LOG_MSG, "EP0 data lenght = %d", ep->xfr_rem);
 		/* prepare fifo to transmit */
 		stm32f_otg_ep0_xfer_setup(otg_fs, ep->xfr_rem);
 	} else {
@@ -914,7 +914,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		ep->xfr_ptr = ep->xfr_buf;
 		ep->xfr_rem = req->length;
 
-		DCC_LOG1(LOG_INFO, "xfr_ptr=0x%08x", ep->xfr_ptr);
+		DCC_LOG1(LOG_MSG, "xfr_ptr=0x%08x", ep->xfr_ptr);
 
 		if (ep->xfr_rem > ep->xfr_buf_len) {
 			ep->xfr_rem = ep->xfr_buf_len;
@@ -924,13 +924,13 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		if (ep->xfr_rem < ep->xfr_max) {
 			/* last and only transfer */
 			ep->state = EP_OUT_DATA_LAST;
-			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_MSG, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
 		} else {
 			ep->state = EP_OUT_DATA;
-			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_MSG, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
 		}
 
-		DCC_LOG(LOG_INFO, "Prepare to receive");
+		DCC_LOG(LOG_MSG, "Prepare to receive");
 
 		/* Prepare to receive */
 		otg_fs->outep[0].doeptsiz = OTG_FS_STUPCNT_SET(0) |
@@ -1408,7 +1408,6 @@ void stm32f_otg_fs_isr(void)
 	/* clear pending interrupts */
 	otg_fs->gintsts = gintsts;
 }
-
 
 /* USB device operations */
 const struct usb_dev_ops stm32f_otg_fs_ops = {

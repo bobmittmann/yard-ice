@@ -97,6 +97,10 @@
 #define THINKOS_ENABLE_EXIT             1
 #endif
 
+#ifndef THINKOS_ENABLE_TERMINATE
+#define THINKOS_ENABLE_TERMINATE        1
+#endif
+
 #ifndef THINKOS_ENABLE_TIMESHARE
 #define THINKOS_ENABLE_TIMESHARE        1
 #endif
@@ -273,6 +277,10 @@
 #define THINKOS_ENABLE_THREAD_VOID      1
 #endif
 
+#ifndef THINKOS_ENABLE_ESCALATE
+#define THINKOS_ENABLE_ESCALATE         THINKOS_ENABLE_MPU
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/
@@ -332,9 +340,11 @@
  #define THINKOS_ENABLE_THREAD_STAT 1
 #endif
 
-#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
+#if THINKOS_ENABLE_EXIT  || THINKOS_ENABLE_CANCEL || THINKOS_ENABLE_JOIN
  #undef THINKOS_ENABLE_THREAD_VOID
  #define THINKOS_ENABLE_THREAD_VOID 1
+ #undef THINKOS_ENABLE_TERMINATE
+ #define THINKOS_ENABLE_TERMINATE 1
 #endif
 
 /* -------------------------------------------------------------------------- 
@@ -345,7 +355,7 @@ struct thinkos_context {
 #if THINKOS_ENABLE_FPU 
 	union {
 		uint32_t s[32];
-		uint32_t d[16];
+		uint64_t d[16];
 	};
 #endif
 	/* saved context */
@@ -370,6 +380,12 @@ struct thinkos_context {
 	uint32_t pc;
 	uint32_t xpsr;
 };
+
+#if THINKOS_ENABLE_FPU 
+  #define CTX_R0 (8 + 32)
+#else
+  #define CTX_R0 8
+#endif
 
 /* -------------------------------------------------------------------------- 
  * Flattened thread state structure

@@ -99,15 +99,18 @@
 #define THINKOS_JOIN            52
 #define THINKOS_PAUSE           53
 #define THINKOS_RESUME          54
+
 #define THINKOS_CANCEL          55
-
 #define THINKOS_EXIT            56
+#define THINKOS_TERMINATE       57
 
-#define THINKOS_CTL             57
+#define THINKOS_CTL             58
 
-#define THINKOS_COMM            58
+#define THINKOS_COMM            59
 
-#define THINKOS_DBGMON          59
+#define THINKOS_DBGMON          60
+
+#define THINKOS_ESCALATE        61
 
 #define CONSOLE_WRITE             0
 #define CONSOLE_READ              1
@@ -230,6 +233,16 @@ __attribute__((always_inline)) thinkos_cancel(unsigned int id, int code) {
 static inline int 
 __attribute__((always_inline)) thinkos_exit(int code) {
 	return THINKOS_SVC1(THINKOS_EXIT, code);
+}
+
+static inline int 
+__attribute__((always_inline)) thinkos_terminate(int code, unsigned int id) {
+	return THINKOS_SVC2(THINKOS_TERMINATE, code, id);
+}
+
+static inline int 
+__attribute__((always_inline)) thinkos_thread_abort(unsigned int id) {
+	return THINKOS_SVC2(THINKOS_TERMINATE, THINKOS_THREAD_ABORTED, id);
 }
 
 static inline int 
@@ -618,13 +631,17 @@ thinkos_comm_recv(uint32_t * hdr, void * buf, unsigned int len) {
    Other
    ---------------------------------------------------------------------------*/
 
-static inline void thinkos_yield(void)  {
+static inline void thinkos_yield(void) {
 	CM3_SCB->icsr = SCB_ICSR_PENDSVSET; /* PendSV rise */
 	asm volatile ("dsb\n"); /* Data synchronization barrier */
 }
 
-static inline void thinkos_dbgmon(unsigned int sig)  {
+static inline void thinkos_dbgmon(unsigned int sig) {
 	THINKOS_SVC1(THINKOS_DBGMON, sig);
+}
+
+static inline int thinkos_escalate(int (* call)(void *), void * arg) {
+	return THINKOS_SVC2(THINKOS_ESCALATE, call, arg);
 }
 
 #ifdef __cplusplus

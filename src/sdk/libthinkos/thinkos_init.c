@@ -294,118 +294,6 @@ static int __thinkos_init_main(uint32_t opt)
 	return self;
 }
 
-/* 
-
-  */
-#define STRONGLY_ORDERED MPU_RASR_TEX(0) 
-#define SHARED_DEVICE    MPU_RASR_TEX(0) | MPU_RASR_B
-#define WRITE_THROUGH    MPU_RASR_TEX(0) | MPU_RASR_C
-#define WRITE_BACK       MPU_RASR_TEX(0) | MPU_RASR_C | MPU_RASR_B
-#define NONCACHEABLE     MPU_RASR_TEX(0)
-#define WRITE_ALLOCATE   MPU_RASR_TEX(1)
-#define NONSHARED_DEVICE MPU_RASR_TEX(2)
-
-#define SHAREABLE        MPU_RASR_S
-
-#define DATA_ONLY        MPU_RASR_XN
-
-#define NO_ACCESS        MPU_RASR_AP_NO_ACCESS
-#define PRIV_RW          MPU_RASR_AP_PRIV_RW
-#define USER_RO          MPU_RASR_AP_USER_RO
-#define USER_RW          MPU_RASR_AP_USER_RW
-#define PRIV_RO          MPU_RASR_AP_PRIV_RO
-#define READ_ONLY        MPU_RASR_AP_READ_ONLY
-
-
-/* Normal memory, Non-shareable, write-through */
-#define M_FLASH         (WRITE_THROUGH)
-/* Normal memory, Shareable, write-through */
-#define M_SRAM          (WRITE_THROUGH | SHAREABLE)
-#define M_CCM           (WRITE_THROUGH | SHAREABLE | DATA_ONLY)
-/* Normal memory, Shareable, write-back, write-allocate */
-#define M_EXTERN        (WRITE_BACK | SHAREABLE)
-/* Device memory, Shareable */
-#define M_PERIPHERAL    (SHARED_DEVICE | SHAREABLE | DATA_ONLY)  
-/* System peripherals */
-#define M_SYSTEM        (STRONGLY_ORDERED | SHAREABLE | DATA_ONLY)  
-
-void mpu_region_cfg(int region, uint32_t addr, uint32_t attr)
-{
-	struct cm3_mpu * mpu = CM3_MPU;
-	/* Region Base Address Register */
-	uint32_t rbar;
-	/* Region Attribute and Size Register */
-	uint32_t rasr;
-	
-	rbar = MPU_RBAR_ADDR(addr) | MPU_RBAR_VALID | MPU_RBAR_REGION(region);
-	rasr = attr; 
-	DCC_LOG3(LOG_TRACE, "region=%d rbar=%08x rasr=%08x", region, rbar, rasr);
-	/* Region Base Address Register */
-	mpu->rbar = rbar;
-	/* Region Attribute and Size Register */
-	mpu->rasr = rasr;
-}
-
-#if THINKOS_ENABLE_MPU
-void __thinkos_mpu_init(void)
-{
-	struct cm3_mpu * mpu = CM3_MPU;
-
-	DCC_LOG(LOG_TRACE, "MPU enable...");
-
-	mpu_region_cfg(0, 0, 0); 
-
-	mpu_region_cfg(1, 0, 0); 
-
-	mpu_region_cfg(2, 0, 0); 
-
-	/* Vectors */
-	mpu_region_cfg(3, 0x00000000, 
-				   M_FLASH | USER_RO | 
-				   MPU_RASR_SIZE_512 | 
-				   MPU_RASR_ENABLE);
-
-	/* FLASH */
-	mpu_region_cfg(4, 0x08000000, 
-				   M_FLASH | USER_RW | 
-				   MPU_RASR_SIZE_512K | 
-				   MPU_RASR_ENABLE);
-
-	/* SRAM and Bitbanding */
-	mpu_region_cfg(5, 0x20000000, 
-				   M_SRAM | USER_RW | 
-				   MPU_RASR_SIZE_64M | 
-				   MPU_RASR_SRD(0x0e) |
-				   MPU_RASR_ENABLE);
-	/* CCM */
-	mpu_region_cfg(6, 0x10000000, 
-				   M_CCM | USER_RW | 
-				   MPU_RASR_SIZE_64K | 
-				   MPU_RASR_ENABLE);
-
-	/* Peripheral */
-	mpu_region_cfg(7, 0x40000000, 
-				   M_PERIPHERAL | USER_RW | 
-				   MPU_RASR_SIZE_512M | 
-				   MPU_RASR_ENABLE);
-
-	/* System */
-/*	mpu_region_cfg(7, 0xe0000000, 
-				   M_SYSTEM | USER_RW | 
-				   MPU_RASR_SIZE_1M | 
-				   MPU_RASR_ENABLE);
-*/
-
-
-	/* Enable MPU with no background mapping */
-//	mpu->ctrl = MPU_CTRL_ENABLE;
-	/* Enable MPU with background mapping */
-	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_ENABLE;
-	/* Control Register */
-//	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_HFNMIENA | MPU_CTRL_ENABLE;
-}
-#endif
-
 int thinkos_init(uint32_t opt)
 {
 	uint32_t msp;
@@ -490,7 +378,8 @@ int thinkos_init(uint32_t opt)
 		- trapping of divide by zero and unaligned accesses
 		- access to the STIR by unprivileged software.
 		*/
-	CM3_SCB->ccr = SCB_CCR_UNALIGN_TRP | SCB_CCR_USERSETMPEND;
+	CM3_SCB->ccr = SCB_CCR_USERSETMPEND;
+// SCB_CCR_UNALIGN_TRP | 
 //		| SCB_CCR_NONBASETHRDENA;
 	/*  NONBASETHRDENA
 		Indicates how the processor enters Thread mode:
@@ -507,20 +396,12 @@ int thinkos_init(uint32_t opt)
 
 	DCC_LOG2(LOG_INFO, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
-
-	/* configure the use of PSP in thread mode */
-#if THINKOS_ENABLE_MPU
-	DCC_LOG(LOG_INFO, "configuring MPU");
-	__thinkos_mpu_init();
-	__mpudump();
-#endif
-
 	DCC_LOG(LOG_TRACE, "control set!");
+	/* configure the use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
 	DCC_LOG(LOG_TRACE, "enabling interrupts!");
 	cm3_cpsie_i();
-
 
 	DCC_LOG4(LOG_INFO, "<%d> msp=%08x psp=%08x ctrl=%08x", 
 			 self, cm3_msp_get(), cm3_psp_get(), cm3_control_get());
@@ -528,12 +409,131 @@ int thinkos_init(uint32_t opt)
 	return self;
 }
 
+/* 
+
+  */
 #if THINKOS_ENABLE_MPU
+
+#define STRONGLY_ORDERED MPU_RASR_TEX(0) 
+#define SHARED_DEVICE    MPU_RASR_TEX(0) | MPU_RASR_B
+#define WRITE_THROUGH    MPU_RASR_TEX(0) | MPU_RASR_C
+#define WRITE_BACK       MPU_RASR_TEX(0) | MPU_RASR_C | MPU_RASR_B
+#define NONCACHEABLE     MPU_RASR_TEX(0)
+#define WRITE_ALLOCATE   MPU_RASR_TEX(1)
+#define NONSHARED_DEVICE MPU_RASR_TEX(2)
+
+#define SHAREABLE        MPU_RASR_S
+
+#define DATA_ONLY        MPU_RASR_XN
+
+#define NO_ACCESS        MPU_RASR_AP_NO_ACCESS
+#define PRIV_RW          MPU_RASR_AP_PRIV_RW
+#define USER_RO          MPU_RASR_AP_USER_RO
+#define USER_RW          MPU_RASR_AP_USER_RW
+#define PRIV_RO          MPU_RASR_AP_PRIV_RO
+#define READ_ONLY        MPU_RASR_AP_READ_ONLY
+
+
+/* Normal memory, Non-shareable, write-through */
+#define M_FLASH         (WRITE_THROUGH)
+/* Normal memory, Shareable, write-through */
+#define M_SRAM          (WRITE_THROUGH | SHAREABLE)
+#define M_CCM           (WRITE_THROUGH | SHAREABLE | DATA_ONLY)
+/* Normal memory, Shareable, write-back, write-allocate */
+#define M_EXTERN        (WRITE_BACK | SHAREABLE)
+/* Device memory, Shareable */
+#define M_PERIPHERAL    (SHARED_DEVICE | SHAREABLE | DATA_ONLY)  
+/* System peripherals */
+#define M_SYSTEM        (STRONGLY_ORDERED | SHAREABLE | DATA_ONLY)  
+
+static void mpu_region_cfg(int region, uint32_t addr, uint32_t attr)
+{
+	struct cm3_mpu * mpu = CM3_MPU;
+	/* Region Base Address Register */
+	uint32_t rbar;
+	/* Region Attribute and Size Register */
+	uint32_t rasr;
+	
+	rbar = MPU_RBAR_ADDR(addr) | MPU_RBAR_VALID | MPU_RBAR_REGION(region);
+	rasr = attr; 
+	DCC_LOG3(LOG_TRACE, "region=%d rbar=%08x rasr=%08x", region, rbar, rasr);
+	/* Region Base Address Register */
+	mpu->rbar = rbar;
+	/* Region Attribute and Size Register */
+	mpu->rasr = rasr;
+}
+
+void thinkos_mpu_init(unsigned int size)
+{
+	struct cm3_mpu * mpu = CM3_MPU;
+
+	DCC_LOG(LOG_TRACE, "configuring MPU ...");
+
+	mpu_region_cfg(0, 0, 0); 
+
+	mpu_region_cfg(1, 0, 0); 
+
+	mpu_region_cfg(2, 0, 0); 
+
+	/* SRAM */
+	mpu_region_cfg(3, 0x20000000, 
+				   M_SRAM | USER_RW | 
+				   MPU_RASR_SIZE_128K | 
+				   MPU_RASR_SRD(0x01) |
+				   MPU_RASR_ENABLE);
+
+#if 0
+	/* SRAM and Bitbanding */
+	mpu_region_cfg(3, 0x20000000, 
+				   M_SRAM | USER_RW | 
+				   MPU_RASR_SIZE_64M | 
+				   MPU_RASR_SRD(0x0e) |
+				   MPU_RASR_ENABLE);
+#endif
+	/* FLASH */
+	mpu_region_cfg(4, 0x08000000, 
+				   M_FLASH | USER_RW | 
+				   MPU_RASR_SIZE_512K | 
+				   MPU_RASR_ENABLE);
+
+	/* CCM */
+	mpu_region_cfg(5, 0x10000000, 
+				   M_CCM | USER_RW | 
+				   MPU_RASR_SIZE_64K | 
+				   MPU_RASR_ENABLE);
+	/* External memory */
+	mpu_region_cfg(6, 0x60000000, 
+				   M_EXTERN | USER_RW | 
+				   MPU_RASR_SIZE_512M | 
+				   MPU_RASR_ENABLE);
+	/* Peripheral */
+	mpu_region_cfg(7, 0x40000000, 
+				   M_PERIPHERAL | USER_RW | 
+				   MPU_RASR_SIZE_512M | 
+				   MPU_RASR_ENABLE);
+	/* System */
+/*	mpu_region_cfg(7, 0xe0000000, 
+				   M_SYSTEM | USER_RW | 
+				   MPU_RASR_SIZE_1M | 
+				   MPU_RASR_ENABLE);
+*/
+
+	/* Enable MPU with no background mapping */
+//	mpu->ctrl = MPU_CTRL_ENABLE;
+	/* Enable MPU with background mapping */
+	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_ENABLE;
+	/* Control Register */
+//	mpu->ctrl = MPU_CTRL_PRIVDEFENA | MPU_CTRL_HFNMIENA | MPU_CTRL_ENABLE;
+
+	__mpudump();
+}
+
 void thinkos_userland(void)
 {
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_USER);
 }
-#endif
+
+#endif /* THINKOS_ENABLE_MPU */
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
 

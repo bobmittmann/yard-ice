@@ -43,13 +43,13 @@ static void io_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 
 	/* - Relay ------------------------------------------------------------*/
-	stm32_gpio_mode(IO_RELAY_GPIO, OUTPUT, SPEED_LOW);
-	stm32_gpio_clr(IO_RELAY_GPIO);
+	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_RELAY);
 
 	/* - External Power ---------------------------------------------------*/
-	stm32_gpio_mode(IO_PWR_EN_GPIO, OUTPUT, SPEED_LOW);
-	stm32_gpio_clr(IO_PWR_EN_GPIO);
-	stm32_gpio_mode(IO_PWR_MON_GPIO, INPUT, SPEED_LOW | PULL_UP);
+	stm32_gpio_mode(IO_PWR_EN, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_PWR_EN);
+	stm32_gpio_mode(IO_PWR_MON, INPUT, SPEED_LOW | PULL_UP);
 }
 
 bool board_init(void)
@@ -57,6 +57,12 @@ bool board_init(void)
 	io_init();
 
 	return true;
+}
+
+void board_comm_irqen(void)
+{
+	/* Enable USB OTG FS interrupts */
+	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
 void board_softreset(void)
@@ -89,19 +95,17 @@ void board_softreset(void)
 
 bool board_autoboot(uint32_t tick)
 {
-	return true;
-
-	if (tick < 4) {
+	if (tick < 2) {
 		if (tick & 1)
-			stm32_gpio_clr(IO_RELAY_GPIO);
+			stm32_gpio_clr(IO_RELAY);
 		else
-			stm32_gpio_set(IO_RELAY_GPIO);
+			stm32_gpio_set(IO_RELAY);
 	}
 
-	if (tick > (3 * 8)) 
+	if (tick == (3 * 8)) 
 		return true;
 
-	DCC_LOG1(LOG_TRACE, "tick=%d", tick);
+//	DCC_LOG1(LOG_TRACE, "tick=%d", tick);
 
 	return false;
 }
@@ -164,7 +168,8 @@ const struct thinkos_board this_board = {
 	.autoboot = board_autoboot,
 	.configure = board_configure,
 	.upgrade = board_upgrade,
-	.on_appload = board_on_appload
+	.on_appload = board_on_appload,
+	.comm_irqen = board_comm_irqen
 };
 
 

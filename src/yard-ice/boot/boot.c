@@ -59,19 +59,23 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	DCC_LOG(LOG_TRACE, "4. thinkos_console_init()");
+	DCC_LOG(LOG_TRACE, "4. thinkos_mpu_init()");
+	thinkos_mpu_init(0x0c00);
+
+	DCC_LOG(LOG_TRACE, "5. thinkos_console_init()");
 	thinkos_console_init();
 
-	DCC_LOG(LOG_TRACE, "5. usb_comm_init()");
+	DCC_LOG(LOG_TRACE, "6. usb_comm_init()");
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-	DCC_LOG(LOG_TRACE, "6. thinkos_dmon_init()");
+	DCC_LOG(LOG_TRACE, "7. thinkos_dmon_init()");
 	thinkos_dmon_init(comm, monitor_task);
 
-	thinkos_sleep(2000);
+	DCC_LOG(LOG_TRACE, "8. thinkos_userland()");
+	thinkos_userland();
 
-	DCC_LOG(LOG_TRACE, "7. __thinkos_thread_abort()");
-	__thinkos_thread_abort(0);
+	DCC_LOG(LOG_TRACE, "9. thinkos_thread_abort()");
+	thinkos_thread_abort(thinkos_thread_self());
 
 	return 0;
 }

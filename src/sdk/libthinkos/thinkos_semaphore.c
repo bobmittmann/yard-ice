@@ -177,7 +177,7 @@ again:
 	/* (2) Save the context pointer. In case an interrupt wakes up
 	   this thread before the scheduler is called, this will allow
 	   the interrupt handler to locate the return value (r0) address. */
-	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-CTX_R0];
 
 	/* insert into the event wait queue */
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
@@ -254,7 +254,7 @@ again:
 	/* update status, mark the thread clock enable bit */
 	thinkos_rt.th_stat[self] = (wq << 1) + 1;
 #endif
-	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-CTX_R0];
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 	queue |= (1 << self);
 	if (((volatile uint32_t)thinkos_rt.sem_val[sem] > 0) ||

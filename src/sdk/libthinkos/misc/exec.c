@@ -41,10 +41,12 @@ void __thinkos_exec(int thread_id, void (* func)(void *),
 	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, arg);
 
 #if THINKOS_ENABLE_THREAD_INFO
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_inf_set()");
 	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
 #endif
 
 	if (!paused) {
+		DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
 		__thinkos_thread_resume(thread_id);
 		__thinkos_defer_sched();
 	}

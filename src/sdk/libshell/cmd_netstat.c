@@ -92,6 +92,7 @@ int cmd_netstat(FILE *f, int argc, char ** argv)
 	fprintf(f, "\nActive Internet connections (servers and established)\n");
 	fprintf(f, "Proto  Local Address"
 				"          Foreign Address        State\n");
+	fflush(f);
 
 	tcp_enum((void *)show_tcp_pcb, (void *)f);
 
