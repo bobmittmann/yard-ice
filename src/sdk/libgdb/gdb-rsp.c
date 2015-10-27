@@ -138,10 +138,10 @@ int target_goto(uint32_t addr, int opt);
 #define CTRL_Z 0x1a
 
 struct gdb_rspd {
-	uint8_t noack_mode : 1;
-	uint8_t nonstop_mode : 1;
-	uint8_t stopped : 1;
-	uint8_t active_app : 1;
+	uint8_t noack_mode    : 1;
+	uint8_t nonstop_mode  : 1;
+	uint8_t stopped       : 1;
+	uint8_t active_app    : 1;
 	uint8_t session_valid : 1;
 	uint8_t last_signal;
 #if GDB_ENABLE_MULTIPROCESS
@@ -1579,8 +1579,6 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	uint32_t sigset;
 	int len;
 
-	DCC_LOG(LOG_TRACE, "GDB start...");
-
 	gdb->comm = comm;
 	gdb->nonstop_mode = false;
 	gdb->noack_mode = false;
@@ -1588,6 +1586,10 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	gdb->stopped = __thinkos_suspended();
 	gdb->active_app = __thinkos_active();
 	gdb->last_signal = TARGET_SIGNAL_0;
+
+	DCC_LOG2(LOG_TRACE, "GDB [stopped=%s active_app=%s] =====================", 
+		gdb->stopped ? "true" : "false",
+		gdb->active_app ? "true" : "false");
 
 	dmon_breakpoint_clear_all();
 	dmon_watchpoint_clear_all();
@@ -1608,7 +1610,13 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_TX_PIPE);
 #endif
 	for(;;) {
-		
+
+#if 0
+		if (gdb->stopped)
+			DCC_LOG1(LOG_TRACE, "<suspended>%02x", gdb->last_signal);
+		else
+			DCC_LOG1(LOG_TRACE, "<running> %02x", gdb->last_signal);
+#endif		
 		sigset = dmon_select(sigmask);
 
 		DCC_LOG1(LOG_MSG, "sig=%08x", sigset);

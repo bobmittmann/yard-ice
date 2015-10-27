@@ -45,8 +45,8 @@ _Pragma ("GCC optimize (\"O2\")")
 
 #if (THINKOS_ENABLE_DEBUG_FAULT)
 
-#undef THINKOS_ENABLE_MPU
-#define THINKOS_ENABLE_MPU        1
+#undef THINKOS_ENABLE_MEMFAULT
+#define THINKOS_ENABLE_MEMFAULT   1
 
 #undef THINKOS_ENABLE_BUSFAULT
 #define THINKOS_ENABLE_BUSFAULT   1
@@ -253,7 +253,10 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 		xpsr = 0x01000000;
 	}
 
+	/* Get the top of the exception stack */
 	sp = (uint32_t)thinkos_except_stack + sizeof(thinkos_except_stack);
+	/* Make room for the exception frame */
+	sp -= sizeof(struct cm3_except_context); 
 	sf = (struct cm3_except_context *)sp;
 	sf->r0 = (uint32_t)xcpt;
 
@@ -559,7 +562,7 @@ void __xcpt_usage_fault(void)
 }
 #endif /* THINKOS_ENABLE_USAGEFAULT  */
 
-#if THINKOS_ENABLE_MPU
+#if THINKOS_ENABLE_MEMFAULT
 void __xcpt_mem_manag(void)
 {
 	struct thinkos_except * xcpt = &thinkos_except_buf;
@@ -632,7 +635,7 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 }
 #endif
 
-#if THINKOS_ENABLE_MPU
+#if THINKOS_ENABLE_MEMFAULT
 void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 {
 	__xcpt_context_save();
@@ -688,7 +691,7 @@ void thinkos_exception_init(void)
 #if	THINKOS_ENABLE_BUSFAULT 
 		| SCB_SHCSR_BUSFAULTENA
 #endif
-#if THINKOS_ENABLE_MPU
+#if THINKOS_ENABLE_MEMFAULT
 		| SCB_SHCSR_MEMFAULTENA
 #endif
 		;

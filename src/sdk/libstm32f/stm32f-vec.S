@@ -295,9 +295,6 @@ _fault:
 	 * Any function with the same name will override these definitions.
 	 */
 
-	.weak       _stack
-	.set		_stack, 0 
-
 	.weak       cm3_default_isr
 	.thumb_set  cm3_default_isr,_fault
 

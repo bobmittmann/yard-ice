@@ -30,6 +30,7 @@ EXTERN(_stack)
 EXTERN(_reset)
 EXTERN(ice_comm_blk)
 EXTERN(thinkos_idle_stack)
+
 EXTERN(cm3_nmi_isr)
 EXTERN(cm3_hard_fault_isr)
 EXTERN(cm3_mem_manage_isr)

@@ -1,0 +1,536 @@
+
+== ARM DCC log viewer ==
+ - elf: debug/thinkos.elf
+ - symbols off: 000b05e0  size: 48832  entsize: 16 link 00000014
+ - host: 192.168.10.50:1001
+ - log date: Tue Oct 27 10:22:30 2015
+
+
+ EXCEPT: ice_trace_init: starting DCC LOG...
+  TRACE: main: 1. cm3_udelay_calibrate().
+  TRACE: dmon_app_exec: app=08020000 paused=false
+  TRACE: __thinkos_exec: __thinkos_thread_abort()
+  TRACE: __thinkos_exec: __thinkos_thread_init(func=080051bd arg=08020000)
+  TRACE: __thinkos_thread_init: thread_id=0 pc=080051bd sp=1000ff70
+  TRACE: __thinkos_exec: __thinkos_thread_inf_set()
+  TRACE: __thinkos_exec: __thinkos_thread_resume()
+  TRACE: app_bootstrap: sp=0x1000ff70
+  TRACE: thinkos_ctl_svc: .........................
+  TRACE: __thinkos_thread_init: thread_id=30 pc=08022d31 sp=20001698
+  TRACE: __thinkos_thread_init: thread_id=31 pc=08024029 sp=20010b50
+  ERROR: __xcpt_mem_manag: !!! Mem Management !!!
+  ERROR: __xcpt_mem_manag: MMFSR=00000082 MMFAR=1fff7a10
+  ERROR: __xcpt_mem_manag:      MMARVALID DACCVIOL
+  ERROR: __xdump:    R0=00008000  R1=1fff7a10  R2=00000002  R3=00000002
+  ERROR: __xdump:    R4=0803963c  R5=080390a8  R6=08037484  R7=1000fe98
+  ERROR: __xdump:    R8=00000001  R9=0800d0ec R10=00000000 R11=00000000
+  ERROR: __xdump:   R12=080375a8  SP=1000fe48  LR=080244db  PC=08024282
+  ERROR: __xdump:  XPSR=41000000 MSP=20000f78 PSP=1000fe48 RET=fffffffd
+  ERROR: __xdump:  XPSR={ .Z... T ICI/IT=00 GE=0 IPSR=0 (Thread) }
+  ERROR: __xdump: SHCSR={ MEMFAULTACT }
+  ERROR: __xdump:  ICSR={ PENDST RETTOBASE VECTPENDING=15 VECTACTIVE=4 }
+  ERROR: __xdump: thread_id=0 active=0
+  TRACE: __xcpt_process: ...
+  TRACE: __idump: __xcpt_unroll() _________________________________
+  TRACE: __idump:  IPSR=4 (MemManage)
+  TRACE: __idump: SHCSR={ MEMFAULTACT }
+  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
+  TRACE: __idump: __xcpt_thinkos_process() _________________________________
+  TRACE: __idump:  IPSR=4 (MemManage)
+  TRACE: __idump: SHCSR={ MEMFAULTACT }
+  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
+  TRACE: __tdump: Active=0
+  TRACE: __tdump:    MAIN ( 0   0) SP=1000fef0 PC=00000003 LR=08025595 0/4096
+  TRACE: __tdump: [INVALID POINTER] (30   0) SP=20001658 PC=08022d31 LR=08002315 188/256
+  TRACE: __tdump: [INVALID POINTER] (31   0) SP=20010b10 PC=08024029 LR=08002315 960/1024
+  TRACE: __tdump: <IDLE>  (32) SP=1000ff70
+  TRACE: __tdump: <VOID>  (33) SP=1000ff70
+  TRACE: __tdump: wq_ready=c0000001
+  TRACE: __tdump: wq_clock=00000000
+  TRACE: __thinkos_pause_all: active=0
+  TRACE: __thinkos_idle_init: ...
+WARNING: thinkos_exception_dsr: Fault at thread 0 !!!!!!!!!!!!!
+  TRACE: thinkos_exception_dsr: this_board.comm_irqen().
+  TRACE: monitor_task: Thread fault.
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: dmon_exec: task=08009cd1
+  TRACE: dmon_on_reset: DMON_RESET
+  TRACE: gdb_task: GDB [stopped=true active_app=true] =====================
+  TRACE: dmon_watchpoint_clear_all: TWD NUMCOMP=4.
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: qSupported
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: QStartNoAckMode
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_h_packet: get any thread
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: qXfer:features:read:
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: qXfer:features:read:
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: Nonstop=0 +++++++++++++++
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: unsupported: "qTStatus#49"
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_h_packet: continue all threads
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_all_registers_get: thread_id=64 PC=08024282
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: qXfer:memory-map:read:
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: qSymbol (not implemented!)
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: qRcmd
+  TRACE: rsp_cmd: cmd="reset run"
+  TRACE: dmon_soft_reset: 1. disable all interrupts
+  TRACE: dmon_soft_reset: 2. kill all threads...
+  TRACE: dmon_soft_reset: 3. wait idle...
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: dmon_soft_reset: 4. ThinkOS reset...
+  TRACE: __thinkos_idle_init: ...
+  TRACE: dmon_soft_reset: 5. console reset...
+  TRACE: dmon_soft_reset: 6. exception reset...
+WARNING: __exception_reset: !!!!
+  TRACE: dmon_soft_reset: 7. clear all breakpoints...
+  TRACE: dmon_soft_reset: 8. reset this board...
+  TRACE: board_softreset: AHB1ENR=0x0014001f
+  TRACE: board_softreset: AHB2ENR=0x00000080
+  TRACE: board_softreset: AHB3ENR=0x00000000
+  TRACE: board_softreset: APB1ENR=0x00000008
+  TRACE: board_softreset: APB2ENR=0x00000000
+  TRACE: dmon_soft_reset: 9. done.
+  TRACE: dmon_app_exec: app=08020000 paused=true
+  TRACE: __thinkos_exec: __thinkos_thread_abort()
+  TRACE: __thinkos_exec: __thinkos_thread_init(func=080051bd arg=08020000)
+  TRACE: __thinkos_thread_init: thread_id=0 pc=080051bd sp=1000ff70
+  TRACE: __thinkos_exec: __thinkos_thread_inf_set()
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_query: qRcmd
+  TRACE: rsp_cmd: cmd="delay 3000"
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_breakpoint_insert: type=0 addr=0x080244c6 size=2
+  TRACE: gdb_task: <suspended>00
+  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_v_packet: Continue all!
+  TRACE: app_bootstrap: sp=0x1000ff70
+  TRACE: gdb_task: <running> 00
+  TRACE: thinkos_ctl_svc: .........................
+  TRACE: __thinkos_thread_init: thread_id=30 pc=08022d31 sp=20001698
+  TRACE: dbgmon_isr: <<BREAKPOINT>>: thread_id=0 pc=080244c6 ---
+  TRACE: rsp_on_breakpoint: on breakpoint, suspending... ... ...
+  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x00000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x00000008
+  TRACE: __thinkos_pause_all: active=0
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_all_registers_get: thread_id=64 PC=080244c6
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_breakpoint_remove: type=0 addr=0x080244c6 size=2
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d31
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_v_packet: Step 64
+  TRACE: thread_step_req: ThinkOS thread=0 context=1000ff10 PC=080244c6!
+  TRACE: rsp_stop_reply: last_signal=5
+  TRACE: dbgmon_isr: <<STEP>> thread_id=0 pc=0802558c ipsr=0 ------
+  TRACE: gdb_task: <suspended>05
+WARNING: rsp_on_step: on step, suspended already!
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
+  TRACE: gdb_task: <suspended>05
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_breakpoint_insert: type=0 addr=0x080244c6 size=2
+  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_v_packet: Continue all!
+  TRACE: gdb_task: <running> 05
+  TRACE: __thinkos_thread_init: thread_id=31 pc=08024029 sp=20010b50
+  ERROR: __xcpt_mem_manag: !!! Mem Management !!!
+  ERROR: __xcpt_mem_manag: MMFSR=00000082 MMFAR=1fff7a10
+  ERROR: __xcpt_mem_manag:      MMARVALID DACCVIOL
+  ERROR: __xdump:    R0=00008000  R1=1fff7a10  R2=00000002  R3=00000002
+  ERROR: __xdump:    R4=0803963c  R5=080390a8  R6=08037484  R7=1000fe98
+  ERROR: __xdump:    R8=00000001  R9=0800d0ec R10=00000000 R11=00000000
+  ERROR: __xdump:   R12=080375a8  SP=1000fe48  LR=080244db  PC=08024282
+  ERROR: __xdump:  XPSR=41000000 MSP=20000f78 PSP=1000fe48 RET=fffffffd
+  ERROR: __xdump:  XPSR={ .Z... T ICI/IT=00 GE=0 IPSR=0 (Thread) }
+  ERROR: __xdump: SHCSR={ MEMFAULTACT }
+  ERROR: __xdump:  ICSR={ PENDST RETTOBASE VECTPENDING=15 VECTACTIVE=4 }
+  ERROR: __xdump: thread_id=0 active=0
+  TRACE: __xcpt_process: ...
+  TRACE: __idump: __xcpt_unroll() _________________________________
+  TRACE: __idump:  IPSR=4 (MemManage)
+  TRACE: __idump: SHCSR={ MEMFAULTACT }
+  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
+  TRACE: __idump: __xcpt_thinkos_process() _________________________________
+  TRACE: __idump:  IPSR=4 (MemManage)
+  TRACE: __idump: SHCSR={ MEMFAULTACT }
+  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
+  TRACE: __tdump: Active=0
+  TRACE: __tdump:    MAIN ( 0   0) SP=1000fef0 PC=00000003 LR=08025595 0/4096
+  TRACE: __tdump: [INVALID POINTER] (30   0) SP=20001658 PC=08022d31 LR=08002315 188/256
+  TRACE: __tdump: [INVALID POINTER] (31   0) SP=20010b10 PC=08024029 LR=08002315 960/1024
+  TRACE: __tdump: <IDLE>  (32) SP=1000ff70
+  TRACE: __tdump: <VOID>  (33) SP=1000ff70
+  TRACE: __tdump: wq_ready=c0000001
+  TRACE: __tdump: wq_clock=00000000
+  TRACE: __thinkos_pause_all: active=0
+  TRACE: __thinkos_idle_init: ...
+WARNING: thinkos_exception_dsr: Fault at thread 0 !!!!!!!!!!!!!
+  TRACE: thinkos_exception_dsr: this_board.comm_irqen().
+  TRACE: gdb_task: Thread fault.
+  TRACE: rsp_on_fault: suspending (current=64) ... ...
+  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x00000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x00000008
+  TRACE: __thinkos_pause_all: active=33
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: gdb_task: <suspended>0b
+  TRACE: rsp_all_registers_get: thread_id=64 PC=08024282
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d31
+  TRACE: gdb_task: <suspended>0b
+  TRACE: rsp_breakpoint_remove: type=0 addr=0x080244c6 size=2
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: rsp_all_registers_get: thread_id=95 PC=08024029
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: gdb_task: <suspended>0b
+  TRACE: rsp_detach: [DETACH]
+  TRACE: dmon_exec: task=080005cd
+  TRACE: dmon_on_reset: DMON_RESET

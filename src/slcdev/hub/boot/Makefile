@@ -36,12 +36,11 @@ INCPATH = $(SDK)/include ../include
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
-VERSION_DATE = "2015-10-20"
+VERSION_DATE = "2015-10-27"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "34"
+VERSION_MINOR = "35"
 
-#CFLAGS = -g -O2 -Wall
-CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
+CFLAGS = -g -O2 -Wall -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections
 
 JTAGTOOL_ADDR = 192.168.10.51

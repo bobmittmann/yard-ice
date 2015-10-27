@@ -214,6 +214,12 @@ void stdio_init(void)
 /* -------------------------------------------------------------------------
  * TCP/IP network
  * ------------------------------------------------------------------------- */
+int stm32f_get_esn(void * arg)
+{
+	uint64_t * esn = (uint64_t *)arg;
+	*esn = *((uint64_t *)STM32F_UID);
+	return 0;
+}
 
 int network_config(void)
 {
@@ -229,7 +235,10 @@ int network_config(void)
 	uint64_t esn;
 	int dhcp;
 
-	esn = *((uint64_t *)STM32F_UID);
+	/* The UID register is located in a system area not mapped
+	   in the MPU user region. We need to escalate the privilege to 
+	   have access to this area. */
+	thinkos_escalate(stm32f_get_esn, &esn);
 
 	ethaddr[0] = ((esn >>  0) & 0xfc) | 0x02; /* Locally administered MAC */
 	ethaddr[1] = ((esn >>  8) & 0xff);

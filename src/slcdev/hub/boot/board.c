@@ -456,6 +456,9 @@ bool board_configure(struct dmon_comm * comm)
 	return true;
 }
 
+extern int __heap_base;
+const int * heap_base_ = &__heap_base;
+
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
 
@@ -520,7 +523,8 @@ const struct mem_desc sram_desc = {
 const struct mem_desc flash_desc = {
 	.name = "FLASH",
 	.blk = {
-		{ 0x08000000, BLK_RO, SZ_16K,  4 }, /* Bootloader */
+		{ 0x08000000, BLK_RO, SZ_16K,  2 }, /* Bootloader */
+		{ 0x08008000, BLK_RW, SZ_16K,  2 }, /* Application */
 		{ 0x08010000, BLK_RW, SZ_64K,  1 }, /* Application */
 		{ 0x08020000, BLK_RW, SZ_128K, 7 }, /* Application */
 		{ 0x00000000, 0, 0, 0 }
@@ -536,15 +540,14 @@ const struct thinkos_board this_board = {
 	.sw_ver = {
 		.major = VERSION_MAJOR,
 		.minor = VERSION_MINOR
-//		.build = VERSION_BUILD
 	},
 	.memory = {
 		.ram = &sram_desc,
 		.flash = &flash_desc
 	},
 	.application = {
-		.start_addr = 0x08010000,
-		.block_size = (64 + 7 * 128) * 1024
+		.start_addr = 0x08020000,
+		.block_size = (7 * 128) * 1024
 	},
 	.init = board_init,
 	.softreset = board_softreset,

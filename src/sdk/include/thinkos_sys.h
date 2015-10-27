@@ -217,6 +217,10 @@
 #define THINKOS_ENABLE_USAGEFAULT       0
 #endif
 
+#ifndef THINKOS_ENABLE_MEMFAULT 
+#define THINKOS_ENABLE_MEMFAULT         0
+#endif
+
 #ifndef THINKOS_UNROLL_EXCEPTIONS 
 #define THINKOS_UNROLL_EXCEPTIONS       0
 #endif
@@ -347,6 +351,10 @@
  #define THINKOS_ENABLE_TERMINATE 1
 #endif
 
+#if THINKOS_ENABLE_MEMFAULT && !THINKOS_ENABLE_MPU 
+#undef THINKOS_ENABLE_MEMFAULT 
+#define THINKOS_ENABLE_MEMFAULT 0
+#endif
 /* -------------------------------------------------------------------------- 
  * Thread context layout
  * --------------------------------------------------------------------------*/

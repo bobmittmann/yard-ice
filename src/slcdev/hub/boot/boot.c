@@ -95,16 +95,23 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
-	DCC_LOG(LOG_TRACE, "2. board_init().");
-	this_board.init();
-
-	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
+	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	DCC_LOG(LOG_TRACE, "4. monitor_init()");
+	DCC_LOG(LOG_TRACE, "3. thinkos_mpu_init()");
+	thinkos_mpu_init(0x1000);
+
+	DCC_LOG(LOG_TRACE, "4. board_init().");
+	this_board.init();
+
+	DCC_LOG(LOG_TRACE, "5. monitor_init()");
 	monitor_init();
 
-	__thinkos_thread_abort(0);
+	DCC_LOG(LOG_TRACE, "6. thinkos_userland()");
+	thinkos_userland();
+
+	DCC_LOG(LOG_TRACE, "7. thinkos_thread_abort()");
+	thinkos_thread_abort(thinkos_thread_self());
 
 	return 0;
 }

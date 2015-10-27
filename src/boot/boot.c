@@ -98,7 +98,6 @@ int main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
-	udelay(10000);
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	DCC_LOG(LOG_TRACE, "3. thinkos_mpu_init()");

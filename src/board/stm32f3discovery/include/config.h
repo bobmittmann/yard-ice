@@ -70,37 +70,42 @@
 #define THINKOS_ENABLE_CLOCK        1
 #define THINKOS_ENABLE_ALARM        1
 #define THINKOS_ENABLE_SLEEP        1
-#define THINKOS_ENABLE_BREAK        0
+#define THINKOS_ENABLE_BREAK          0
 
-#define THINKOS_ENABLE_ARG_CHECK      1
-#define THINKOS_ENABLE_DEADLOCK_CHECK 1
-#define THINKOS_ENABLE_SANITY_CHECK   1
+#define THINKOS_ENABLE_ARG_CHECK        1
+#define THINKOS_ENABLE_DEADLOCK_CHECK   1
+#define THINKOS_ENABLE_SANITY_CHECK     1
 
-#define THINKOS_ENABLE_EXCEPTIONS     1
-#define THINKOS_EXCEPT_STACK_SIZE     320
+#define THINKOS_ENABLE_EXCEPTIONS       1
+#define THINKOS_EXCEPT_STACK_SIZE       320
 
-#define THINKOS_STDERR_FAULT_DUMP     0
-#define THINKOS_ENABLE_SCHED_DEBUG    0
-#define THINKOS_ENABLE_RT_DEBUG       0
+#define THINKOS_STDERR_FAULT_DUMP       0
+#define THINKOS_ENABLE_SCHED_DEBUG      0
+#define THINKOS_ENABLE_RT_DEBUG         0
 
-#define THINKOS_ENABLE_PROFILING      0
+#define THINKOS_ENABLE_PROFILING        0
 
-#define THINKOS_ENABLE_MONITOR        1
-#define THINKOS_ENABLE_CONSOLE        1
+#define THINKOS_ENABLE_MONITOR          1
+#define THINKOS_ENABLE_CONSOLE          1
 
-#define THINKOS_ENABLE_DEBUG_STEP     1
-#define THINKOS_ENABLE_DEBUG_FAULT    1
+#define THINKOS_ENABLE_DEBUG_STEP       1
+#define THINKOS_ENABLE_DEBUG_FAULT      1
 
-#define THINKOS_ENABLE_BUSFAULT       1
-#define THINKOS_ENABLE_USAGEFAULT     1
+#define THINKOS_ENABLE_BUSFAULT         1
+#define THINKOS_ENABLE_USAGEFAULT       1
+#define THINKOS_ENABLE_MEMFAULT         1
 
-#define THINKOS_ENABLE_MPU            1
-#define THINKOS_ENABLE_FPU            0
-#define THINKOS_ENABLE_CTL            1
+#define THINKOS_ENABLE_MPU              1
+#define THINKOS_ENABLE_ESCALATE         1
+#define THINKOS_ENABLE_FPU              0
+    
+#define THINKOS_ENABLE_THREAD_VOID      1
+#define THINKOS_ENABLE_DMCLOCK          1
 
-#define THINKOS_ENABLE_THREAD_VOID    1
-#define THINKOS_ENABLE_DMCLOCK        1
+#define THINKOS_ENABLE_THREAD_VOID      1
+#define THINKOS_ENABLE_DMCLOCK          1
 
+#define THINKOS_ENABLE_CTL              1
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
