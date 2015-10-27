@@ -261,8 +261,8 @@ void lsm303_acc_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_SYSCFG);
 
-	stm32_gpio_mode(LSM303_INT1_GIO, INPUT, SPEED_LOW);
-	stm32_gpio_mode(LSM303_INT2_GIO, INPUT, SPEED_LOW);
+	stm32_gpio_mode(LSM303_INT1_GIO, INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(LSM303_INT2_GIO, INPUT, PULL_UP | SPEED_LOW);
 
 	/* Select PE as EXTI5 input */
 	tmp = syscfg->exticr[1];
@@ -296,7 +296,7 @@ void lsm303_acc_init(void)
 
 	cfg[0] = ODR_10HZ | CTRL_ZEN | CTRL_YEN | CTRL_XEN;
 	cfg[1] = 0;
-	cfg[2] = CTRL_I1_DRDY2 | CTRL_I1_DRDY1;
+	cfg[2] = CTRL_I1_DRDY1;
 	cfg[3] = CTRL_FS_16G | CTRL_HR;
 	cfg[4] = 0;
 	cfg[5] = 0;

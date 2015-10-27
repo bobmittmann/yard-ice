@@ -70,6 +70,16 @@ void led_toggle(unsigned int id)
 	__led_toggle(led_io[id].gpio, led_io[id].pin);
 }
 
+void leds_init(void)
+{
+	int i;
+
+	for (i = 0; i < LED_COUNT; ++i) {
+		__led_off(led_io[i].gpio, led_io[i].pin);
+	}
+}
+
+
 /* ----------------------------------------------------------------------
  * Console
  * ----------------------------------------------------------------------
@@ -141,9 +151,21 @@ void xy_rotate_pi_8(struct vector * v)
 	v->y = y / 32768;
 }
 
+int32_t isqrt(uint32_t x);
+
+int32_t mag(struct vector * v)
+{
+	int32_t w;
+
+	w = v->x * v->x + v->y * v->y + v->z * v->z;
+	return isqrt(w);
+}
+
 int main(int argc, char ** argv)
 {
     int o = 0;
+
+    leds_init();
 
     /* Initialize the console */
 	stdio_init();
@@ -161,11 +183,15 @@ int main(int argc, char ** argv)
     	/* get the magnetic vector */
         lsm303_mag_vec_get(&v);
 
+        printf("%4d,%4d,%4d %4d : ", v.x, v.y, v.z, mag(&v));
         /* rotate PI/8 (22.5 dg) */
         xy_rotate_pi_8(&v);
 
+        printf("%4d,%4d,%4d %4d : ", v.x, v.y, v.z, mag(&v));
+
         /* get the vector's octant */
         i = xy_octant(&v);
+        printf("%d\n", i);
 
         /* update LEDs */
         if (i != o) {

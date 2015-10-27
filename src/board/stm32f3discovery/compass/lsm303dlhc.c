@@ -106,16 +106,16 @@ const struct thinkos_thread_inf magnetometer_inf = {
     .tag = "MAG"
 };
 
-struct mag_dev mag;
+struct mag_dev magdev;
 
 void lsm303_mag_vec_get(struct vector * v)
 {
 	/* Wait for data from magnetic sensor device */
-    thinkos_sem_wait(mag.sem);
+    thinkos_sem_wait(magdev.sem);
     /* Read data with exclusive acccess */
-    thinkos_mutex_lock(mag.mutex);
-    *v = mag.v;
-    thinkos_mutex_unlock(mag.mutex);
+    thinkos_mutex_lock(magdev.mutex);
+    *v = magdev.v;
+    thinkos_mutex_unlock(magdev.mutex);
 }
 
 void lsm303_mag_init(void)
@@ -150,10 +150,10 @@ void lsm303_mag_init(void)
 	cfg[2] = MR_MD_CONTINOUS;
 	lsm303_mag_wr(LSM303_CRA_REG_M, cfg, 3);
 
-    mag.sem = thinkos_sem_alloc(0);
-    mag.mutex = thinkos_mutex_alloc();
+    magdev.sem = thinkos_sem_alloc(0);
+    magdev.mutex = thinkos_mutex_alloc();
 
-    thinkos_thread_create_inf((void *)magnetometer_task, (void *)&mag,
+    thinkos_thread_create_inf((void *)magnetometer_task, (void *)&magdev,
                               &magnetometer_inf);
 }
 
