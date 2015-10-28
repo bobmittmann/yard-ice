@@ -51,11 +51,11 @@
 #endif
 
 #ifndef MONITOR_STACKUSAGE_ENABLE
-#define MONITOR_STACKUSAGE_ENABLE  1
+#define MONITOR_STACKUSAGE_ENABLE  0
 #endif
 
 #ifndef MONITOR_THREADINFO_ENABLE
-#define MONITOR_THREADINFO_ENABLE  1
+#define MONITOR_THREADINFO_ENABLE  0
 #endif
 
 #ifndef MONITOR_APPWIPE_ENABLE
@@ -63,7 +63,7 @@
 #endif
 
 #ifndef MONITOR_APPTERM_ENABLE
-#define MONITOR_APPTERM_ENABLE     1
+#define MONITOR_APPTERM_ENABLE     0
 #endif
 
 #ifndef MONITOR_APPRESTART_ENABLE
@@ -71,7 +71,7 @@
 #endif
 
 #ifndef MONITOR_FAULT_ENABLE
-#define MONITOR_FAULT_ENABLE       1
+#define MONITOR_FAULT_ENABLE       0
 #endif
 
 #define CTRL_B 0x02
@@ -231,7 +231,7 @@ static void monitor_on_fault(struct dmon_comm * comm)
 #if (MONITOR_THREADINFO_ENABLE)
 static void monitor_pause_all(struct dmon_comm * comm)
 {
-	dmprintf(comm, "\r\nPausing all threads...\r\n");
+	dmputs("\r\nPausing all threads...\r\n", comm);
 	DCC_LOG(LOG_WARNING, "__thinkos_pause_all()");
 	__thinkos_pause_all();
 	if (dmon_wait_idle() < 0) {
@@ -241,9 +241,9 @@ static void monitor_pause_all(struct dmon_comm * comm)
 
 static void monitor_resume_all(struct dmon_comm * comm)
 {
-	dmprintf(comm, "\r\nResuming all threads...\r\n");
+	dmputs("\r\nResuming all threads...\r\n", comm);
 	__thinkos_resume_all();
-	dmprintf(comm, "Restarting...\r\n");
+	dmputs("Restarting...\r\n", comm);
 }
 #endif
 
@@ -274,12 +274,12 @@ static void monitor_ymodem_recv(struct dmon_comm * comm,
 static void monitor_app_erase(struct dmon_comm * comm, 
 							  uint32_t addr, unsigned int size)
 {
-	dmprintf(comm, "\r\nErasing application block ... ");
+	dmputs("\r\nErasing application block ... ", comm);
 	dmon_soft_reset(comm);
 	if (dmon_app_erase(comm, addr, size))
-		dmprintf(comm, "done.\r\n");
+		dmputs("done.\r\n", comm);
 	else	
-		dmprintf(comm, "failed!\r\n");
+		dmputs("failed!\r\n", comm);
 }
 #endif
 
@@ -372,7 +372,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 #endif
 #if (MONITOR_CONFIGURE_ENABLE)
 		case CTRL_K:
-			dmprintf(comm, "^K\r\n");
+			dmputs("^K\r\n", comm);
 			dmon_soft_reset(comm);
 			this_board.configure(comm);
 			break;
@@ -380,8 +380,8 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 #if (MONITOR_UPGRADE_ENABLE)
 		case CTRL_L:
 			dmon_soft_reset(comm);
-//			dmprintf(comm, "^L\r\n");
-//			dmprintf(comm, "Confirm (yes/no)? ");
+//			dmputs("^L\r\n", comm);
+//			dmputs("Confirm (yes/no)? ", comm);
 //			dmscanf(comm, "yes%n", &i);
 //			if (i == 3)
 				this_board.upgrade(comm);
@@ -399,21 +399,21 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			dmon_print_osinfo(comm);
 			break;
 		case CTRL_P:
-			dmprintf(comm, "^P\r\n");
+			dmputs("^P\r\n", comm);
 			monitor_pause_all(comm);
 			break;
 		case CTRL_Q:
-			dmprintf(comm, "^Q\r\n");
+			dmputs("^Q\r\n", comm);
 			dmon_exec(monitor_task);
 			break;
 		case CTRL_R:
-			dmprintf(comm, "^R\r\n");
+			dmputs("^R\r\n", comm);
 			monitor_resume_all(comm);
 			break;
 #endif
 #if (MONITOR_DUMPMEM_ENABLE)
 		case CTRL_S:
-			dmprintf(comm, "^S\r\n");
+			dmputs("^S\r\n", comm);
 			monitor_dump_mem(comm, this_board.application.start_addr, 
 							 this_board.application.block_size);
 			break;
@@ -443,7 +443,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			break;
 #if (MONITOR_APPWIPE_ENABLE)
 		case CTRL_W:
-			dmprintf(comm, "^W\r\n");
+			dmputs("^W\r\n", comm);
 			monitor_app_erase(comm, this_board.application.start_addr, 
 							  this_board.application.block_size);
 			break;
@@ -496,10 +496,10 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 //	dmon_sleep(100);
 
 #if 0
-	dmprintf(comm, "\r\n\r\n");
-	dmprintf(comm, __hr__);
-	dmprintf(comm, " ThikOS Debug Monitor (Ctrl+V for Help)\r\n");
-	dmprintf(comm, __hr__);
+	dmputs("\r\n\r\n", comm);
+	dmputs(comm, __hr__);
+	dmputs(" ThikOS Debug Monitor (Ctrl+V for Help)\r\n", comm);
+	dmputs(comm, __hr__);
 #endif
 
 #if (MONITOR_FAULT_ENABLE)

@@ -33,7 +33,7 @@
 #define THINKOS_IRQ_MAX               80
 #define THINKOS_ENABLE_IRQ_CTL        1
 
-#define THINKOS_ENABLE_IDLE_WFI       0
+#define THINKOS_ENABLE_IDLE_WFI       1
 
 #define THINKOS_ENABLE_CLOCK          1
 
@@ -47,7 +47,7 @@
 #define THINKOS_ENABLE_JOIN           0
 #define THINKOS_ENABLE_PAUSE          0
 #define THINKOS_ENABLE_CANCEL         0
-#define THINKOS_ENABLE_EXIT           1
+#define THINKOS_ENABLE_EXIT           0
 
 #define THINKOS_MUTEX_MAX             16
 #define THINKOS_ENABLE_MUTEX_ALLOC    1
@@ -63,7 +63,7 @@
 
 #define THINKOS_FLAG_MAX              16
 #define THINKOS_ENABLE_FLAG_ALLOC     1
-#define THINKOS_ENABLE_FLAG_WATCH     1
+#define THINKOS_ENABLE_FLAG_WATCH     0
 
 #define THINKOS_GATE_MAX              16
 #define THINKOS_ENABLE_GATE_ALLOC     1
@@ -77,7 +77,7 @@
 
 #define THINKOS_EXCEPT_STACK_SIZE     320
 
-#define THINKOS_ENABLE_CTL            1
+#define THINKOS_ENABLE_CTL            0
 
 #define THINKOS_ENABLE_SCHED_DEBUG    0
 
@@ -93,25 +93,31 @@
 #define THINKOS_ENABLE_CONSOLE        1
 
 #define THINKOS_ENABLE_EXCEPTIONS     1
-#define THINKOS_UNROLL_EXCEPTIONS     1
+#define THINKOS_UNROLL_EXCEPTIONS     0
 #define THINKOS_ENABLE_EXCEPT_CLEAR   0
-#define THINKOS_ENABLE_BUSFAULT       1
-#define THINKOS_ENABLE_USAGEFAULT     1
+#define THINKOS_ENABLE_BUSFAULT       0
+#define THINKOS_ENABLE_USAGEFAULT     0
 #define THINKOS_SYSRST_ONFAULT        0
 #define THINKOS_STDERR_FAULT_DUMP     0
 
-#define THINKOS_ENABLE_MPU            1
+#define THINKOS_ENABLE_MPU            0
 #define THINKOS_ENABLE_ESCALATE       1
 #define THINKOS_ENABLE_FPU            0
 
 #define THINKOS_ENABLE_DEBUG_STEP     0
-#define THINKOS_ENABLE_DEBUG_FAULT    1
+#define THINKOS_ENABLE_DEBUG_FAULT    0
 
 #define THINKOS_DMON_STACK_SIZE       512
 
-#define THINKOS_ENABLE_STACK_INIT     1
+#define THINKOS_ENABLE_STACK_INIT     0
 
 #define THINKOS_ENABLE_THREAD_VOID    1
+
+/* -------------------------------------------------------------------------
+ * delay
+ * ------------------------------------------------------------------------- */
+
+#define UDELAY_FACTOR 1706
 
 /* -------------------------------------------------------------------------
    USB 

@@ -38,6 +38,7 @@ static void io_init(void)
 	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
 	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+#if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
@@ -50,6 +51,7 @@ static void io_init(void)
 	stm32_gpio_mode(IO_PWR_EN, OUTPUT, SPEED_LOW);
 	stm32_gpio_clr(IO_PWR_EN);
 	stm32_gpio_mode(IO_PWR_MON, INPUT, SPEED_LOW | PULL_UP);
+#endif
 }
 
 bool board_init(void)
@@ -95,13 +97,14 @@ void board_softreset(void)
 
 bool board_autoboot(uint32_t tick)
 {
+#if 0
 	if (tick < 2) {
 		if (tick & 1)
 			stm32_gpio_clr(IO_RELAY);
 		else
 			stm32_gpio_set(IO_RELAY);
 	}
-
+#endif
 	if (tick == (3 * 8)) 
 		return true;
 

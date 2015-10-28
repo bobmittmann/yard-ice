@@ -23,9 +23,17 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdint.h>
 
-int32_t udelay_factor;
+#ifndef UDELAY_FACTOR
+#define UDELAY_FACTOR 0
+#endif
+
+int32_t udelay_factor = UDELAY_FACTOR;
 
 #if UDELAY_ERROR_ENABLE
 int32_t udelay_error;
