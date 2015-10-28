@@ -945,6 +945,12 @@ struct cm3_fpb {
 /* this constant must be privided by the BSP */
 extern const uint32_t cm3_systick_load_1ms;
 
+struct cm4_fpu {
+	uint32_t fpccr;
+	uint32_t fpcar;
+	uint32_t fpdscr;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif

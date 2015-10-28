@@ -285,6 +285,10 @@
 #define THINKOS_ENABLE_ESCALATE         THINKOS_ENABLE_MPU
 #endif
 
+#ifndef THINKOS_ENABLE_CONST_IDLE
+#define THINKOS_ENABLE_CONST_IDLE       0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/

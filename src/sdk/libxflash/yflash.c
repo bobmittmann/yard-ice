@@ -32,19 +32,8 @@
 
 #define FLASH_WR_BLK_SIZE 128
 
-static void __attribute__((noreturn)) reset(void)
-{
-	CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
-	for(;;);
-}
-
-static void delay(unsigned int msec)
-{
-	while (msec > 0) {
-		if (CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG)
-			msec--;
-	}
-}
+void __attribute__((noreturn)) reset(void);
+void delay(unsigned int msec);
 
 #define SOH  0x01
 #define STX  0x02

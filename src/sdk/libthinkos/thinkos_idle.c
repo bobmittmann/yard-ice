@@ -34,14 +34,29 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 //	DCC_LOG(LOG_TRACE, "ThinkOS Idle started..."); 
 
 	for (;;) {
-#if (THINKOS_ENABLE_MONITOR)
-		thinkos_dbgmon(DBGMON_SIGNAL_IDLE);
-#endif
 #if THINKOS_ENABLE_IDLE_WFI
 		asm volatile ("wfi\n"); /* wait for interrupt */
 #endif
+#if (THINKOS_ENABLE_MONITOR)
+		thinkos_dbgmon(DBGMON_SIGNAL_IDLE);
+#endif
 	}
 }
+
+#if THINKOS_ENABLE_CONST_IDLE 
+/* Constant IDLE stack:
+
+   Define the IDLE context (stack) in Flash or read only memory. This
+   is helpful in two aspects:
+   1 - it reduces the memory footprint.
+   2 - it won't be unintetionally modified by a misbehaved application.
+
+ */
+const struct thinkos_context __attribute__((aligned(8))) thinkos_idle_ctx = {
+	.pc = (uint32_t)thinkos_idle_task,
+	.xpsr = CM_EPSR_T /* set the thumb bit */
+};
+#endif
 
 void __thinkos_idle_init(void)
 {
@@ -49,6 +64,9 @@ void __thinkos_idle_init(void)
 
 	DCC_LOG(LOG_TRACE, "..."); 
 
+#if (THINKOS_ENABLE_CONST_IDLE) 
+	idle_ctx = (struct thinkos_context *)&thinkos_idle_ctx;
+#else
 	/* initialize the idle thread */
 //	idle_ctx = (struct thinkos_context *)&thinkos_idle_stack[-CTX_R0];
 	idle_ctx = (struct thinkos_context *)&thinkos_idle_stack[0];
@@ -63,6 +81,7 @@ void __thinkos_idle_init(void)
 	idle_ctx->pc = (uint32_t)thinkos_idle_task,
 	idle_ctx->xpsr = CM_EPSR_T; /* set the thumb bit */
 
+#endif
 	thinkos_rt.idle_ctx = idle_ctx;
 #if (THINKOS_THREADS_MAX < 32) 
 	/* put the IDLE thread in the ready queue */

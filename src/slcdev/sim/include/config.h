@@ -32,6 +32,7 @@
    -------------------------------------------------------------------------- */
 
 #define THINKOS_IRQ_MAX               39
+#define THINKOS_ENABLE_IRQ_CTL        0
 
 #if DEBUG
 //#define THINKOS_EXCEPT_STACK_SIZE     240
@@ -87,6 +88,9 @@
 #define THINKOS_ENABLE_SANITY_CHECK   0 
 
 #define THINKOS_ENABLE_EXCEPTIONS     1
+#define THINKOS_ENABLE_BUSFAULT       0
+#define THINKOS_ENABLE_USAGEFAULT     0
+#define THINKOS_ENABLE_MEMFAULT       0
 #define THINKOS_UNROLL_EXCEPTIONS     0
 #define THINKOS_SYSRST_ONFAULT        1
 #define THINKOS_STDERR_FAULT_DUMP     0
@@ -108,6 +112,8 @@
 #else
 #define THINKOS_ENABLE_STACK_INIT     0
 #endif
+
+#define THINKOS_ENABLE_CONST_IDLE     0
 
 /* -------------------------------------------------------------------------
    MicroJS configuration

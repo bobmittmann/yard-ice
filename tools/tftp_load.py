@@ -70,6 +70,7 @@ tgt_reset_quiet = 'rst\n'\
 tgt_config = 'target {0} force\n'\
 	'target config\n'\
 	'connect\n'\
+	'sleep 4\n'\
 	'halt\n'\
 	'init\n'
 

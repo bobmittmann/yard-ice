@@ -36,9 +36,9 @@ INCPATH = $(SDK)/include ../include
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
-VERSION_DATE = "2015-10-27"
+VERSION_DATE = "2015-10-28"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "35"
+VERSION_MINOR = "36"
 
 CFLAGS = -g -O2 -Wall -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections

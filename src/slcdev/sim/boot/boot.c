@@ -40,8 +40,8 @@
 
 /* FIXME: this is a mark to keep the symbol __heap_end in 
    the symbols listing. */
-extern int __heap_end;
-const void * heap_end = &__heap_end; 
+extern int __heap_base;
+const void * heap_base = &__heap_base; 
 uint32_t except_crc __attribute__((section(".heap")));
 
 void app_default(int mode);

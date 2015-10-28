@@ -463,23 +463,57 @@ extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
 
 struct magic {
-	uint32_t cnt;
 	struct {
-		uint32_t addr;
-		uint32_t mask;
+		uint16_t pos;
+		uint16_t cnt;
+	} hdr;
+	struct {
+	    uint32_t mask;
 		uint32_t comp;
 	} rec[];
 };
 
-const struct magic bootloader_magic = {
-	.cnt = 4,
+const struct magic thinkos_magic = {
+	.hdr = {
+		.pos = 0,
+		.cnt = 10
+	},
 	.rec = {
-		{  0x08000000, 0xffffffff, 0x10010000 },
-		{  0x08000004, 0xffff0000, 0x08000000 },
-		{  0x08000008, 0xffff0000, 0x08000000 },
-		{  0x0800000c, 0xffff0000, 0x08000000 }
+		{  0xfff00000, 0x10000000 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+		{  0xffff0000, 0x08000000 },
+
+		{  0xffffffff, 0x10010000 },
+		{  0xffff0000, 0x08000000 }
 	}
 };
+
+/*
+ c0 ff 00 10
+ 49 00 00 08
+ a5 1a 00 08
+ bd 23 00 08
+
+ 49 23 00 08
+ 61 22 00 08
+ d5 22 00 08
+ ed 5c 00 08
+
+ 00 00 01 10
+ 19 60 00 08
+ b1 65 00 08
+ 21 51 00 08
+ 89 31 00 08
+ d5 6f 00 08
+ 91 4f 00 08 
+ 61 50 00 08
+*/
 
 void board_upgrade(struct dmon_comm * comm)
 {
@@ -489,7 +523,7 @@ void board_upgrade(struct dmon_comm * comm)
 
 	cm3_cpsid_f();
 	__thinkos_memcpy(xflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
-	xflash_ram(0, 65536, &bootloader_magic);
+	xflash_ram(0, 65536, &thinkos_magic);
 }
 
 #ifndef ENABLE_PRIPHERAL_MEM
@@ -539,7 +573,8 @@ const struct thinkos_board this_board = {
 	},
 	.sw_ver = {
 		.major = VERSION_MAJOR,
-		.minor = VERSION_MINOR
+		.minor = VERSION_MINOR,
+		.build = VERSION_BUILD
 	},
 	.memory = {
 		.ram = &sram_desc,

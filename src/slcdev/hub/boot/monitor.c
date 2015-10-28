@@ -69,7 +69,6 @@
 int8_t monitor_thread_id = MONITOR_STARTUP_MAGIC;
 
 static const char monitor_menu[] = 
-"- ThinkOS Monitor Commands:\r\n"
 " Ctrl+C - Stop application\r\n"
 " Ctrl+K - Configure Board\r\n"
 " Ctrl+L - Upload ThinkOS\r\n"
@@ -93,6 +92,11 @@ static const char __hr__[] =
 static void monitor_show_help(struct dmon_comm * comm)
 {
 	dmprintf(comm, __hr__);
+	dmprintf(comm, "ThinkOS-%d.%d.%d (%s):\r\n", 
+			 this_board.sw_ver.major,
+			 this_board.sw_ver.minor,
+			 this_board.sw_ver.build,
+			 this_board.name);
 	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
 	dmprintf(comm, __hr__);
 }

@@ -1,98 +1,758 @@
 
 == ARM DCC log viewer ==
  - elf: debug/thinkos.elf
- - symbols off: 000b05e0  size: 48832  entsize: 16 link 00000014
+ - symbols off: 000b0564  size: 48752  entsize: 16 link 00000014
  - host: 192.168.10.50:1001
- - log date: Tue Oct 27 10:22:30 2015
+ - log date: Wed Oct 28 09:37:25 2015
 
 
  EXCEPT: ice_trace_init: starting DCC LOG...
   TRACE: main: 1. cm3_udelay_calibrate().
-  TRACE: dmon_app_exec: app=08020000 paused=false
+  TRACE: main: 6. thinkos_userland()
+  TRACE: main: 7. thinkos_thread_abort()
+  TRACE: thinkos_terminate_svc: <0> code=2147483647
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+  TRACE: dmon_exec: task=08009cd1
+  TRACE: dmon_on_reset: DMON_RESET
+  TRACE: gdb_task: GDB [stopped=true active_app=false] =====================
+  TRACE: dmon_watchpoint_clear_all: TWD NUMCOMP=4.
+  TRACE: rsp_query: qSupported
+  TRACE: rsp_query: QStartNoAckMode
+  TRACE: rsp_h_packet: get any thread
+  TRACE: rsp_query: qXfer:features:read:
+  TRACE: rsp_query: qXfer:features:read:
+  TRACE: rsp_query: Nonstop=0 +++++++++++++++
+  TRACE: rsp_query: unsupported: "qTStatus#49"
+WARNING: thread_any: No threads!
+WARNING: rsp_query: no active application, calling dmon_app_exec()!
+WARNING: dmon_app_exec: invalid signature at 08020000!
+  TRACE: rsp_h_packet: continue all threads
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030d6
+  TRACE: rsp_query: qXfer:memory-map:read:
+  TRACE: rsp_query: qSymbol (not implemented!)
+  TRACE: rsp_query: qRcmd
+  TRACE: rsp_cmd: cmd="reset run"
+WARNING: dmon_app_exec: invalid signature at 08020000!
+  TRACE: rsp_query: qRcmd
+  TRACE: rsp_cmd: cmd="delay 3000"
+  TRACE: rsp_memory_write_bin: write probe!
+  TRACE: rsp_memory_write_bin: addr=08020000 size=128 cp=20000408
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: target_mem_write: block erase addr=0x08020000 size=131072
+WARNING: gdb_task: [NACK]!
+  TRACE: rsp_memory_write_bin: addr=08020080 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020260 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020440 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020620 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080207f0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080209c0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020b90 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020d60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020f40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021120 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021300 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080214e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080216c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080218a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021a80 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021c60 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021e30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022010 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080221f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080223d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080225b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022790 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022970 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022b50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022d30 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022f00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080230e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080232c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080234a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023680 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023860 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023a40 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023c10 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023de0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023fb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024190 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024360 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024540 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024720 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080248f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024ad0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024cb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024e90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025070 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025250 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025430 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025610 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080257e0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080259b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025b90 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025d60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025f40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026120 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026300 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080264e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080266c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080268a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026a80 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026c60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026e40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027020 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027200 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080273e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080275c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080277a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027980 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027b60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027d40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027f20 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080280f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080282d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080284b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028690 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028870 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028a50 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028c20 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028e00 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028fd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080291b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029390 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029570 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029750 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029920 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029b00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029ce0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029eb0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a080 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a260 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a440 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a620 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a7f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a9d0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802aba0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ad70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802af50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b130 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b310 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b4f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b6d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b8b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ba90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802bc70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802be50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c030 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c210 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c3f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c5d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c7b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c990 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802cb70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802cd50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802cf30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d110 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d2f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d4d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d6b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d890 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802da70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802dc50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802de30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e010 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e1f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e3d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e5b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e790 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e970 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802eb50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ed30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ef10 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f0f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f2d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f4b0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f680 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f860 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802fa40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802fc20 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802fe00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ffe0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080301c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080303a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030580 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030760 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030940 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030b20 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030d00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030ee0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080310c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080312a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031480 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031660 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031840 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031a20 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031bf0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031dd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031fb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032190 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032370 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032550 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032730 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032910 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032af0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032cd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032eb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033090 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033270 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033450 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033630 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033810 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080339f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033bd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033db0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033f90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034170 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034350 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034530 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034710 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080348f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034ad0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034cb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034e90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035070 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035250 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035430 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035610 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080357f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080359d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035bb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035d90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035f70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036150 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036330 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036510 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080366f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080368d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036ab0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036c90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036e70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037050 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037230 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037410 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080375f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080377d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080379b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037b90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037d70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037f50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038130 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038310 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080384f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080386d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080388b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038a90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038c70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038e50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08039030 size=224 cp=20000408
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08039110 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080392f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080394d0 size=468 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=10000000 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100001e0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100003c0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100005a0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000780 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000960 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000b40 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000d20 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000f00 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100010e0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100012c0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100014a0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001680 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001860 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001a40 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001c20 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001e00 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001fe0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100021c0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100023a0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002580 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002760 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002940 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002b20 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002d00 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002ee0 size=288 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_register_set: thread_id=96 reg=15 val=0x08020000
+  TRACE: thread_register_set: ThinkOS Idle thread, context=1000ff70!
+  TRACE: rsp_v_packet: Continue all!
+WARNING: rsp_v_packet: no active application, calling dmon_app_exec()!
+  TRACE: dmon_app_exec: app=08020000 paused=true
   TRACE: __thinkos_exec: __thinkos_thread_abort()
   TRACE: __thinkos_exec: __thinkos_thread_init(func=080051bd arg=08020000)
   TRACE: __thinkos_thread_init: thread_id=0 pc=080051bd sp=1000ff70
   TRACE: __thinkos_exec: __thinkos_thread_inf_set()
-  TRACE: __thinkos_exec: __thinkos_thread_resume()
   TRACE: app_bootstrap: sp=0x1000ff70
   TRACE: thinkos_ctl_svc: .........................
   TRACE: __thinkos_thread_init: thread_id=30 pc=08022d31 sp=20001698
-  TRACE: __thinkos_thread_init: thread_id=31 pc=08024029 sp=20010b50
-  ERROR: __xcpt_mem_manag: !!! Mem Management !!!
-  ERROR: __xcpt_mem_manag: MMFSR=00000082 MMFAR=1fff7a10
-  ERROR: __xcpt_mem_manag:      MMARVALID DACCVIOL
-  ERROR: __xdump:    R0=00008000  R1=1fff7a10  R2=00000002  R3=00000002
-  ERROR: __xdump:    R4=0803963c  R5=080390a8  R6=08037484  R7=1000fe98
-  ERROR: __xdump:    R8=00000001  R9=0800d0ec R10=00000000 R11=00000000
-  ERROR: __xdump:   R12=080375a8  SP=1000fe48  LR=080244db  PC=08024282
-  ERROR: __xdump:  XPSR=41000000 MSP=20000f78 PSP=1000fe48 RET=fffffffd
-  ERROR: __xdump:  XPSR={ .Z... T ICI/IT=00 GE=0 IPSR=0 (Thread) }
-  ERROR: __xdump: SHCSR={ MEMFAULTACT }
-  ERROR: __xdump:  ICSR={ PENDST RETTOBASE VECTPENDING=15 VECTACTIVE=4 }
-  ERROR: __xdump: thread_id=0 active=0
-  TRACE: __xcpt_process: ...
-  TRACE: __idump: __xcpt_unroll() _________________________________
-  TRACE: __idump:  IPSR=4 (MemManage)
-  TRACE: __idump: SHCSR={ MEMFAULTACT }
-  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
-  TRACE: __idump: __xcpt_thinkos_process() _________________________________
-  TRACE: __idump:  IPSR=4 (MemManage)
-  TRACE: __idump: SHCSR={ MEMFAULTACT }
-  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
-  TRACE: __tdump: Active=0
-  TRACE: __tdump:    MAIN ( 0   0) SP=1000fef0 PC=00000003 LR=08025595 0/4096
-  TRACE: __tdump: [INVALID POINTER] (30   0) SP=20001658 PC=08022d31 LR=08002315 188/256
-  TRACE: __tdump: [INVALID POINTER] (31   0) SP=20010b10 PC=08024029 LR=08002315 960/1024
-  TRACE: __tdump: <IDLE>  (32) SP=1000ff70
-  TRACE: __tdump: <VOID>  (33) SP=1000ff70
-  TRACE: __tdump: wq_ready=c0000001
-  TRACE: __tdump: wq_clock=00000000
-  TRACE: __thinkos_pause_all: active=0
-  TRACE: __thinkos_idle_init: ...
-WARNING: thinkos_exception_dsr: Fault at thread 0 !!!!!!!!!!!!!
-  TRACE: thinkos_exception_dsr: this_board.comm_irqen().
-  TRACE: monitor_task: Thread fault.
+  TRACE: __thinkos_thread_init: thread_id=31 pc=0802404d sp=20010b50
+  TRACE: __thinkos_thread_init: thread_id=29 pc=080280ad sp=20019ea0
+  TRACE: __thinkos_thread_init: thread_id=28 pc=08027155 sp=20019ae0
+  TRACE: gdb_task: [BREAK]
+  TRACE: rsp_on_break: on break, suspending... ... ...
+  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x20000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x00000008
+  TRACE: __thinkos_pause_all: active=32
   TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: rsp_all_registers_get: thread_id=64 PC=0802a54c
+  TRACE: rsp_all_registers_get: thread_id=95 PC=0802a54c
+  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d5e
+  TRACE: rsp_all_registers_get: thread_id=93 PC=0802813e
+  TRACE: rsp_all_registers_get: thread_id=92 PC=08027160
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030d6
+  TRACE: rsp_v_packet: Continue all!
+  TRACE: __console_wr_resume: PC=0802a54c pipe full ..
+  TRACE: __console_wr_resume: PC=0802a54c pipe full ..
+  TRACE: gdb_task: [BREAK]
+  TRACE: rsp_on_break: on break, suspending... ... ...
+  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x20000000
+  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x00000008
+  TRACE: __thinkos_pause_all: active=32
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: rsp_all_registers_get: thread_id=64 PC=0802a54c
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030d6
+  TRACE: rsp_all_registers_get: thread_id=92 PC=08027160
+  TRACE: rsp_all_registers_get: thread_id=93 PC=0802813e
+  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d5e
+  TRACE: rsp_all_registers_get: thread_id=95 PC=0802a54c
+  TRACE: rsp_v_packet: Continue all!
+  TRACE: __console_wr_resume: PC=0802a54c pipe full ..
+  TRACE: __console_wr_resume: PC=0802a54c pipe full ..
+  TRACE: __thinkos_thread_init: thread_id=7 pc=08024585 sp=10000c00
+  TRACE: __thinkos_thread_init: thread_id=8 pc=08024585 sp=10001800
+  TRACE: __thinkos_thread_init: thread_id=9 pc=08024585 sp=10002400
+  TRACE: __thinkos_thread_init: thread_id=10 pc=08024585 sp=10003000
+  TRACE: thinkos_flag_alloc_svc: wq=126
+  TRACE: thinkos_flag_alloc_svc: wq=127
+  TRACE: thinkos_flag_alloc_svc: wq=128
+  TRACE: thinkos_flag_alloc_svc: wq=129
+  TRACE: __thinkos_thread_init: thread_id=11 pc=08023651 sp=2000e2f8
+  TRACE: thinkos_flag_alloc_svc: wq=130
+  TRACE: thinkos_flag_alloc_svc: wq=131
+  TRACE: thinkos_flag_alloc_svc: wq=132
+  TRACE: thinkos_flag_alloc_svc: wq=133
+  TRACE: __thinkos_thread_init: thread_id=12 pc=08023651 sp=2000e6f8
+  TRACE: thinkos_flag_alloc_svc: wq=134
+  TRACE: thinkos_flag_alloc_svc: wq=135
+  TRACE: thinkos_flag_alloc_svc: wq=136
+  TRACE: thinkos_flag_alloc_svc: wq=137
+  TRACE: __thinkos_thread_init: thread_id=13 pc=08023651 sp=2000eaf8
+  TRACE: thinkos_flag_alloc_svc: wq=138
+  TRACE: thinkos_flag_alloc_svc: wq=139
+  TRACE: thinkos_flag_alloc_svc: wq=140
+  TRACE: thinkos_flag_alloc_svc: wq=141
+  TRACE: __thinkos_thread_init: thread_id=14 pc=08023651 sp=2000eef8
+  TRACE: thinkos_flag_alloc_svc: wq=142
+  TRACE: thinkos_flag_alloc_svc: wq=143
+  TRACE: thinkos_flag_alloc_svc: wq=144
+  TRACE: thinkos_flag_alloc_svc: wq=145
+  TRACE: __thinkos_thread_init: thread_id=15 pc=08023651 sp=2000f2f8
+  TRACE: gdb_task: [BREAK]
+  TRACE: rsp_on_break: on break, suspending... ... ...
+  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00013800
+  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x243000c0
+  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x000000a8
+  TRACE: __thinkos_pause_all: active=32
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: rsp_all_registers_get: thread_id=64 PC=08024562
+  TRACE: rsp_all_registers_get: thread_id=79 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=78 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=77 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=76 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=75 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=74 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=73 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=72 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=71 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=95 PC=0802a54c
+  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d5e
+  TRACE: rsp_all_registers_get: thread_id=93 PC=0802813e
+  TRACE: rsp_all_registers_get: thread_id=92 PC=08027160
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030d6
+  TRACE: rsp_v_packet: Continue all!
+  TRACE: __console_wr_resume: PC=0802a54c pipe full ..
+  TRACE: gdb_task: [BREAK]
+  TRACE: rsp_on_break: on break, suspending... ... ...
+  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00013800
+  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x243000c0
+  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x000000a8
+  TRACE: __thinkos_pause_all: active=32
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: rsp_all_registers_get: thread_id=64 PC=08024562
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030d6
+  TRACE: rsp_all_registers_get: thread_id=92 PC=08027160
+  TRACE: rsp_all_registers_get: thread_id=93 PC=0802813e
+  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d5e
+  TRACE: rsp_all_registers_get: thread_id=95 PC=0802a54c
+  TRACE: rsp_all_registers_get: thread_id=71 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=72 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=73 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=74 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=75 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=76 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=77 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=78 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=79 PC=0802692a
+  TRACE: rsp_kill: [KILL]
+  TRACE: gdb_task: Comm Ctl.
+WARNING: gdb_task: Debug Monitor Comm closed!
+  TRACE: dmon_exec: task=080005cd
+  TRACE: dmon_on_reset: DMON_RESET
   TRACE: dmon_exec: task=08009cd1
   TRACE: dmon_on_reset: DMON_RESET
   TRACE: gdb_task: GDB [stopped=true active_app=true] =====================
   TRACE: dmon_watchpoint_clear_all: TWD NUMCOMP=4.
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: qSupported
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: QStartNoAckMode
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_h_packet: get any thread
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: qXfer:features:read:
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: qXfer:features:read:
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: Nonstop=0 +++++++++++++++
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: unsupported: "qTStatus#49"
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_h_packet: continue all threads
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: rsp_all_registers_get: thread_id=64 PC=08024282
-  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_all_registers_get: thread_id=64 PC=08024562
   TRACE: rsp_query: qXfer:memory-map:read:
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: qSymbol (not implemented!)
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: qRcmd
   TRACE: rsp_cmd: cmd="reset run"
   TRACE: dmon_soft_reset: 1. disable all interrupts
@@ -106,431 +766,593 @@ WARNING: thinkos_exception_dsr: Fault at thread 0 !!!!!!!!!!!!!
 WARNING: __exception_reset: !!!!
   TRACE: dmon_soft_reset: 7. clear all breakpoints...
   TRACE: dmon_soft_reset: 8. reset this board...
-  TRACE: board_softreset: AHB1ENR=0x0014001f
+  TRACE: board_softreset: AHB1ENR=0x0e74001f
   TRACE: board_softreset: AHB2ENR=0x00000080
   TRACE: board_softreset: AHB3ENR=0x00000000
-  TRACE: board_softreset: APB1ENR=0x00000008
-  TRACE: board_softreset: APB2ENR=0x00000000
+  TRACE: board_softreset: APB1ENR=0x001e0008
+  TRACE: board_softreset: APB2ENR=0x00000020
   TRACE: dmon_soft_reset: 9. done.
   TRACE: dmon_app_exec: app=08020000 paused=true
   TRACE: __thinkos_exec: __thinkos_thread_abort()
   TRACE: __thinkos_exec: __thinkos_thread_init(func=080051bd arg=08020000)
   TRACE: __thinkos_thread_init: thread_id=0 pc=080051bd sp=1000ff70
   TRACE: __thinkos_exec: __thinkos_thread_inf_set()
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
   TRACE: rsp_query: qRcmd
   TRACE: rsp_cmd: cmd="delay 3000"
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
-  TRACE: rsp_breakpoint_insert: type=0 addr=0x080244c6 size=2
-  TRACE: gdb_task: <suspended>00
-  TRACE: gdb_task: <suspended>00
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030d6
+  TRACE: rsp_memory_write_bin: write probe!
+WARNING: rsp_memory_write_bin: active application!
+  TRACE: dmon_soft_reset: 1. disable all interrupts
+  TRACE: dmon_soft_reset: 2. kill all threads...
+  TRACE: dmon_soft_reset: 3. wait idle...
+  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
+  TRACE: dmon_soft_reset: 4. ThinkOS reset...
+  TRACE: __thinkos_idle_init: ...
+  TRACE: dmon_soft_reset: 5. console reset...
+  TRACE: dmon_soft_reset: 6. exception reset...
+WARNING: __exception_reset: !!!!
+  TRACE: dmon_soft_reset: 7. clear all breakpoints...
+  TRACE: dmon_soft_reset: 8. reset this board...
+  TRACE: board_softreset: AHB1ENR=0x0010001f
+  TRACE: board_softreset: AHB2ENR=0x00000080
+  TRACE: board_softreset: AHB3ENR=0x00000000
+  TRACE: board_softreset: APB1ENR=0x00000000
+  TRACE: board_softreset: APB2ENR=0x00000000
+  TRACE: dmon_soft_reset: 9. done.
+  TRACE: rsp_memory_write_bin: addr=08020000 size=128 cp=20000408
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: target_mem_write: block erase addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020080 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020260 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020440 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020620 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080207f0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080209c0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020b90 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020d60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08020f40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021120 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021300 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080214e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080216c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080218a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021a80 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021c60 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08021e30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022010 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080221f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080223d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080225b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022790 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022970 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022b50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022d30 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08022f00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080230e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080232c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080234a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023680 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023860 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023a40 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023c10 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023de0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08023fb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024190 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024360 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024540 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024720 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080248f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024ad0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024cb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08024e90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025070 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025250 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025430 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025610 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080257e0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080259b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025b90 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025d60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08025f40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026120 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026300 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080264e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080266c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080268a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026a80 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026c60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08026e40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027020 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027200 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080273e0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080275c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080277a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027980 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027b60 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027d40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08027f20 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080280f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080282d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080284b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028690 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028870 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028a50 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028c20 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028e00 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08028fd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080291b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029390 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029570 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029750 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029920 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029b00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029ce0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08029eb0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a080 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a260 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a440 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a620 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a7f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802a9d0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802aba0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ad70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802af50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b130 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b310 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b4f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b6d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802b8b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ba90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802bc70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802be50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c030 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c210 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c3f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c5d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c7b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802c990 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802cb70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802cd50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802cf30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d110 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d2f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d4d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d6b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802d890 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802da70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802dc50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802de30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e010 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e1f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e3d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e5b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e790 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802e970 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802eb50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ed30 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ef10 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f0f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f2d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f4b0 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f680 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802f860 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802fa40 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802fc20 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802fe00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=0802ffe0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080301c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080303a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030580 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030760 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030940 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030b20 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030d00 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08030ee0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080310c0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080312a0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031480 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031660 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031840 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031a20 size=464 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031bf0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031dd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08031fb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032190 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032370 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032550 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032730 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032910 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032af0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032cd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08032eb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033090 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033270 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033450 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033630 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033810 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080339f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033bd0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033db0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08033f90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034170 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034350 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034530 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034710 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080348f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034ad0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034cb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08034e90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035070 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035250 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035430 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035610 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080357f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080359d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035bb0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035d90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08035f70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036150 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036330 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036510 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080366f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080368d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036ab0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036c90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08036e70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037050 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037230 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037410 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080375f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080377d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080379b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037b90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037d70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08037f50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038130 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038310 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080384f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080386d0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080388b0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038a90 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038c70 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08038e50 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08039030 size=224 cp=20000408
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=08039110 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080392f0 size=480 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=080394d0 size=468 cp=20000409
+  TRACE: target_mem_write: FLASH block addr=0x08020000 size=131072
+  TRACE: rsp_memory_write_bin: addr=10000000 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100001e0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100003c0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100005a0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000780 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000960 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000b40 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000d20 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10000f00 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100010e0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100012c0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100014a0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001680 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001860 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001a40 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001c20 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001e00 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10001fe0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100021c0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=100023a0 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002580 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002760 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002940 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002b20 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002d00 size=480 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+  TRACE: rsp_memory_write_bin: addr=10002ee0 size=288 cp=2000040a
+  TRACE: target_mem_write: RAM block addr=0x10000000 size=65536
+WARNING: rsp_register_set: thread 64 is dead!
   TRACE: rsp_v_packet: Continue all!
+WARNING: rsp_v_packet: no active application, calling dmon_app_exec()!
+  TRACE: dmon_app_exec: app=08020000 paused=true
+  TRACE: __thinkos_exec: __thinkos_thread_abort()
+  TRACE: __thinkos_exec: __thinkos_thread_init(func=080051bd arg=08020000)
+  TRACE: __thinkos_thread_init: thread_id=0 pc=080051bd sp=1000ff70
+  TRACE: __thinkos_exec: __thinkos_thread_inf_set()
   TRACE: app_bootstrap: sp=0x1000ff70
-  TRACE: gdb_task: <running> 00
   TRACE: thinkos_ctl_svc: .........................
   TRACE: __thinkos_thread_init: thread_id=30 pc=08022d31 sp=20001698
-  TRACE: dbgmon_isr: <<BREAKPOINT>>: thread_id=0 pc=080244c6 ---
-  TRACE: rsp_on_breakpoint: on breakpoint, suspending... ... ...
-  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00000000
-  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x00000000
-  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x00000008
-  TRACE: __thinkos_pause_all: active=0
+  TRACE: __thinkos_thread_init: thread_id=31 pc=0802404d sp=20010b50
+  TRACE: __thinkos_thread_init: thread_id=29 pc=080280ad sp=20019ea0
+  TRACE: __thinkos_thread_init: thread_id=28 pc=08027155 sp=20019ae0
+  TRACE: __thinkos_thread_init: thread_id=7 pc=08024585 sp=10000c00
+  TRACE: __thinkos_thread_init: thread_id=8 pc=08024585 sp=10001800
+  TRACE: __thinkos_thread_init: thread_id=9 pc=08024585 sp=10002400
+  TRACE: __thinkos_thread_init: thread_id=10 pc=08024585 sp=10003000
+  TRACE: thinkos_flag_alloc_svc: wq=126
+  TRACE: thinkos_flag_alloc_svc: wq=127
+  TRACE: thinkos_flag_alloc_svc: wq=128
+  TRACE: thinkos_flag_alloc_svc: wq=129
+  TRACE: __thinkos_thread_init: thread_id=11 pc=08023651 sp=2000e2f8
+  TRACE: thinkos_flag_alloc_svc: wq=130
+  TRACE: thinkos_flag_alloc_svc: wq=131
+  TRACE: thinkos_flag_alloc_svc: wq=132
+  TRACE: thinkos_flag_alloc_svc: wq=133
+  TRACE: __thinkos_thread_init: thread_id=12 pc=08023651 sp=2000e6f8
+  TRACE: thinkos_flag_alloc_svc: wq=134
+  TRACE: thinkos_flag_alloc_svc: wq=135
+  TRACE: thinkos_flag_alloc_svc: wq=136
+  TRACE: thinkos_flag_alloc_svc: wq=137
+  TRACE: __thinkos_thread_init: thread_id=13 pc=08023651 sp=2000eaf8
+  TRACE: thinkos_flag_alloc_svc: wq=138
+  TRACE: thinkos_flag_alloc_svc: wq=139
+  TRACE: thinkos_flag_alloc_svc: wq=140
+  TRACE: thinkos_flag_alloc_svc: wq=141
+  TRACE: __thinkos_thread_init: thread_id=14 pc=08023651 sp=2000eef8
+  TRACE: thinkos_flag_alloc_svc: wq=142
+  TRACE: thinkos_flag_alloc_svc: wq=143
+  TRACE: thinkos_flag_alloc_svc: wq=144
+  TRACE: thinkos_flag_alloc_svc: wq=145
+  TRACE: __thinkos_thread_init: thread_id=15 pc=08023651 sp=2000f2f8
+  TRACE: gdb_task: [BREAK]
+  TRACE: rsp_on_break: on break, suspending... ... ...
+  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00013800
+  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x243000c0
+  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x000000a8
+  TRACE: __thinkos_pause_all: active=32
   TRACE: thinkos_dbgmon_svc: <<< Idle >>>
-  TRACE: gdb_task: <suspended>05
-  TRACE: rsp_all_registers_get: thread_id=64 PC=080244c6
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: rsp_breakpoint_remove: type=0 addr=0x080244c6 size=2
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d31
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: rsp_v_packet: Step 64
-  TRACE: thread_step_req: ThinkOS thread=0 context=1000ff10 PC=080244c6!
-  TRACE: rsp_stop_reply: last_signal=5
-  TRACE: dbgmon_isr: <<STEP>> thread_id=0 pc=0802558c ipsr=0 ------
-  TRACE: gdb_task: <suspended>05
-WARNING: rsp_on_step: on step, suspended already!
-  TRACE: gdb_task: <suspended>05
-  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
-  TRACE: gdb_task: <suspended>05
-  TRACE: gdb_task: <suspended>05
-  TRACE: rsp_breakpoint_insert: type=0 addr=0x080244c6 size=2
-  TRACE: gdb_task: <suspended>05
+  TRACE: rsp_all_registers_get: thread_id=64 PC=08024562
+  TRACE: rsp_all_registers_get: thread_id=95 PC=080240f2
+  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d5e
+  TRACE: rsp_all_registers_get: thread_id=93 PC=0802813e
+  TRACE: rsp_all_registers_get: thread_id=92 PC=08027160
+  TRACE: rsp_all_registers_get: thread_id=79 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=78 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=77 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=76 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=75 PC=0802692a
+  TRACE: rsp_all_registers_get: thread_id=74 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=73 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=72 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=71 PC=080278e4
+  TRACE: rsp_all_registers_get: thread_id=96 PC=080030d6
   TRACE: rsp_v_packet: Continue all!
-  TRACE: gdb_task: <running> 05
-  TRACE: __thinkos_thread_init: thread_id=31 pc=08024029 sp=20010b50
-  ERROR: __xcpt_mem_manag: !!! Mem Management !!!
-  ERROR: __xcpt_mem_manag: MMFSR=00000082 MMFAR=1fff7a10
-  ERROR: __xcpt_mem_manag:      MMARVALID DACCVIOL
-  ERROR: __xdump:    R0=00008000  R1=1fff7a10  R2=00000002  R3=00000002
-  ERROR: __xdump:    R4=0803963c  R5=080390a8  R6=08037484  R7=1000fe98
-  ERROR: __xdump:    R8=00000001  R9=0800d0ec R10=00000000 R11=00000000
-  ERROR: __xdump:   R12=080375a8  SP=1000fe48  LR=080244db  PC=08024282
-  ERROR: __xdump:  XPSR=41000000 MSP=20000f78 PSP=1000fe48 RET=fffffffd
-  ERROR: __xdump:  XPSR={ .Z... T ICI/IT=00 GE=0 IPSR=0 (Thread) }
-  ERROR: __xdump: SHCSR={ MEMFAULTACT }
-  ERROR: __xdump:  ICSR={ PENDST RETTOBASE VECTPENDING=15 VECTACTIVE=4 }
-  ERROR: __xdump: thread_id=0 active=0
-  TRACE: __xcpt_process: ...
-  TRACE: __idump: __xcpt_unroll() _________________________________
-  TRACE: __idump:  IPSR=4 (MemManage)
-  TRACE: __idump: SHCSR={ MEMFAULTACT }
-  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
-  TRACE: __idump: __xcpt_thinkos_process() _________________________________
-  TRACE: __idump:  IPSR=4 (MemManage)
-  TRACE: __idump: SHCSR={ MEMFAULTACT }
-  TRACE: __idump:  ICSR={ RETTOBASE VECTPENDING=0 VECTACTIVE=4 }
-  TRACE: __tdump: Active=0
-  TRACE: __tdump:    MAIN ( 0   0) SP=1000fef0 PC=00000003 LR=08025595 0/4096
-  TRACE: __tdump: [INVALID POINTER] (30   0) SP=20001658 PC=08022d31 LR=08002315 188/256
-  TRACE: __tdump: [INVALID POINTER] (31   0) SP=20010b10 PC=08024029 LR=08002315 960/1024
-  TRACE: __tdump: <IDLE>  (32) SP=1000ff70
-  TRACE: __tdump: <VOID>  (33) SP=1000ff70
-  TRACE: __tdump: wq_ready=c0000001
-  TRACE: __tdump: wq_clock=00000000
-  TRACE: __thinkos_pause_all: active=0
-  TRACE: __thinkos_idle_init: ...
-WARNING: thinkos_exception_dsr: Fault at thread 0 !!!!!!!!!!!!!
-  TRACE: thinkos_exception_dsr: this_board.comm_irqen().
-  TRACE: gdb_task: Thread fault.
-  TRACE: rsp_on_fault: suspending (current=64) ... ...
-  TRACE: __dmon_irq_disable_all: nvic_ie[0]=0x00000000
-  TRACE: __dmon_irq_disable_all: nvic_ie[1]=0x00000000
-  TRACE: __dmon_irq_disable_all: nvic_ie[2]=0x00000008
-  TRACE: __thinkos_pause_all: active=33
-  TRACE: thinkos_dbgmon_svc: <<< Idle >>>
-  TRACE: gdb_task: <suspended>0b
-  TRACE: rsp_all_registers_get: thread_id=64 PC=08024282
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: rsp_all_registers_get: thread_id=94 PC=08022d31
-  TRACE: gdb_task: <suspended>0b
-  TRACE: rsp_breakpoint_remove: type=0 addr=0x080244c6 size=2
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: rsp_all_registers_get: thread_id=96 PC=080030da
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: rsp_all_registers_get: thread_id=95 PC=08024029
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: gdb_task: <suspended>0b
-  TRACE: rsp_detach: [DETACH]
-  TRACE: dmon_exec: task=080005cd
-  TRACE: dmon_on_reset: DMON_RESET

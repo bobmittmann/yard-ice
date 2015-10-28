@@ -115,7 +115,7 @@ struct mem_desc {
 };
 
 struct thinkos_board {
-	char name[20];
+	char name[18];
 
 	struct {
 		uint8_t minor;
@@ -125,6 +125,7 @@ struct thinkos_board {
 	struct {
 		uint8_t minor;
 		uint8_t major;
+		uint16_t build;
 	} sw_ver;
 
 	struct {

@@ -68,34 +68,32 @@ static int stm32f2x_flash_sect_erase(struct stm32_flash * flash,
 int flash_erase(uint32_t offs, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
-	unsigned int page;
-	unsigned int sect;
-	unsigned int size;
 	unsigned int cnt;
-
-	page = offs >> 14;
-
-	/* must start at a page boundary */
-	if ((page << 14) != (offs)) {
-		return -1;
-	};
 
 	cnt = 0;
 	while (cnt < len) {
+		unsigned int page;
+		unsigned int sect;
+		unsigned int size;
 
-		switch (page) {
-		case 0 ... 3:
+		page = offs >> 14;
+		if ((page << 14) != (offs)) {
+			/* must start at a page boundary */
+			return -1;
+		};
+
+		if (page < 4) {
 			sect = page;
 			size = 16384;
-			break;
-		case 4 ... 7:
+		} else if (page == 4) {
 			sect = 4;
 			size = 65536;
-			break;
-		default:
+		} else if ((page % 8) == 0) {
 			sect = ((page - 7) / 8) + 5;
 			size = 131072;
-			break;
+		} else {
+			/* must start at a sector boundary */
+			return -1;
 		}
 
 		if (stm32f2x_flash_sect_erase(flash, sect) < 0) {
@@ -104,7 +102,6 @@ int flash_erase(uint32_t offs, unsigned int len)
 
 		cnt += size;
 		offs += size;
-		page = offs >> 14;
 	}
 
 	return cnt;

@@ -23,7 +23,8 @@
 
 CODELIB = otg_xflash_pic
 
-CFILES = xflash.c crc16ccitt.c stm32f2xx-flash.c stm32-otg_fs.c stm32-dbg.c
+CFILES = ../crc16ccitt.c ../util.c ../yflash.c ../xflash.c \
+		 stm32f2xx-flash.c stm32-otg_fs.c otg-xflash.c
 
-include cm3-pic.mk
+include ../cm3-pic.mk
 

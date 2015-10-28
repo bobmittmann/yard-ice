@@ -21,12 +21,17 @@
 
 
 _stack_top = ORIGIN(sram) + LENGTH(sram);
-_stack = _stack_top - DEFINED(ice_trace_init) * 0x50;
+_stack = _stack_top - DEFINED(ice_trace_init) * 0x50 - !DEFINED(thinkos_idle_ctx) * 0x40;
 _stack_limit = ORIGIN(sram);
-ice_comm_blk = _stack;
+ice_comm_blk = _stack_top - DEFINED(ice_trace_init) * 0x50;
+thinkos_idle_stack = _stack;
+__heap_end = ORIGIN(sram) + LENGTH(sram);
 
 EXTERN(_stack)
 EXTERN(_reset)
+EXTERN(ice_comm_blk)
+EXTERN(thinkos_idle_stack)
+
 EXTERN(cm3_nmi_isr)
 EXTERN(cm3_hard_fault_isr)
 EXTERN(cm3_mem_manage_isr)
@@ -36,7 +41,6 @@ EXTERN(cm3_svc_isr)
 EXTERN(cm3_debug_mon_isr)
 EXTERN(cm3_pendsv_isr)
 EXTERN(cm3_systick_isr)
-EXTERN(ice_comm_blk)
 
 EXTERN(stm32_wwdg_isr)
 EXTERN(stm32_pvd_isr)
@@ -184,6 +188,6 @@ SECTIONS
 
 	/* advance location counter to the next 32-bit boundary */
 	. = ALIGN(4);
-	PROVIDE (__heap_end = . );
+	PROVIDE (__heap_base = . );
 }
 

@@ -39,6 +39,8 @@
 
 #include <sys/dcclog.h>
 
+#include "version.h"
+
 #ifndef BOOT_ENABLE_GDB
 #define BOOT_ENABLE_GDB 0
 #endif
@@ -48,9 +50,6 @@
 #endif
 
 #include "board.h"
-
-#define VERSION_NUM "0.2"
-#define VERSION_DATE "Jul, 2015"
 
 const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
