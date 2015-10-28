@@ -12,7 +12,6 @@
 #include <thinkos.h>
 #include <sys/file.h>
 #include <sys/null.h>
-#include "profclk.h"
 #include "www.h"
 
 #define JSON_ERR_MAX 128

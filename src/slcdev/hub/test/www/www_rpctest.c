@@ -12,7 +12,6 @@
 #include <thinkos.h>
 #include <sys/file.h>
 #include <sys/null.h>
-#include "profclk.h"
 #include "www.h"
 
 void rpc_test_reset(FILE * f, int port)
@@ -118,23 +117,23 @@ void rpc_test_file_write(FILE * f, int port, char * fname)
 
 	simrpc_set_timeout(sp, 500);
 
-	start = profclk_get();
+	start = trace_timestamp();
 	if (simrpc_file_create(sp, fname) < 0) {
 		fprintf(f, "simrpc_file_create() failed!\n");
 		simrpc_close(sp);
 		return;
 	}
-	stop = profclk_get();
-	fprintf(f, "simrpc_file_create(): %d us.\n", profclk_us(stop - start));
+	stop = trace_timestamp();
+	fprintf(f, "simrpc_file_create(): %d us.\n", trace_ts2us(stop - start));
 
 	n = sprintf(s, "The quick brown fox jumps over the lazy dog!\n");
 
-	start = profclk_get();
+	start = trace_timestamp();
 	if (simrpc_file_write(sp, s, n) < 0) {
 		fprintf(f, "simrpc_file_write() failed!\n");
 	}
-	stop = profclk_get();
-	fprintf(f, "simrpc_file_write(): %d us.\n", profclk_us(stop - start));
+	stop = trace_timestamp();
+	fprintf(f, "simrpc_file_write(): %d us.\n", trace_ts2us(stop - start));
 
 	if (simrpc_file_close(sp) < 0) {
 		fprintf(f, "simrpc_file_close() failed!\n");
@@ -159,17 +158,17 @@ void rpc_test_file_read(FILE * f, int port, char * fname)
 		return;
 	}
 
-	start = profclk_get();
+	start = trace_timestamp();
 	if (simrpc_file_open(sp, fname) < 0) {
 		fprintf(f, "simrpc_file_create() failed!\n");
 		simrpc_close(sp);
 		return;
 	}
-	stop = profclk_get();
-	fprintf(f, "simrpc_file_open(): %d us.\n", profclk_us(stop - start));
+	stop = trace_timestamp();
+	fprintf(f, "simrpc_file_open(): %d us.\n", trace_ts2us(stop - start));
 
 
-	start = profclk_get();
+	start = trace_timestamp();
 	while ((n = simrpc_file_read(sp, s, 128)) > 0) {
 		fwrite(s, n, 1, f);
 	}
@@ -178,8 +177,8 @@ void rpc_test_file_read(FILE * f, int port, char * fname)
 		fprintf(f, "\n\n#ERROR: simrpc_file_read() failed!\n");
 	}
 
-	stop = profclk_get();
-	fprintf(f, "simrpc_file_read(): %d us.\n", profclk_us(stop - start));
+	stop = trace_timestamp();
+	fprintf(f, "simrpc_file_read(): %d us.\n", trace_ts2us(stop - start));
 
 	if (simrpc_file_close(sp) < 0) {
 		fprintf(f, "simrpc_file_close() failed!\n");
@@ -414,17 +413,17 @@ int rpc_test_file_load(struct httpctl * http, int port, char * fname)
 	}
 
     while ((n = http_multipart_recv(http, buf, 512)) > 0) {
-    	start = profclk_get();
+    	start = trace_timestamp();
     	if (simrpc_file_write(sp, buf, n) < 0) {
     		WARN("simrpc_file_write() failed!");
     		simrpc_close(sp);
     		return -1;
     	}
         http_send(http, buf, n);
-    	stop = profclk_get();
+    	stop = trace_timestamp();
 		(void)start;
 		(void)stop;
-    	DBG("simrpc_file_write(): %d us.", profclk_us(stop - start));
+    	DBG("simrpc_file_write(): %d us.", trace_ts2us(stop - start));
     	cnt += n;
     }
 
@@ -839,18 +838,18 @@ int cfg_compile_cgi(struct httpctl * http)
 		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
 	} else {
 		simrpc_set_timeout(sp, 10000);
-		clk_start = profclk_get();
+		clk_start = trace_timestamp();
 		n = simrpc_cfg_compile(sp, s, sizeof(s));
-		clk_stop = profclk_get();
+		clk_stop = trace_timestamp();
 		(void)clk_start;
 		(void)clk_stop;
 		if (n < 0) {
 			WARN("simrpc_cfg_compile() failed, with code=%d after %d us!",
-					n, profclk_us(clk_stop - clk_start));
+					n, trace_ts2us(clk_stop - clk_start));
 			n = sprintf(s, "#ERROR: simrpc_cfg_compile() failed!\r\n");
 		} else {
 			INF("configuration compiled in %d us.", 
-				profclk_us(clk_stop - clk_start));
+				trace_ts2us(clk_stop - clk_start));
 		}
 
 		simrpc_close(sp);
@@ -929,17 +928,17 @@ int db_compile_cgi(struct httpctl * http)
 		n = sprintf(s, "#ERROR: simrpc_open() failed!\r\n");
 	} else {
 		simrpc_set_timeout(sp, 10000);
-		clk_start = profclk_get();
+		clk_start = trace_timestamp();
 		n = simrpc_db_compile(sp, s, sizeof(s));
-		clk_stop = profclk_get();
+		clk_stop = trace_timestamp();
 		(void)clk_start;
 		(void)clk_stop;
 		if (n < 0) {
 			WARN("simrpc_db_compile() failed, with code=%d after %d us!",
-					n, profclk_us(clk_stop - clk_start));
+					n, trace_ts2us(clk_stop - clk_start));
 			n = sprintf(s, "#ERROR: simrpc_db_compile() failed!\r\n");
 		} else {
-			INF("database compiled in %d us.", profclk_us(clk_stop - clk_start));
+			INF("database compiled in %d us.", trace_ts2us(clk_stop - clk_start));
 		}
 		simrpc_close(sp);
 	}

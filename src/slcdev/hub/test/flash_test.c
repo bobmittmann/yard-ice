@@ -30,12 +30,11 @@
 #include <string.h>
 #include <stdbool.h>
 #include <hexdump.h>
-
 #include <thinkos.h>
+#include <trace.h>
 
 #include "board.h"
 #include "sflash.h"
-#include "profclk.h"
 
 unsigned int micron_sf_capacity_mbits(unsigned int id)
 {
@@ -111,10 +110,10 @@ bool block_erase(struct sflash_dev * sf, uint32_t addr)
 	uint32_t ts[2];
 	uint32_t dt;
 
-	ts[0] = profclk_get();
+	ts[0] = trace_timestamp();
 	sflash_subsector_erase(sf, addr);
-	ts[1] = profclk_get();
-	dt = profclk_us(ts[1] - ts[0]);
+	ts[1] = trace_timestamp();
+	dt = trace_ts2us(ts[1] - ts[0]);
 	printf("0x%08x Sub-sector erase: %d us\n", addr, dt);
 
 	return true;
@@ -158,10 +157,10 @@ bool block_write(struct sflash_dev * sf, uint32_t addr)
 			page[i + 1] = val;
 		}
 
-		ts[0] = profclk_get();
+		ts[0] = trace_timestamp();
 		sflash_page_write(sf, addr, page, sizeof(page));
-		ts[1] = profclk_get();
-		dt = profclk_us(ts[1] - ts[0]);
+		ts[1] = trace_timestamp();
+		dt = trace_ts2us(ts[1] - ts[0]);
 		printf("0x%08x Page write: %d us\n", addr, dt);
 		addr += PAGE_SIZE;
 	}
@@ -274,8 +273,6 @@ void high_level_test(struct sflash_dev * sf)
 void flash_test(void)
 {
 	struct sflash_dev * sf;
-
-	profclk_init();
 
 	sf = sflash_init();
 
