@@ -34,6 +34,7 @@ _Pragma ("GCC optimize (\"Os\")")
 #include <string.h>
 
 extern const char thinkos_svc_nm[];
+extern const char thinkos_xcp_nm[];
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
 void __thinkos_irq_disable_all(void)
@@ -400,4 +401,5 @@ int thinkos_init(uint32_t opt)
 }
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
+const char * const thinkos_xcp_link = thinkos_xcp_nm;
 

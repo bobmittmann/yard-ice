@@ -616,7 +616,7 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 
 struct mem_blk {
 	uint32_t addr;
-	uint32_t size: 30;
+	uint32_t size: 31;
 	uint32_t ro: 1;
 };
 
@@ -874,111 +874,4 @@ int target_file_read(const char * name, char * dst,
 
 	return cnt;
 }
-
-#if 0
-struct mem_range {
-	char name[8];
-	uint32_t base;
-	uint32_t size;
-};
-
-const struct mem_range target_mem_map[] = {
-	{ .name = "boot", .base = 0x08000000, .size = 4 * 16 * 1024 },
-	{ .name = "app", .base = 0x08010000, .size = 64 * 1024 },
-	{ .name = "ffs", .base = 0x08020000, .size = 4 * 128 * 1024 },
-	{ .name = "sram0", .base = 0x20000000, .size = 112 * 1024 },
-	{ .name = "sram1", .base = 0x2001c000, .size = 16 * 1024 },
-	{ .name = "sram2", .base = 0x10000000, .size = 64 * 1024 }
-};
-
-struct flash_map {
-	uint32_t base;
-	uint8_t blk[];
-};
-
-struct flash_blk {
-	uint32_t base;
-	uint32_t size: 30;
-	uint32_t ro: 1;
-};
-
-#define SZ_128   7
-#define SZ_256   8
-#define SZ_1K   10
-#define SZ_2K   11
-#define SZ_4K   12
-#define SZ_8K   13
-#define SZ_16K  14
-#define SZ_32K  15
-#define SZ_64K  16
-#define SZ_128K 17
-#define SZ_256K 18
-
-#define BLK_RW  (0 << 7)
-#define BLK_RO  (1 << 7)
-
-const struct flash_map stm32f407_flash = {
-	.base = (uint32_t)STM32_FLASH_MEM,
-	.blk = {
-		BLK_RO + SZ_16K, 
-		BLK_RO + SZ_16K, 
-		BLK_RO + SZ_16K, 
-		BLK_RO + SZ_16K, 
-		BLK_RW + SZ_64K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		0
-	}
-};
-
-#define BLK_SZ(BLK) (1 << ((BLK) & 0x3f)) 
-
-int flash_addr2block(const struct flash_map * map,
-					 uint32_t addr, struct flash_blk * blk) 
-{
-	uint32_t base = map->base;
-	uint32_t size;
-	int i;
-
-	if (addr < base)
-		return -1;
-
-	for (i = 0; map->blk[i] != 0; ++i) {
-		size = BLK_SZ(map->blk[i]);
-		if (addr < base + size) {
-			if (blk != NULL) {
-				blk->base = base;
-				blk->size = size;
-				blk->ro = (map->blk[i] & BLK_RO) ? 1 : 0;
-			}
-			return i;
-		}
-		base += size;
-	}
-
-	return -1;
-}
-
-static bool is_addr_valid(struct mem_desc * mem, uint32_t addr) 
-{
-	uint32_t base;
-	uint32_t size;
-	int i;
-
-	for (i = 0; mem->blk[i].cnt != 0; ++i) {
-		size = mem->blk[i].cnt << mem->blk[i].siz;
-		base = mem->blk[i].ref;
-		if (addr < base + size)
-			return true;
-	}
-
-	return false;
-}
-
-#endif
 

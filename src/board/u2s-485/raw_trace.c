@@ -37,9 +37,8 @@ void raw_trace(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len)
 	xx_dump(ts, rx_buf, rx_len);
 }
 
-void raw_trace_init(struct usb_cdc_class * cdc, void * buf)
+void raw_trace_init(void)
 {
-	usb_trace_init(cdc);
-	tracef(profclk_get(), "--- RW data trace ---------"); 
+	tracef(profclk_get(), "--- Raw data trace ---------"); 
 }
 

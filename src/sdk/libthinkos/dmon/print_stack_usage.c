@@ -74,7 +74,7 @@ void dmon_print_stack_usage(struct dmon_comm * comm)
 
 	dmprintf(comm, "%3d", THINKOS_THREAD_IDLE);
 	dmprintf(comm, " |  <IDLE>"); 
-	dmprintf(comm, " | %08x", (uint32_t)thinkos_idle_stack); 
+	dmprintf(comm, " | %08x", (uint32_t)*thinkos_idle_stack_ptr); 
 	dmprintf(comm, " | %08x", (uint32_t)rt->idle_ctx); 
 	dmprintf(comm, " | %6d", THINKOS_EXCEPT_STACK_SIZE); 
 	dmprintf(comm, " | %6d", __scan_stack(thinkos_except_stack, 

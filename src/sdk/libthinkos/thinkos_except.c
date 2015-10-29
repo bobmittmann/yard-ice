@@ -699,5 +699,18 @@ void thinkos_exception_init(void)
 	__exception_reset();
 }
 
+#else /* THINKOS_ENABLE_EXCEPTIONS */
+
+#if THINKOS_SYSRST_ONFAULT
+void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+{
+	cm3_sysrst();
+}
+#endif
+
 #endif /* THINKOS_ENABLE_EXCEPTIONS */
+
+/* FIXME: this is a hack to force linking this file. 
+ The linker then will override the weak alias for the cm3_hard_fault_isr() */
+const char thinkos_xcp_nm[] = "XCP";
 

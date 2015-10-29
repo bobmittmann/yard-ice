@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file usb-serial.c
+ * @file u2s-485.c
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -37,10 +37,12 @@
 #include "trace.h"
 #include "profclk.h"
 
-#define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 10
+void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len);
+struct serial_dev * serial2_open(void);
 
-uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
+
+#define FW_VERSION_MAJOR 1
+#define FW_VERSION_MINOR 11
 
 /* -------------------------------------------------------------------------
    USB-CDC ACM
@@ -112,16 +114,13 @@ const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
    Virtual COM 
    ------------------------------------------------------------------------- */
 
-struct serial_dev * serial2_open(void);
-
 enum {
-	VCOM_MODE_NONE = 0,
-	VCOM_MODE_CONVERTER = 1,
-	VCOM_MODE_SERVICE = 2,
+	VCOM_MODE_NONE        = 0,
+	VCOM_MODE_CONVERTER   = 1,
+	VCOM_MODE_SERVICE     = 2,
 	VCOM_MODE_INTERACTIVE = 3,
-	VCOM_MODE_SDU_TRACE = 4,
-	VCOM_MODE_MSTP_TRACE = 5,
-	VCOM_MODE_RAW_TRACE = 6
+	VCOM_MODE_SDU_TRACE   = 4,
+	VCOM_MODE_RAW_TRACE   = 5
 };
 
 struct vcom {
@@ -132,7 +131,7 @@ struct vcom {
 	uint32_t ticks_per_byte;
 	struct serial_dev * serial;
 	struct serial_status ser_stat;
-	struct serial_stat stat;
+	struct serial_stats stats;
 	struct {
 		const char * pat;
 		int pos;
@@ -185,63 +184,6 @@ static bool vcom_scan_match(struct vcom * vcom, uint8_t buf[], int len)
 	return false;
 }
 
-/* -------------------------------------------------------------------------::
-   Firmware update 
-   ------------------------------------------------------------------------- */
-
-extern const uint8_t usb_xflash_pic[];
-extern const unsigned int sizeof_usb_xflash_pic;
-extern uint32_t __data_start[]; 
-
-struct magic {
-	struct {
-		uint16_t pos;
-		uint16_t cnt;
-	} hdr;
-	struct {
-	    uint32_t mask;
-		uint32_t comp;
-	} rec[];
-};
-
-const struct magic firmware_magic = {
-	.hdr = {
-		.pos = 0,
-		.cnt = 10
-	},
-	.rec = {
-		{  0xffffffff, 0x20002800 },
-		{  0xffff0000, 0x08000000 },
-		{  0xffff0000, 0x08000000 },
-		{  0xffff0000, 0x08000000 },
-
-		{  0xffff0000, 0x08000000 },
-		{  0xffff0000, 0x08000000 },
-		{  0xffff0000, 0x08000000 },
-		{  0xffff0000, 0x08000000 },
-
-		{  0xffffffff, 0x00000000 },
-		{  0xffff0000, 0x08000000 }
-	}
-};
-
-void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len)
-{
-	uint32_t * xflash_code = __data_start;
-	int (* xflash_ram)(uint32_t, uint32_t, const struct magic *);
-
-	DCC_LOG3(LOG_TRACE, "sp=%08x offs=%08x len=%d", cm3_sp_get(), offs, len);
-
-	cm3_cpsid_f();
-
-	memcpy(xflash_code, usb_xflash_pic, sizeof_usb_xflash_pic);
-
-	xflash_ram = ((void *)xflash_code) + 1;
-	xflash_ram(offs, len, &firmware_magic);
-
-	cm3_sysrst();
-}
-
 /* -------------------------------------------------------------------------
    Debug and trace 
    ------------------------------------------------------------------------- */
@@ -266,8 +208,6 @@ void show_menu(usb_cdc_class_t * cdc)
 	usb_printf(cdc, "  [X/x] enable/disable XON/XOFF flow control\r\n");
 	usb_printf(cdc, "[U2S-485 %d.%d]: ", FW_VERSION_MAJOR, FW_VERSION_MINOR);
 };
-
-uint32_t protocol_buf[512];
 
 static void vcom_serial_8n1_force_cfg(struct vcom * vcom, 
 									  unsigned int baudrate)
@@ -310,13 +250,13 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - SDU trace mode...\r\n");
 			vcom->mode = VCOM_MODE_SDU_TRACE;
 			vcom->ticks_per_byte = ((PROFCLK_HZ) * 10) / vcom->cfg.baudrate;
-			sdu_trace_init(cdc, (void *)protocol_buf);
+			sdu_trace_init();
 			break;
 		case 'R':
 			usb_printf(cdc, " - Raw data trace mode...\r\n");
 			vcom->mode = VCOM_MODE_RAW_TRACE;
 			vcom->ticks_per_byte = ((PROFCLK_HZ) * 10) / vcom->cfg.baudrate;
-			raw_trace_init(cdc, (void *)protocol_buf);
+			raw_trace_init();
 			break;
 		case 'r':
 		case 's':
@@ -406,14 +346,14 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			break;
 
 		case 't': {
-			struct serial_stat stat;
-			serial_stat_get(vcom->serial, &stat);
+			struct serial_stats stats;
+			serial_stats_get(vcom->serial, &stats);
 			usb_printf(cdc, "\r\n"
 					   " -  RX: %10d\r\n"
 					   " -  TX: %10d\r\n"
 					   " - Err: %10d\r\n", 
-					   stat.rx_cnt, stat.tx_cnt, stat.err_cnt);
-			vcom->stat = stat;
+					   stats.rx_cnt, stats.tx_cnt, stats.err_cnt);
+			vcom->stats = stats;
 			break;
 		}
 		default:
@@ -429,15 +369,15 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 	struct serial_dev * serial = vcom->serial;
 	usb_cdc_class_t * cdc = vcom->cdc;
 	uint8_t buf[VCOM_BUF_SIZE];
-	uint32_t usb_stat_rx = 0;
-	struct serial_stat stat;
+	uint32_t usb_rx_cnt = 0;
+	struct serial_stats stats;
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 	DCC_LOG2(LOG_TRACE, "vcom->%p, cdc->%p", vcom, cdc);
 
-	stat.rx_cnt = 0;
-	stat.tx_cnt = 0;
+	stats.rx_cnt = 0;
+	stats.tx_cnt = 0;
 
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 1000);
@@ -445,7 +385,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 		DCC_LOG1(LOG_MSG, "rx len=%d", len);
 
 		if (len > 0) {
-			usb_stat_rx += len;
+			usb_rx_cnt += len;
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
 				led_flash(LED_RED, 50);
 				serial_send(serial, buf, len);
@@ -454,20 +394,20 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 				vcom_service_input(vcom, buf, len);
 			}
 		} else if (len == THINKOS_ETIMEDOUT) {
-			struct serial_stat tmp;
+			struct serial_stats tmp;
 			uint32_t rx_cnt;
 			uint32_t tx_cnt;
 			
-			if (usb_stat_rx) {
-				DCC_LOG1(LOG_TRACE, "USB rx=%d", usb_stat_rx);
-				usb_stat_rx = 0;
+			if (usb_rx_cnt) {
+				DCC_LOG1(LOG_TRACE, "USB rx=%d", usb_rx_cnt);
+				usb_rx_cnt = 0;
 			}
 
-			serial_stat_get(serial, &tmp);
-			rx_cnt = tmp.rx_cnt - stat.rx_cnt;
-			tx_cnt = tmp.tx_cnt - stat.tx_cnt;
-			stat.rx_cnt = tmp.rx_cnt;
-			stat.tx_cnt = tmp.tx_cnt;
+			serial_stats_get(serial, &tmp);
+			rx_cnt = tmp.rx_cnt - stats.rx_cnt;
+			tx_cnt = tmp.tx_cnt - stats.tx_cnt;
+			stats.rx_cnt = tmp.rx_cnt;
+			stats.tx_cnt = tmp.tx_cnt;
 
 			if (rx_cnt || tx_cnt)
 				DCC_LOG2(LOG_TRACE, "Serial rx=%d tx=%d", rx_cnt, tx_cnt);
@@ -536,8 +476,6 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	}
 }
 
-void __tdump(void);
-
 void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
@@ -602,7 +540,6 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				if (vcom->mode != VCOM_MODE_SERVICE) {
 					vcom->mode = VCOM_MODE_SERVICE; 
 					DCC_LOG(LOG_TRACE, "Service mode magic config ...");
-//					__tdump();
 				}
 			} else {
 				DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
@@ -678,6 +615,8 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	vcom.cfg.parity = 0;
 	vcom.cfg.stopbits = 1;
 	vcom.cfg_lock = false;
+
+	usb_trace_init(cdc);
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |

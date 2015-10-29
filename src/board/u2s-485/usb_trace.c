@@ -39,7 +39,8 @@
 
 uint32_t trace_ts;
 uint32_t trace_opt;
-static struct usb_cdc_class * usb_cdc;
+struct usb_cdc_class * usb_cdc;
+uint32_t protocol_buf[512];
 
 #define TIME_ABS  1
 #define DUMP_PKT  2

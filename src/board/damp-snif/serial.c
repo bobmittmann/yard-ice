@@ -35,6 +35,8 @@
 
 #include <sys/dcclog.h>
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #ifndef SERIAL_STATS_ENABLE
 #define SERIAL_STATS_ENABLE 0
 #endif
@@ -69,7 +71,6 @@ struct capture_drv uart2_capture_drv;
 
 #define BITS_TO_TICKS(BITS, BITRATE) ((((BITS) * PROFCLK_HZ) + \
 									   ((BITRATE) / 2)) / (BITRATE))
-
 void stm32f_usart2_isr(void)
 {
 	struct capture_drv * drv = &uart2_capture_drv;

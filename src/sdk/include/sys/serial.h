@@ -78,7 +78,7 @@
 #include <stdbool.h>
 
 /* driver statistics */
-struct serial_stat {
+struct serial_stats {
 	uint32_t rx_cnt;
 	uint32_t tx_cnt;
 	uint32_t err_cnt;
@@ -130,7 +130,7 @@ enum {
 	SERIAL_IOCTL_RESET,
 	SERIAL_IOCTL_FLUSH,
 	SERIAL_IOCTL_FLOWCTRL_SET,
-	SERIAL_IOCTL_STAT_GET,
+	SERIAL_IOCTL_STATS_GET,
 	SERIAL_IOCTL_DMA_PREPARE,
 	SERIAL_IOCTL_CONF_SET,
 	SERIAL_IOCTL_CONF_GET,
@@ -191,10 +191,10 @@ extern inline int serial_reset(struct serial_dev * dev) {
 	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_RESET, 0, 0);
 }
 
-extern inline int serial_stat_get(struct serial_dev * dev, 
-								  struct serial_stat * stat) {
-	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_STAT_GET, 
-						  (uintptr_t)stat, 0);
+extern inline int serial_stats_get(struct serial_dev * dev, 
+								  struct serial_stats * stats) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_STATS_GET, 
+						  (uintptr_t)stats, 0);
 }
 
 extern inline int serial_enable(struct serial_dev * dev) {
@@ -273,7 +273,7 @@ int serial_config_set(struct serial_dev * dev,
 int serial_ioctl(struct serial_dev * dev, int opt, 
 				 uintptr_t arg1, uintptr_t arg2);
 
-int serial_stat_get(struct serial_dev * dev, struct serial_stat * stat);
+int serial_stats_get(struct serial_dev * dev, struct serial_stats * stats);
 
 int serial_enable(struct serial_dev * dev);
 

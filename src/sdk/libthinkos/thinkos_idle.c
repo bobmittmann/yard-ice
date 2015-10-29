@@ -29,6 +29,11 @@
  * Idle task
  * --------------------------------------------------------------------------*/
 
+#if (THINKOS_IDLE_STACK_ALLOC + THINKOS_IDLE_STACK_CONST + \
+	 THINKOS_IDLE_STACK_BSS) > 1
+#error "Invalid multiple IDLE stack options!"
+#endif
+
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
 //	DCC_LOG(LOG_TRACE, "ThinkOS Idle started..."); 
@@ -43,46 +48,54 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 	}
 }
 
-#if THINKOS_ENABLE_CONST_IDLE 
+#if THINKOS_IDLE_STACK_CONST
 /* Constant IDLE stack:
 
    Define the IDLE context (stack) in Flash or read only memory. This
    is helpful in two aspects:
    1 - it reduces the memory footprint.
-   2 - it won't be unintetionally modified by a misbehaved application.
-
- */
+   2 - it won't be unintetionally modified by a misbehaved application. */
 const struct thinkos_context __attribute__((aligned(8))) thinkos_idle_ctx = {
 	.pc = (uint32_t)thinkos_idle_task,
 	.xpsr = CM_EPSR_T /* set the thumb bit */
 };
+uint32_t * const thinkos_idle_stack_ptr = (uint32_t *)&thinkos_idle_ctx;
 #endif
 
+#if THINKOS_IDLE_STACK_BSS
+/* IDLE stack on .bss section */
+struct thinkos_context __attribute__((aligned(8))) thinkos_idle_ctx;
+uint32_t * const thinkos_idle_stack_ptr = (uint32_t *)&thinkos_idle_ctx;
+#endif
+
+#if THINKOS_IDLE_STACK_ALLOC
+extern uint32_t _stack[];
+
+/* IDLE stack allocated on main stack */
+uint32_t * const thinkos_idle_stack_ptr = &_stack[0];
+#endif
+
+/* initialize the idle thread */
 void __thinkos_idle_init(void)
 {
 	struct thinkos_context * idle_ctx;
 
 	DCC_LOG(LOG_TRACE, "..."); 
 
-#if (THINKOS_ENABLE_CONST_IDLE) 
+#if THINKOS_IDLE_STACK_CONST
 	idle_ctx = (struct thinkos_context *)&thinkos_idle_ctx;
 #else
-	/* initialize the idle thread */
-//	idle_ctx = (struct thinkos_context *)&thinkos_idle_stack[-CTX_R0];
-	idle_ctx = (struct thinkos_context *)&thinkos_idle_stack[0];
-#if DEBUG
-	idle_ctx->r0 = 0,
-	idle_ctx->r1 = 0x01010101,
-	idle_ctx->r2 = 0x02020202,
-	idle_ctx->r3 = 0x03030303,
-	idle_ctx->r12 = 0x12121212,
-	idle_ctx->lr = 0x14141414,
-#endif
+  #if THINKOS_IDLE_STACK_BSS
+	idle_ctx = (struct thinkos_context *)&thinkos_idle_ctx;
+  #elif THINKOS_IDLE_STACK_ALLOC
+	idle_ctx = (struct thinkos_context *)thinkos_idle_stack_ptr;
+  #endif
 	idle_ctx->pc = (uint32_t)thinkos_idle_task,
 	idle_ctx->xpsr = CM_EPSR_T; /* set the thumb bit */
+#endif /* THINKOS_IDLE_STACK_CONST */
 
-#endif
 	thinkos_rt.idle_ctx = idle_ctx;
+
 #if (THINKOS_THREADS_MAX < 32) 
 	/* put the IDLE thread in the ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);

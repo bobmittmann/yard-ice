@@ -19,10 +19,21 @@
  * http://www.gnu.org/
  */
 
-_stack = ORIGIN(sram) + LENGTH(sram);
+_stack_limit = ORIGIN(sram);
+_stack_top = ORIGIN(sram) + LENGTH(sram);
+_stack = _stack_top - DEFINED(ice_trace_init) * 0x50 - !DEFINED(thinkos_idle_ctx) * 0x40;
+
+ice_comm_blk = (_stack_top - 0x50) * DEFINED(ice_trace_init);
+
+thinkos_idle_stack = _stack * !DEFINED(thinkos_idle_ctx);
+
+__heap_end = ORIGIN(sram) + LENGTH(sram) - 256;
 
 EXTERN(_stack)
 EXTERN(_reset)
+EXTERN(ice_comm_blk)
+EXTERN(thinkos_idle_stack)
+
 EXTERN(cm3_nmi_isr)
 EXTERN(cm3_hard_fault_isr)
 EXTERN(cm3_mem_manage_isr)
@@ -32,7 +43,6 @@ EXTERN(cm3_svc_isr)
 EXTERN(cm3_debug_mon_isr)
 EXTERN(cm3_pendsv_isr)
 EXTERN(cm3_systick_isr)
-EXTERN(ice_comm_blk)
 EXTERN(stm32f_wwdg_isr)
 EXTERN(stm32f_pvd_isr)
 EXTERN(stm32f_tamp_stamp_isr)
@@ -151,11 +161,21 @@ SECTIONS
 		/* define a global symbol marking the start of the .bss section */
 		PROVIDE (__bss_start = . );
 		/* all .bss sections  */
-		*(.bss)
+		*(.bss .bss*)
 	} >sram
 
 	/* advance location counter to the next 32-bit boundary */
 	. = ALIGN(4);
 	PROVIDE (__bss_end = . );
-	PROVIDE (__heap_start = . );
+
+	.heap :
+	{
+		PROVIDE (__heap_start = . );
+		/* all .heap sections  */
+		*(.heap .heap*)
+	} >sram
+
+	/* advance location counter to the next 32-bit boundary */
+	. = ALIGN(4);
+	PROVIDE (__heap_base = . );
 }

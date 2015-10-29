@@ -113,7 +113,9 @@
 #define THINKOS_ENABLE_STACK_INIT     0
 #endif
 
-#define THINKOS_ENABLE_CONST_IDLE     0
+#define THINKOS_ENABLE_IDLE_WFI       1
+#define THINKOS_IDLE_STACK_CONST      0
+#define THINKOS_IDLE_STACK_BSS        0
 
 /* -------------------------------------------------------------------------
    MicroJS configuration

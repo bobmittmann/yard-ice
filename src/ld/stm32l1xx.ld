@@ -20,12 +20,15 @@
  */
 
 
+_stack_limit = ORIGIN(sram);
 _stack_top = ORIGIN(sram) + LENGTH(sram);
 _stack = _stack_top - DEFINED(ice_trace_init) * 0x50 - !DEFINED(thinkos_idle_ctx) * 0x40;
-_stack_limit = ORIGIN(sram);
-ice_comm_blk = _stack_top - DEFINED(ice_trace_init) * 0x50;
-thinkos_idle_stack = _stack;
-__heap_end = ORIGIN(sram) + LENGTH(sram);
+
+ice_comm_blk = (_stack_top - 0x50) * DEFINED(ice_trace_init);
+
+thinkos_idle_stack = _stack * !DEFINED(thinkos_idle_ctx);
+
+__heap_end = ORIGIN(sram) + LENGTH(sram) - 256;
 
 EXTERN(_stack)
 EXTERN(_reset)

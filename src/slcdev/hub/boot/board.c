@@ -557,8 +557,8 @@ const struct mem_desc sram_desc = {
 const struct mem_desc flash_desc = {
 	.name = "FLASH",
 	.blk = {
-		{ 0x08000000, BLK_RO, SZ_16K,  2 }, /* Bootloader */
-		{ 0x08008000, BLK_RW, SZ_16K,  2 }, /* Application */
+		{ 0x08000000, BLK_RO, SZ_16K,  3 }, /* Bootloader */
+		{ 0x0800c000, BLK_RW, SZ_16K,  1 }, /* Application */
 		{ 0x08010000, BLK_RW, SZ_64K,  1 }, /* Application */
 		{ 0x08020000, BLK_RW, SZ_128K, 7 }, /* Application */
 		{ 0x00000000, 0, 0, 0 }

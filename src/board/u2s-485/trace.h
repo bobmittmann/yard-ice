@@ -37,6 +37,8 @@
 
 extern uint32_t trace_opt;
 extern uint32_t trace_ts;
+extern struct usb_cdc_class * usb_cdc;
+extern uint32_t protocol_buf[];
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,11 +54,11 @@ int xx_dump(uint32_t ts, uint8_t * buf, int len);
 
 void usb_trace_init(struct usb_cdc_class * cdc);
 
-int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... );
+int usb_printf(struct usb_cdc_class * cdc, const char *fmt, ... );
 
 void raw_trace(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len);
 
-void raw_trace_init(struct usb_cdc_class * cdc, void * buf);
+void raw_trace_init(void);
 
 #ifdef __cplusplus
 }

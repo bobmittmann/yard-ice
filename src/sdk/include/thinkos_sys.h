@@ -77,10 +77,6 @@
 #define THINKOS_ENABLE_THREAD_STAT      1
 #endif
 
-#ifndef THINKOS_ENABLE_IDLE_WFI
-#define THINKOS_ENABLE_IDLE_WFI         1
-#endif
-
 #ifndef THINKOS_ENABLE_JOIN
 #define THINKOS_ENABLE_JOIN             1
 #endif
@@ -285,8 +281,24 @@
 #define THINKOS_ENABLE_ESCALATE         THINKOS_ENABLE_MPU
 #endif
 
-#ifndef THINKOS_ENABLE_CONST_IDLE
-#define THINKOS_ENABLE_CONST_IDLE       0
+#ifndef THINKOS_ENABLE_IDLE_WFI
+#define THINKOS_ENABLE_IDLE_WFI         1
+#endif
+
+#ifndef THINKOS_IDLE_STACK_CONST
+#define THINKOS_IDLE_STACK_CONST        0
+#endif
+
+#ifndef THINKOS_IDLE_STACK_BSS 
+#define THINKOS_IDLE_STACK_BSS          0
+#endif
+
+#ifndef THINKOS_IDLE_STACK_ALLOC
+  #if THINKOS_IDLE_STACK_CONST || THINKOS_IDLE_STACK_BSS 
+    #define THINKOS_IDLE_STACK_ALLOC    0
+  #else
+    #define THINKOS_IDLE_STACK_ALLOC    1
+  #endif
 #endif
 
 /* -------------------------------------------------------------------------- 
@@ -763,7 +775,7 @@ extern struct thinkos_except thinkos_except_buf;
 
 extern uint32_t thinkos_except_stack[THINKOS_EXCEPT_STACK_SIZE / 4];
 
-extern uint32_t thinkos_idle_stack[8];
+extern uint32_t * const thinkos_idle_stack_ptr;
 
 extern uint32_t * const thinkos_obj_alloc_lut[];
 

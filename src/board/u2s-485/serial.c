@@ -36,6 +36,8 @@
 
 #include <sys/dcclog.h>
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define UART_TX_FIFO_BUF_LEN 64
 #define UART_RX_FIFO_BUF_LEN 64
 #define UART_RX_FIFO_WATER_MARK 32
@@ -215,13 +217,13 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 		drv->tx_fifo.tail = 0;
 		break;
 
-	case SERIAL_IOCTL_STAT_GET: 
+	case SERIAL_IOCTL_STATS_GET: 
 		{
-			struct serial_stat * stat = (struct serial_stat *)arg1;
-			DCC_LOG(LOG_MSG, "SERIAL_IOCTL_STAT_GET");
-			stat->rx_cnt = drv->rx_fifo.head;
-			stat->tx_cnt = drv->tx_fifo.tail;
-			stat->err_cnt = drv->err_cnt;
+			struct serial_stats * stats = (struct serial_stats *)arg1;
+			DCC_LOG(LOG_MSG, "SERIAL_IOCTL_STATS_GET");
+			stats->rx_cnt = drv->rx_fifo.head;
+			stats->tx_cnt = drv->tx_fifo.tail;
+			stats->err_cnt = drv->err_cnt;
 			break;
 		}
 
