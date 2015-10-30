@@ -37,6 +37,9 @@
 #define THINKOS_ENABLE_THREAD_STAT    0
 
 #define THINKOS_ENABLE_IDLE_WFI       1
+#define THINKOS_IDLE_STACK_CONST      0
+#define THINKOS_IDLE_STACK_BSS        1
+#define THINKOS_IDLE_STACK_ALLOC      0
 
 #define THINKOS_ENABLE_JOIN           0
 #define THINKOS_ENABLE_PAUSE          0

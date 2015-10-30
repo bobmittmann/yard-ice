@@ -41,7 +41,7 @@
 #include "mstp.h"
 
 #define FW_VERSION_MAJOR 0
-#define FW_VERSION_MINOR 1
+#define FW_VERSION_MINOR 2
 
 /* -------------------------------------------------------------------------
    USB-CDC ACM
@@ -62,7 +62,11 @@ static const uint8_t vendor_str[VENDOR_STR_SZ] = {
 };
 
 
+#if FW_VERSION_MINOR > 9
+#define PRODUCT_STR_SZ           54
+#else
 #define PRODUCT_STR_SZ           52
+#endif
 static const uint8_t product_str[PRODUCT_STR_SZ] = {
 	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Product name: "Mircom ClassD Sniffer" */
@@ -70,7 +74,12 @@ static const uint8_t product_str[PRODUCT_STR_SZ] = {
 	'l', 0, 'a', 0, 's', 0, 's', 0, 'D', 0, ' ', 0, 'S', 0, 'n', 0, 
 	'i', 0, 'f', 0, 'f', 0, 'e', 0, 'r', 0, ' ', 0, 
 	'0' + FW_VERSION_MAJOR, 0, '.', 0, 
+#if FW_VERSION_MINOR > 9
+	'0' + (FW_VERSION_MINOR / 10), 0, 
+	'0' + (FW_VERSION_MINOR % 10), 0, 
+#else 
 	'0' + FW_VERSION_MINOR, 0, 
+#endif
 };
 
 

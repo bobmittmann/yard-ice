@@ -63,6 +63,8 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
+#define SIZEOF_INDEX_HTML 1471
+
 #define SIZEOF_SIMRPC_CLNT_C 1823
 
 #define SIZEOF_SIM_DEBUG_HTML 1947
@@ -84,8 +86,6 @@ extern struct httpdobj www_img[];
 #define SIZEOF_SIM_FIRMWARE_HTML 1683
 
 #define SIZEOF_SIM_DIAG_HTML 1960
-
-#define SIZEOF_INDEX_HTML 1471
 
 #define SIZEOF_SIM_MONITOR_HTML 1676
 
@@ -111,8 +111,6 @@ extern struct httpdobj www_img[];
 extern const uint8_t simrpc_clnt_c[];
 
 extern const uint8_t sim_debug_html[];
-
-extern const uint8_t jquery_2_1_4_min_js[];
 
 extern const uint8_t zepto_min_js[];
 
