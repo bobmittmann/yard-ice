@@ -356,14 +356,14 @@ int stm32f_serial_ioctl(struct stm32f_serial_drv * drv, int opt,
 		drv->tx_fifo.tail = 0;
 		break;
 
-	case SERIAL_IOCTL_STAT_GET: 
+	case SERIAL_IOCTL_STATS_GET:
 		{
-			struct serial_stat * stat = (struct serial_stat *)arg1;
+			struct serial_stats * stats = (struct serial_stats *)arg1;
 
-			DCC_LOG(LOG_INFO, "SERIAL_IOCTL_STAT_GET");
-			stat->rx_cnt = drv->rx_fifo.head;
-			stat->tx_cnt = drv->tx_fifo.tail;
-			stat->err_cnt = 0;
+			DCC_LOG(LOG_INFO, "SERIAL_IOCTL_STATS_GET");
+			stats->rx_cnt = drv->rx_fifo.head;
+			stats->tx_cnt = drv->tx_fifo.tail;
+			stats->err_cnt = 0;
 			break;
 		}
 
