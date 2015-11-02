@@ -32,9 +32,9 @@ SDK = ../../thinkos/sdk
 
 LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil $(SDK)/libice-comm\
 		  $(SDK)/libc $(SDK)/libtcpip $(SDK)/libstm32drv\
-		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc libaltera\
+		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc ../libaltera\
 		  $(SDK)/libtrace $(SDK)/libtty $(SDK)/libxmodem\
-		  $(SDK)/libshell $(SDK)/libconsole libopcodes\
+		  $(SDK)/libshell $(SDK)/libconsole ../libopcodes\
 		  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
 		  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
 		  ../comm 
