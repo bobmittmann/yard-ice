@@ -1,0 +1,3 @@
+[submodule "thinkos"]
+	path = thinkos
+	url = git@github.com:bobmittmann/thinkos.git
