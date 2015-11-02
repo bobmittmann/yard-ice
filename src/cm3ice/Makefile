@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 LIB_STATIC = cm3ice
 
@@ -30,5 +30,5 @@ CFILES = armv7m-dbg.c mod_cm3ice.c cm3ice.c cm3ice-info.c cm3ice-test.c\
 
 override INCPATH += ./include
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

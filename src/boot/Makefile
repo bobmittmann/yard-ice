@@ -24,7 +24,7 @@ PROG = thinkos
 
 CFILES = boot.c monitor.c board.c 
 
-SDK = ../../sdk
+SDK = ../../thinkos/sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil $(SDK)/libthinkos\
 		  $(SDK)/libice-comm 
@@ -40,5 +40,5 @@ LDFLAGS = -Wl,--gc-sections
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f207
-include ../../mk/stm32f2xx.mk
+include ../../thinkos/mk/stm32f2xx.mk
 

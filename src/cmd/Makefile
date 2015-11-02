@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 LIB_STATIC = cmd
 
@@ -42,5 +42,5 @@ CFILES = show_asm.c cmd_beep.c \
 	  cmd_fpga.c cmd_xflash.c otg_xflash_pic.c \
 	  uart_xflash_pic.c xflash.c
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

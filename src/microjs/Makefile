@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../../mk/config.mk
+include ../../../thinkos/mk/config.mk
 
 LIB_STATIC = microjs
 
@@ -29,9 +29,9 @@ CFILES = microjs_dbg.c microjs_str.c microjs_lib.c microjs_vm.c \
 		 microjs_lex.c microjs_sym.c microjs_ll.c microjs_sdt.c \
 		 microjs_json.c
 
-INCPATH = ../../sdk/include
+INCPATH = ../../thinkos/sdk/include
 
-include ../../../mk/lib.mk
+include ../../../thinkos/mk/lib.mk
 
 ifeq ($(HOST),Linux)
 	ELL = $(TOOLSDIR)/linux/ell

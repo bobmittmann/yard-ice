@@ -25,5 +25,5 @@ LIB_STATIC = yard-rpc
 
 CFILES = $(wildcard *.c) 
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

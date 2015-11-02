@@ -21,11 +21,11 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 LIB_STATIC = telnet
 
 CFILES = telnet_svc.c telnet_fops.c telnetd.c
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 LIB_STATIC = targets
 
@@ -47,5 +47,5 @@ CFILES = target_db.c dummy.c \
 		$(addprefix stellaris/,$(STELLARIS_CFILES)) \
 		$(addprefix stm32f/,$(STM32F_CFILES))
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

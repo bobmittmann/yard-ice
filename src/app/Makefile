@@ -28,13 +28,13 @@ CFILES = yard-ice.c board.c debugger.c ice_drv.c\
 		 i2c-master.c mod_ice.c shell.c lookup.c monitor.c\
 		 console.c 
 
-SDK = ../../sdk
+SDK = ../../thinkos/sdk
 
 LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil $(SDK)/libice-comm\
 		  $(SDK)/libc $(SDK)/libtcpip $(SDK)/libstm32drv\
-		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc $(SDK)/libaltera\
+		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc libaltera\
 		  $(SDK)/libtrace $(SDK)/libtty $(SDK)/libxmodem\
-		  $(SDK)/libshell $(SDK)/libconsole $(SDK)/libopcodes\
+		  $(SDK)/libshell $(SDK)/libconsole libopcodes\
 		  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
 		  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
 		  ../comm 
@@ -51,13 +51,13 @@ CDEFS = CONFIG_H
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-INCPATH = ../../sdk/include ../include
+INCPATH = ../../thinkos/sdk/include ../include
 
 MACH = stm32f207
 THINKAPP = 1
 LDSCRIPT = yard-ice.ld
 LOAD_ADDR = 0x08020000
-include ../../mk/stm32f2xx.mk
+include ../../thinkos/mk/stm32f2xx.mk
 
 help:
 	@echo 'Targets:'

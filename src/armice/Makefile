@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 LIB_STATIC = armice
 
@@ -31,5 +31,5 @@ CFILES = mod_armice.c armice.c armice-test.c armice-info.c arm-wp.c\
 
 #INCPATH = ../include ../../sdk/include
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

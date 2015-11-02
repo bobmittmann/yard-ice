@@ -28,11 +28,13 @@ CFILES = yard-ice.c board.c debugger.c ice_drv.c\
 		 i2c-master.c mod_ice.c shell.c lookup.c monitor.c\
 		 console.c 
 
-LIBDIRS = ../sdk/libcm3 ../sdk/libstm32f ../sdk/libutil ../sdk/libthinkos\
-		  ../sdk/libc ../sdk/libice-comm ../sdk/libtcpip ../sdk/libstm32drv\
-		  ../sdk/libbitvec ../sdk/libhexdump ../sdk/libcrc ../sdk/libaltera\
-		  ../sdk/libtrace ../sdk/libtty ../sdk/libxmodem\
-		  ../sdk/libshell ../sdk/libconsole ../sdk/libopcodes\
+SDK = ../thinkos/sdk
+
+LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil $(SDK)/libthinkos\
+		  $(SDK)/libc $(SDK)/libice-comm $(SDK)/libtcpip $(SDK)/libstm32drv\
+		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc libaltera\
+		  $(SDK)/libtrace $(SDK)/libtty $(SDK)/libxmodem\
+		  $(SDK)/libshell $(SDK)/libconsole libopcodes\
 		  arch jtag script cmd nand jtag3drv\
 		  armice cm3ice targets tftp gdb vcom telnet comm 
 
@@ -47,10 +49,10 @@ VERSION_MINOR = "27"
 CDEFS = CONFIG_H
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
-INCPATH = ../sdk/include include
+INCPATH = $(SDK)/include include
 
 MACH = stm32f207
-include ../mk/stm32f2xx.mk
+include ../thinkos/mk/stm32f2xx.mk
 
 help:
 	@echo 'Targets:'

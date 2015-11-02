@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 LIB_STATIC = nand
 
@@ -31,5 +31,5 @@ CFILES = mod_nand.c nand-bb-check.c nand-block-erase.c\
 		 nand-page-read.c nand-page-write.c\
 		 nand-spare-read.c nand-spare-write.c
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

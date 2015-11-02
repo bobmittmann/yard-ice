@@ -21,9 +21,11 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../thinkos/mk/config.mk
+
 LIB_STATIC = dcc
 
 CFILES = dcc_tcp.c
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 

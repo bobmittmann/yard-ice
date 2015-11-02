@@ -21,11 +21,11 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-include ../../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 LIB_STATIC = vcom
 
 CFILES = vcom.c stm32f-serial.c
 
-include ../../mk/lib.mk
+include ../../thinkos/mk/lib.mk
 
