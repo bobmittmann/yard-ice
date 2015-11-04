@@ -106,7 +106,7 @@ int8_t monitor_thread_id = MONITOR_STARTUP_MAGIC;
 #endif
 
 static const char monitor_menu[] = 
-"- ThinkOS Monitor Commands:\r\n"
+"- ThinkOS Monitor\r\n"
 #if (MONITOR_APPTERM_ENABLE)
 " Ctrl+C - Stop app\r\n"
 #endif
@@ -134,7 +134,7 @@ static const char monitor_menu[] =
 #endif
 " Ctrl+V - Help\r\n"
 #if (MONITOR_APPWIPE_ENABLE)
-" Ctrl+W - Wipe application\r\n"
+" Ctrl+W - Wipe app\r\n"
 #endif
 #if (MONITOR_FAULT_ENABLE)
 " Ctrl+X - Exception info\r\n"
@@ -146,7 +146,7 @@ static const char monitor_menu[] =
 ;
 
 static const char __hr__[] = 
-"--------------------------------------------------------------\r\n";
+"--------------------------------------\r\n";
 
 static void monitor_show_help(struct dmon_comm * comm)
 {

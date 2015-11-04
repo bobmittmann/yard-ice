@@ -50,8 +50,10 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-//	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
-//	cm3_udelay_calibrate();
+#ifndef UDELAY_FACTOR 
+	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
+	cm3_udelay_calibrate();
+#endif
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
