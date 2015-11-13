@@ -34,41 +34,46 @@
  * Altera 
  ---------------------------------------------------------------------------*/
 
-static const gpio_io_t n_config = GPIO(GPIOE, 0);
-static const gpio_io_t conf_done = GPIO(GPIOE, 1);
-static const gpio_io_t n_status = GPIO(GPIOC, 11);
-
-static const struct stm32f_spi_io spi3_io = {
-	.miso = GPIO(GPIOC, 11), /* MISO */
-	.mosi = GPIO(GPIOB, 5), /* MOSI */
-	.sck = GPIO(GPIOC, 10)  /* SCK */
+struct gpio_pin {
+	struct stm32_gpio * gpio;
+	unsigned int num;
 };
 
-int altera_io_init(void)
-{
-	gpio_io_t io;
-
-	stm32_gpio_clock_en(STM32_GPIOB);
-	stm32_gpio_clock_en(STM32_GPIOC);
-	stm32_gpio_clock_en(STM32_GPIOE);
-
-	io = n_config;
-	stm32_gpio_clock_en(STM32_GPIO(io.port));
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
-
-	io = conf_done;
-	stm32_gpio_clock_en(STM32_GPIO(io.port));
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, SPEED_MED);
-
-	io = n_status;
-	stm32_gpio_clock_en(STM32_GPIO(io.port));
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, SPEED_MED);
-
-	gpio_set(n_config);
-	udelay(40);
-
-	return 0;
+/* set pin */
+static inline void gpio_set(struct gpio_pin pin) {
+	pin.gpio->bsr = GPIO_SET(pin.num);
 }
+
+/* clear pin */
+static inline void gpio_clr(struct gpio_pin pin) {
+	pin.gpio->brr = GPIO_RESET(pin.num);
+}
+
+/* get pin status */
+static inline int gpio_status(struct gpio_pin pin) {
+	return pin.gpio->idr & (1 << pin.num);
+}
+
+/* mode */
+static inline void gpio_mode(struct gpio_pin pin, 
+							unsigned int mode, unsigned int opt) {
+	stm32_gpio_mode(pin.gpio, pin.num, mode, opt);
+}
+
+
+static const struct gpio_pin n_config = { STM32_GPIOE, 0 };
+static const struct gpio_pin conf_done = { STM32_GPIOE, 1 };
+static const struct gpio_pin n_status = { STM32_GPIOC, 11 };
+
+static const struct {
+	struct gpio_pin miso;
+	struct gpio_pin mosi;
+	struct gpio_pin sck;
+} spi3_io = {
+	.miso = { STM32_GPIOC, 11 }, /* MISO */
+	.mosi = { STM32_GPIOB, 5 }, /* MOSI */
+	.sck = { STM32_GPIOC, 10 }  /* SCK */
+};
 
 static inline int conf_start(void)
 {
@@ -117,7 +122,6 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 {
 	struct stm32f_spi * spi = STM32F_SPI3;
 	unsigned int div;
-	gpio_io_t io;
 	int freq = 1000000;
 	int n = 0;
 	int ret;
@@ -126,25 +130,17 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 
 	DCC_LOG2(LOG_TRACE, "rbf=%08x max=%d", buf, max);
 	
-	io = n_config;
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
+	gpio_mode(n_config, OUTPUT, SPEED_MED);
 	gpio_set(n_config);
 
-	io = conf_done;
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, PULL_UP | SPEED_MED);
+	gpio_mode(conf_done, INPUT, PULL_UP | SPEED_MED);
+	gpio_mode(n_status, INPUT, PULL_UP | SPEED_MED);
 
-	io = n_status;
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, PULL_UP | SPEED_MED);
+	gpio_mode(spi3_io.sck, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(spi3_io.sck.gpio, spi3_io.sck.num, GPIO_AF6);
 
-	io = spi3_io.sck;
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, 
-					ALT_FUNC, PUSH_PULL | SPEED_MED);
-	stm32_gpio_af(STM32_GPIO(io.port), io.pin, GPIO_AF6);
-
-	io = spi3_io.mosi;
-	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, 
-					ALT_FUNC, PUSH_PULL | SPEED_MED);
-	stm32_gpio_af(STM32_GPIO(io.port), io.pin, GPIO_AF6);
+	gpio_mode(spi3_io.mosi, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(spi3_io.mosi.gpio, spi3_io.mosi.num, GPIO_AF6);
 
 	/* Enable peripheral clock */;
 	stm32_clk_enable(STM32_RCC, STM32_CLK_SPI3);

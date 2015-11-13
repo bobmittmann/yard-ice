@@ -43,7 +43,7 @@
 
 struct serial_dev * serial_open(void)
 {
-	stm32_gpio_clock_en(STM32_GPIOC);
+	stm32_gpio_clk_en(STM32_GPIOC);
 
 	/* UART TX */
 	stm32_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
