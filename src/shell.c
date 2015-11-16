@@ -370,7 +370,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
-#if 1
+#if 0
 	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
 

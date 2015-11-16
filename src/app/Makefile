@@ -23,10 +23,9 @@
 
 PROG = yard-ice
 
-CFILES = yard-ice.c board.c debugger.c ice_drv.c\
-		 mod_mem.c fmt_freq.c mem_hexdump.c targets.c\
-		 i2c-master.c mod_ice.c shell.c lookup.c monitor.c\
-		 console.c 
+CFILES = ../yard-ice.c ../io.c ../debugger.c ../ice_drv.c\
+		 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
+		 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c 
 
 SDK = ../../thinkos/sdk
 

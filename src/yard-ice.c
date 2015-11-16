@@ -372,54 +372,25 @@ int init_target(void)
 	return 0;
 }
 
-int monitor_init(void);
+void monitor_task(struct dmon_comm * comm);
+
+void monitor_init(void)
+{
+	struct dmon_comm * comm;
+
+	thinkos_console_init();
+
+	comm = usb_comm_init(&stm32f_otg_fs_dev);
+
+	thinkos_dmon_init(comm, monitor_task);
+}
+
+void io_init(void);
 int stdio_shell(void);
 FILE * console_shell(void);
 int telnet_shell(void);
 int usb_shell(void);
 int sys_start(void);
-
-void io_init(void)
-{
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
-
-	/* - Relay ------------------------------------------------------------*/
-	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
-	stm32_gpio_clr(IO_RELAY);
-
-	/* - External Power ---------------------------------------------------*/
-	stm32_gpio_mode(IO_PWR_EN, OUTPUT, SPEED_LOW);
-	stm32_gpio_clr(IO_PWR_EN);
-	stm32_gpio_mode(IO_PWR_MON, INPUT, SPEED_LOW | PULL_UP);
-
-	/* - Debug UART -------------------------------------------------------*/
-	stm32_gpio_mode(IO_UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(IO_UART5_RX, ALT_FUNC, PULL_UP);
-
-	stm32_gpio_af(IO_UART5_RX, GPIO_AF8);
-	stm32_gpio_af(IO_UART5_TX, GPIO_AF8);
-
-	/* - FPGA PRogramming ------------------------------------------------*/
-	stm32_gpio_mode(IO_N_CONFIG, OUTPUT, SPEED_MED);
-	stm32_gpio_set(IO_N_CONFIG);
-
-	stm32_gpio_mode(IO_CONF_DONE, INPUT, SPEED_MED | PULL_UP);
-#if 0
-	stm32_gpio_mode(IO_N_STATUS, INPUT, SPEED_MED | PULL_UP);
-#endif
-	stm32_gpio_mode(IO_N_STATUS, ALT_FUNC, PULL_UP | SPEED_MED);
-	stm32_gpio_af(IO_N_STATUS, GPIO_AF6);
-
-	stm32_gpio_mode(IO_DCLK, ALT_FUNC, PUSH_PULL | SPEED_MED);
-	stm32_gpio_af(IO_DCLK, GPIO_AF6);
-
-	stm32_gpio_mode(IO_DATA0, ALT_FUNC, PUSH_PULL | SPEED_MED);
-	stm32_gpio_af(IO_DATA0, GPIO_AF6);
-}
 
 int main(int argc, char ** argv)
 {
