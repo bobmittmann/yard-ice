@@ -157,7 +157,6 @@ static void monitor_show_help(struct dmon_comm * comm)
 
 extern int __heap_end;
 const void * heap_end = &__heap_end; 
-uint32_t except_crc __attribute__((section(".heap")));
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
