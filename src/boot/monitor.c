@@ -257,7 +257,7 @@ static void monitor_ymodem_recv(struct dmon_comm * comm,
 								uint32_t addr, unsigned int size)
 {
 	dmon_comm_send(comm, ymodem_rcv_msg, sizeof(ymodem_rcv_msg) - 1);
-	dmon_soft_reset(comm);
+	dmon_soft_reset();
 	if (dmon_ymodem_flash(comm, addr, size) < 0) {
 		dmon_comm_send(comm, ymodem_err_msg, sizeof(ymodem_err_msg) - 1);
 		return;
@@ -269,12 +269,13 @@ static void monitor_ymodem_recv(struct dmon_comm * comm,
 	}
 }
 
+
 #if (MONITOR_APPWIPE_ENABLE)
 static void monitor_app_erase(struct dmon_comm * comm, 
 							  uint32_t addr, unsigned int size)
 {
 	dmputs("\r\nErasing application block ... ", comm);
-	dmon_soft_reset(comm);
+	dmon_soft_reset();
 	if (dmon_app_erase(comm, addr, size))
 		dmputs("done.\r\n", comm);
 	else	
@@ -361,7 +362,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 #if (MONITOR_APPTERM_ENABLE)
 		case CTRL_C:
 			dmon_comm_send(comm, "^C\r\n", 4);
-			dmon_soft_reset(comm);
+			dmon_soft_reset();
 			break;
 #endif
 #if (BOOT_ENABLE_GDB)
@@ -372,13 +373,13 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 #if (MONITOR_CONFIGURE_ENABLE)
 		case CTRL_K:
 			dmputs("^K\r\n", comm);
-			dmon_soft_reset(comm);
+			dmon_soft_reset();
 			this_board.configure(comm);
 			break;
 #endif
 #if (MONITOR_UPGRADE_ENABLE)
 		case CTRL_L:
-			dmon_soft_reset(comm);
+			dmon_soft_reset();
 //			dmputs("^L\r\n", comm);
 //			dmputs("Confirm (yes/no)? ", comm);
 //			dmscanf(comm, "yes%n", &i);
@@ -450,7 +451,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 #if (MONITOR_APPRESTART_ENABLE)
 		case CTRL_Z:
 			dmon_comm_send(comm, "^Z\r\n", 4);
-			dmon_soft_reset(comm);
+			dmon_soft_reset();
 			monitor_exec(comm, this_board.application.start_addr);
 			break;
 #endif
