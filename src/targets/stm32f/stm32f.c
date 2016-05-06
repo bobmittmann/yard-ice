@@ -266,7 +266,7 @@ struct ice_mem_entry stm32f_mem[] = {
 	},
 	{ .name = "flash", .flags = MEM_32_BITS,
 		.addr = { .base = 0x08000000, .offs = 0 }, 
-		.blk = {.count = 128, .size = MEM_KiB(1)},
+		.blk = {.count = 2048, .size = MEM_KiB(1)},
 		.op = &flash_stm32f1_oper
 	},
 	{ .name = "eeprom", .flags = 0, 
@@ -276,7 +276,7 @@ struct ice_mem_entry stm32f_mem[] = {
 	},
 	{ .name = "sram", .flags = MEM_32_BITS,
 		.addr = { .base = 0x20000000, .offs = 0 }, 
-		.blk = {.count = 16, .size = MEM_KiB(1)},
+		.blk = {.count = 256, .size = MEM_KiB(1)},
 		.op = &cm3_ram_oper 
 	},
 	{ .name = "ccm", .flags = MEM_32_BITS,

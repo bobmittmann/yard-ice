@@ -360,7 +360,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		switch (c) {
 #if (MONITOR_APPTERM_ENABLE)
 		case CTRL_C:
-			dmon_comm_send(comm, "^C\r\n", 4);
+			dmputs("^C\r\n", comm);
 			dmon_soft_reset(comm);
 			break;
 #endif
@@ -436,7 +436,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			break;
 #endif
 		case CTRL_Y:
-			dmon_comm_send(comm, "^Y\r\n", 4);
+			dmputs("^Y\r\n", comm);
 			monitor_ymodem_recv(comm, this_board.application.start_addr, 
 								this_board.application.block_size);
 			break;
