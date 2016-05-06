@@ -233,6 +233,22 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[CCM].blk.count = 0;
 		break;
 
+	case 0x422:
+		ice_rd16(ice, 0x1ffff7cc, &memsz);
+		/* This bitfield indicates the size of the device Flash memory 
+		   expressed in Kbytes.As an example, 0x040 corresponds 
+		   to 64 Kbytes. */
+		fprintf(f, "STM32F3XX\n"); 
+		target->on_init = (target_script_t)stm32f3xx_on_init,
+		mem[FLASH].op = &flash_stm32f3_oper;
+		mem[FLASH].blk.size = MEM_KiB(2);
+		mem[FLASH].blk.count = memsz / 2;
+		mem[EEPROM].blk.count = 0;
+		/* FIXME: configure SRAM */
+		mem[SRAM].blk.count = 40;
+		mem[CCM].blk.count = 8;
+		break;
+
 	default:
 		fprintf(f, "Unknown device: 0x%03x!\n", dev_id); 
 		return -1;

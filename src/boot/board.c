@@ -58,13 +58,10 @@ bool board_init(void)
 {
 	io_init();
 
-	return true;
-}
-
-void board_comm_irqen(void)
-{
 	/* Enable USB OTG FS interrupts */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+
+	return true;
 }
 
 void board_softreset(void)
@@ -90,9 +87,6 @@ void board_softreset(void)
 	rcc->apb2enr = 0;
 
 	io_init();
-
-	/* Enable USB OTG FS interrupts */
-	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
 bool board_autoboot(uint32_t tick)
@@ -171,8 +165,7 @@ const struct thinkos_board this_board = {
 	.autoboot = board_autoboot,
 	.configure = board_configure,
 	.upgrade = board_upgrade,
-	.on_appload = board_on_appload,
-	.comm_irqen = board_comm_irqen
+	.on_appload = board_on_appload
 };
 
 
