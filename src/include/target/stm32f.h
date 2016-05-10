@@ -46,6 +46,8 @@ extern const struct ice_mem_oper flash_stm32l1_oper;
 
 extern const struct ice_mem_oper flash_stm32f2_oper;
 
+extern const struct ice_mem_oper flash_stm32f3_oper;
+
 extern const struct cm3ice_cfg stm32f_cfg;
 
 extern const struct target_arch stm32f_arch;
@@ -66,6 +68,16 @@ int stm32l1xx_on_init(FILE * f, const ice_drv_t * ice,
 
 int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice, 
 					 ice_mem_entry_t * mem);
+
+int stm32f3xx_on_init(FILE * f, const ice_drv_t * ice, 
+					 ice_mem_entry_t * mem);
+
+int stm32f1_flash_erase(cm3ice_ctrl_t * ctrl, 
+					   ice_mem_ref_t * mem, 
+					   ice_size_t len);
+
+int stm32f1_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem, 
+					 const void * buf, ice_size_t len);
 
 #ifdef __cplusplus
 extern "C" {
