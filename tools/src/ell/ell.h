@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file calc.h
+ * @file ell.h
  * @brief 
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
