@@ -29,7 +29,10 @@
 #include <thinkos_dmon.h>
 
 #include "board.h"
+#include "version.h"
 
+#define IO_UART5_TX       STM32_GPIOC, 12
+#define IO_UART5_RX       STM32_GPIOD, 2
 static void io_init(void)
 {
 	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
@@ -38,10 +41,11 @@ static void io_init(void)
 	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
 	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
-#if 0
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+
+#if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 
 	/* - Relay ------------------------------------------------------------*/
 	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
@@ -51,7 +55,11 @@ static void io_init(void)
 	stm32_gpio_mode(IO_PWR_EN, OUTPUT, SPEED_LOW);
 	stm32_gpio_clr(IO_PWR_EN);
 	stm32_gpio_mode(IO_PWR_MON, INPUT, SPEED_LOW | PULL_UP);
+	/* - Debug UART ---------------------------------------------------*/
+	stm32_gpio_mode(IO_UART5_TX, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_UART5_TX);
 #endif
+	stm32_gpio_mode(IO_UART5_TX, INPUT, SPEED_LOW | PULL_UP);
 }
 
 bool board_init(void)
@@ -98,13 +106,12 @@ bool board_autoboot(uint32_t tick)
 		else
 			stm32_gpio_set(IO_RELAY);
 	}
-#endif
 	if (tick == (3 * 8)) 
 		return true;
+#endif
 
 //	DCC_LOG1(LOG_TRACE, "tick=%d", tick);
-
-	return false;
+	return stm32_gpio_stat(IO_UART5_TX) ? false : true;
 }
 
 void board_on_appload(void)
@@ -149,8 +156,8 @@ const struct thinkos_board this_board = {
 		.minor = 2,
 	},
 	.sw_ver = {
-		.major = 0,
-		.minor = 19,
+		.major = VERSION_MAJOR,
+		.minor = VERSION_MINOR,
 	},
 	.memory = {
 		.ram = &sram_desc,
@@ -167,5 +174,4 @@ const struct thinkos_board this_board = {
 	.upgrade = board_upgrade,
 	.on_appload = board_on_appload
 };
-
 

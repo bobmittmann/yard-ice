@@ -109,11 +109,13 @@
 #define THINKOS_ENABLE_ESCALATE         1
 #define THINKOS_ENABLE_FPU              0
 
-#define THINKOS_ENABLE_THREAD_VOID      1
+#define THINKOS_ENABLE_THREAD_VOID      0
 
 #define THINKOS_DMON_STACK_SIZE         512
 
 #define THINKOS_ENABLE_STACK_INIT       0
+
+#define THINKOS_ASM_SCHEDULER           1
 
 /* -------------------------------------------------------------------------
  * delay

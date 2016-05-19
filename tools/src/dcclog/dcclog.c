@@ -1606,8 +1606,6 @@ void __term_sig_handler(void (* handler)(void))
 
 int main(int argc, char *argv[])
 {
-	extern char *optarg;	/* getopt */
-	extern int optind;	/* getopt */
 	char appfname[1024];
 	char host[128];
 	int port = 1001;

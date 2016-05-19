@@ -81,7 +81,7 @@ int main(int argc, char ** argv)
 #endif
 
 	DCC_LOG(LOG_TRACE, "9. thinkos_thread_abort()");
-	thinkos_thread_abort(thinkos_thread_self());
+	thinkos_thread_abort(0);
 
 	return 0;
 }
