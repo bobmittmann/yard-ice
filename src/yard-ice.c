@@ -38,8 +38,10 @@
 #include <sys/dcclog.h>
 
 #include <thinkos.h>
-#define __THINKOS_DMON__
+#ifndef THINKAPP
+#define __THINKOS_DBGMON__
 #include <thinkos_dmon.h>
+#endif
 
 #include <tcpip/ethif.h>
 #include <tcpip/route.h>
@@ -372,6 +374,7 @@ int init_target(void)
 	return 0;
 }
 
+#ifndef THINKAPP
 void monitor_task(struct dmon_comm * comm);
 
 void monitor_init(void)
@@ -382,8 +385,9 @@ void monitor_init(void)
 
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-	thinkos_dmon_init(comm, monitor_task);
+	thinkos_dbgmon_init(comm, monitor_task);
 }
+#endif
 
 void io_init(void);
 int stdio_shell(void);
