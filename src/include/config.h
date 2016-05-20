@@ -34,7 +34,6 @@
 #define THINKOS_ENABLE_IRQ_CTL          1
 
 #define THINKOS_ENABLE_IDLE_WFI         1
-#define THINKOS_IDLE_STACK_CONST        0
 #define THINKOS_IDLE_STACK_BSS          0
 #define THINKOS_IDLE_STACK_ALLOC        1
 
@@ -94,7 +93,7 @@
 #define THINKOS_ENABLE_CONSOLE          1
 
 #define THINKOS_EXCEPT_STACK_SIZE       320
-#define THINKOS_ENABLE_EXCEPTIONS       1
+#define THINKOS_ENABLE_EXCEPTIONS       0
 #define THINKOS_UNROLL_EXCEPTIONS       0
 #define THINKOS_ENABLE_EXCEPT_CLEAR     0
 #define THINKOS_ENABLE_BUSFAULT         0
@@ -102,8 +101,11 @@
 #define THINKOS_ENABLE_MEMFAULT         0
 #define THINKOS_SYSRST_ONFAULT          0
 #define THINKOS_STDERR_FAULT_DUMP       0
+#define THINKOS_ENABLE_DEBUG_BKPT       0
+#define THINKOS_ENABLE_DEBUG_WPT        0
 #define THINKOS_ENABLE_DEBUG_STEP       0
 #define THINKOS_ENABLE_DEBUG_FAULT      0
+#define THINKOS_ENABLE_ERROR_TRAP       0
 
 #define THINKOS_ENABLE_MPU              0
 #define THINKOS_ENABLE_ESCALATE         1
@@ -111,11 +113,13 @@
 
 #define THINKOS_ENABLE_THREAD_VOID      0
 
-#define THINKOS_DMON_STACK_SIZE         512
+#define THINKOS_DBGMON_STACK_SIZE       480
 
 #define THINKOS_ENABLE_STACK_INIT       0
 
 #define THINKOS_ASM_SCHEDULER           1
+
+#define THINKOS_ENABLE_OFAST            0
 
 /* -------------------------------------------------------------------------
  * delay
@@ -130,9 +134,9 @@
 #define STM32_ENABLE_OTG_FS          1
 #define STM32_OTG_FS_EP_MAX          4
 
-#define CDC_EP_OUT_MAX_PKT_SIZE 64
-#define CDC_EP_IN_MAX_PKT_SIZE  64
-#define CDC_EP_INT_MAX_PKT_SIZE 8
+#define CDC_EP_OUT_MAX_PKT_SIZE      64
+#define CDC_EP_IN_MAX_PKT_SIZE       64
+#define CDC_EP_INT_MAX_PKT_SIZE      8
 
 /* -------------------------------------------------------------------------
  * TCP/IP

@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define __THINKOS_DMON__
+#define __THINKOS_DBGMON__
 #include <thinkos_dmon.h>
 #include <thinkos.h>
 #include <sys/dcclog.h>
@@ -348,11 +348,8 @@ static void monitor_exec(struct dmon_comm * comm, unsigned int addr)
 
 void monitor_task(struct dmon_comm *);
 
-int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
+static bool monitor_process_input(struct dmon_comm * comm, int c)
 {
-	int c;
-
-	c = buf[0];
 	switch (c) {
 #if (MONITOR_APPTERM_ENABLE)
 	case CTRL_C:
@@ -445,9 +442,11 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		monitor_exec(comm, this_board.application.start_addr);
 		break;
 #endif
+	default:
+		return false;
 	}
 
-	return 1;
+	return true;
 }
 
 /*
@@ -459,22 +458,18 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint32_t sigmask = 0;
 	uint32_t sigset;
 #if THINKOS_ENABLE_CONSOLE
-	bool connected;
 	uint8_t * ptr;
 	int cnt;
 #endif
-	char buf[64];
-	int len;
+	uint8_t buf[1];
 
 #if (MONITOR_FAULT_ENABLE)
-	sigmask |= (1 << DMON_THREAD_FAULT);
-	sigmask |= (1 << DMON_EXCEPT);
+	sigmask |= (1 << DBGMON_THREAD_FAULT);
+	sigmask |= (1 << DBGMON_EXCEPT);
 #endif
-	sigmask |= (1 << DMON_COMM_RCV);
+	sigmask |= (1 << DBGMON_COMM_RCV);
 #if THINKOS_ENABLE_CONSOLE
-	sigmask |= (1 << DMON_COMM_CTL);
-	sigmask |= (1 << DMON_TX_PIPE);
-	sigmask |= (1 << DMON_RX_PIPE);
+	sigmask |= (1 << DBGMON_TX_PIPE);
 #endif
 
 #if (MONITOR_THREADINFO_ENABLE)
@@ -486,89 +481,71 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	}
 #endif
 
-#if THINKOS_ENABLE_CONSOLE
-	connected = dmon_comm_isconnected(comm);
-#endif
+	dbgmon_wait_idle();
 
 	if (this_board.autoboot(0)) {
+		DCC_LOG(LOG_TRACE, "Autoboot...");
 		monitor_app_exec(this_board.application.start_addr, 0);
-	}  
+	} else {
+		DCC_LOG(LOG_WARNING, "No autoboot!!");
+	}
 
 	for(;;) {
 		sigset = dbgmon_select(sigmask);
 		DCC_LOG1(LOG_MSG, "sigset=%08x", sigset);
 
+		if (sigset & (1 << DBGMON_COMM_RCV)) {
 #if THINKOS_ENABLE_CONSOLE
-		if (sigset & (1 << DMON_COMM_CTL)) {
-			DCC_LOG(LOG_INFO, "Comm Ctl.");
-			dbgmon_clear(DMON_COMM_CTL);
-			connected = dmon_comm_isconnected(comm);
-		}
-#endif
-
-		if (sigset & (1 << DMON_COMM_RCV)) {
-#if THINKOS_ENABLE_CONSOLE
-			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				if ((len = dmon_comm_recv(comm, ptr, 1)) > 0) {
-					len = monitor_process_input(comm, (char *)ptr, 1);
-					__console_rx_pipe_commit(len); 
-				} else {
-					sigmask &= ~(1 << DMON_COMM_RCV);
-				}
-			} else {
-				if ((len = dmon_comm_recv(comm, buf, sizeof(buf))) > 0) {
-					monitor_process_input(comm, buf, len);
-				} else {
-					sigmask &= ~(1 << DMON_COMM_RCV);
+			/* receive from the COMM driver one bye at the time */
+			if (dmon_comm_recv(comm, buf, 1) > 0) {
+				/* process the input character */
+				if (!monitor_process_input(comm, buf[0])) {
+					/* if the character was not consumed by the monitor 
+					   insert into the console pipe */
+					/* get a pointer to the head of the pipe,
+					 __console_rx_pipe_ptr() will return the number of 
+					 consecutive spaces in the buffer, we need only one. */
+					if (__console_rx_pipe_ptr(&ptr) > 0) {
+						/* copy the data to the buffer */
+						ptr[0] = buf[0];
+						/* commit the fifo head */
+						__console_rx_pipe_commit(1);
+					}
 				}
 			}
 #else
-			if ((len = dmon_comm_recv(comm, buf, sizeof(buf))) > 0) {
-				monitor_process_input(comm, buf, len);
+			if (dmon_comm_recv(comm, buf, 1) > 0) {
+				monitor_process_input(comm, buf[0]);
 			}
 #endif
 		}
 
 #if THINKOS_ENABLE_CONSOLE
-		if (sigset & (1 << DMON_RX_PIPE)) {
-			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_TRACE, "RX Pipe. rx_pipe.free=%d. "
-						 "Unmaksing DMON_COMM_RCV!", cnt);
-				sigmask |= (1 << DMON_COMM_RCV);
-			} else {
-				DCC_LOG(LOG_TRACE, "RX Pipe empty!!!");
-			}
-			dbgmon_clear(DMON_RX_PIPE);
-		}
-
-
-		if (sigset & (1 << DMON_TX_PIPE)) {
-			DCC_LOG(LOG_INFO, "TX Pipe.");
+		if (sigset & (1 << DBGMON_TX_PIPE)) {
+			DCC_LOG(LOG_MSG, "TX Pipe.");
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
 				DCC_LOG1(LOG_INFO, "TX Pipe, %d pending chars.", cnt);
-				if (connected) 
-					len = dmon_comm_send(comm, ptr, cnt);
-				else
-					len = cnt;
-				__console_tx_pipe_commit(len); 
+				if (dmon_comm_isconnected(comm))
+					cnt = dmon_comm_send(comm, ptr, cnt);
+				__console_tx_pipe_commit(cnt); 
 			} else {
 				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
-				dbgmon_clear(DMON_TX_PIPE);
+				dbgmon_clear(DBGMON_TX_PIPE);
 			}
 		}
 #endif
 
 #if (MONITOR_FAULT_ENABLE)
-		if (sigset & (1 << DMON_THREAD_FAULT)) {
+		if (sigset & (1 << DBGMON_THREAD_FAULT)) {
 			DCC_LOG(LOG_TRACE, "Thread fault.");
 			monitor_on_fault(comm);
-			dbgmon_clear(DMON_THREAD_FAULT);
+			dbgmon_clear(DBGMON_THREAD_FAULT);
 		}
 
-		if (sigset & (1 << DMON_EXCEPT)) {
+		if (sigset & (1 << DBGMON_EXCEPT)) {
 			DCC_LOG(LOG_TRACE, "System exception.");
 			monitor_on_fault(comm);
-			dbgmon_clear(DMON_EXCEPT);
+			dbgmon_clear(DBGMON_EXCEPT);
 		}
 #endif
 	}

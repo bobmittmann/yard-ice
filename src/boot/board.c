@@ -25,14 +25,12 @@
 #include <sys/dcclog.h>
 #include <stdint.h>
 #include <sys/stm32f.h>
-#define __THINKOS_DMON__
+#define __THINKOS_DBGMON__
 #include <thinkos_dmon.h>
 
 #include "board.h"
 #include "version.h"
 
-#define IO_UART5_TX       STM32_GPIOC, 12
-#define IO_UART5_RX       STM32_GPIOD, 2
 static void io_init(void)
 {
 	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
@@ -66,6 +64,8 @@ bool board_init(void)
 {
 	io_init();
 
+	/* Adjust USB OTG FS interrupts priority */
+	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
 	/* Enable USB OTG FS interrupts */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 
@@ -111,7 +111,7 @@ bool board_autoboot(uint32_t tick)
 #endif
 
 //	DCC_LOG1(LOG_TRACE, "tick=%d", tick);
-	return stm32_gpio_stat(IO_UART5_TX) ? false : true;
+	return stm32_gpio_stat(IO_UART5_TX) ? true : false;
 }
 
 void board_on_appload(void)

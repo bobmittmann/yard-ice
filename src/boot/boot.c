@@ -33,7 +33,7 @@
 #include <sys/stm32f.h>
 #include <sys/delay.h>
 
-#define __THINKOS_DMON__
+#define __THINKOS_DBGMON__
 #include <thinkos_dmon.h>
 #include <thinkos.h>
 
@@ -72,8 +72,8 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "6. usb_comm_init()");
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-	DCC_LOG(LOG_TRACE, "7. thinkos_dmon_init()");
-	thinkos_dmon_init(comm, monitor_task);
+	DCC_LOG(LOG_TRACE, "7. thinkos_dbgmon_init()");
+	thinkos_dbgmon_init(comm, monitor_task);
 
 #if THINKOS_ENABLE_MPU
 	DCC_LOG(LOG_TRACE, "8. thinkos_userland()");
