@@ -39,6 +39,7 @@
 #include "cm3ice.h"
 #include "arm_pn.h"
 #include "arm-fpb.h"
+#include "arm-dwt.h"
 #include "dbglog.h"
 
 #include "trace.h"
@@ -192,6 +193,131 @@ static int fpb_disable(jtag_tap_t * tap, armv7m_fpb_ctrl_t * fpb)
 {
 	/* disable the FPB unit */
 	if (jtag_mem_ap_wr32(tap, fpb->base + FP_CTRL_OFFS, 
+						 FP_KEY | FP_DISABLE) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	return ICE_OK;
+}
+
+/****************************************************************************
+  ARM DWT (Data Watchpoint and Trace Unit)
+ ****************************************************************************/
+
+static int dwt_probe(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt, 
+					  uint32_t addr)
+{
+	uint32_t ctrl;
+
+	dwt->base = addr;
+
+	DCC_LOG1(LOG_TRACE, "FPB @ 0x%08x", dwt->base); 
+
+	if (jtag_mem_ap_rd32(tap, dwt->base + DWT_CTRL_OFFS, 
+						 &ctrl) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	DCC_LOG2(LOG_TRACE, "FPB: code=%d lit=%d", FP_NUM_CODE(fp_ctrl),
+			 FP_NUM_LIT(fp_ctrl));
+	dwt->numcomp = DWT_NUMCOMP(ctrl);
+	dwt->comp_base = dwt->base + DWT_COMP_OFFS;
+	dwt->comp_bmp = 0;
+
+	return ICE_OK;
+}
+
+static int dwt_clear(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
+{
+	int id;
+
+	dwt->comp_bmp = 0;
+
+	for (id = 0; id < dwt->numcomp; id++) {
+		if (jtag_mem_ap_wr32(tap, dwt->comp_base + 4 * id, 
+							 0) != JTAG_ADI_ACK_OK_FAULT) {
+			DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+			return ICE_ERR_JTAG;
+		}
+	}
+
+	return 0;
+}
+
+static int dwt_comp_set(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt, 
+							 uint32_t comp)
+{
+	int id;
+
+	id = ffs(~dwt->comp_bmp) - 1;
+
+	if ((id < 0) || (id >= dwt->numcomp)) {
+		DCC_LOG(LOG_WARNING, "all HW breakpoints are being used!"); 
+		return ICE_ERR_UNDEF;
+	}
+
+	if (jtag_mem_ap_wr32(tap, dwt->comp_base + 4 * id, 
+						 comp) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	dwt->comp_bmp |= (1 << id);
+
+	return id;
+}
+
+static int dwt_comp_clr(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt, 
+							 int id)
+{
+	if (id >= dwt->numcomp) {
+		DCC_LOG1(LOG_WARNING, "invalid hardware BP: %d !", id);
+		return ICE_ERR_ARG;
+	}
+
+	if ((dwt->comp_bmp & (1 << id)) == 0)
+		return ICE_OK;
+
+	/* clear the allocation flag */
+	dwt->comp_bmp &= ~(1 << id);
+
+	if (jtag_mem_ap_wr32(tap, dwt->comp_base + 4 * id, 
+						 0) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	return ICE_OK;
+}
+
+#if 0
+static void dwt_code_comp_clr_all(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
+{
+	int id;
+
+	for (id = 0; id < dwt->code_max; id++)
+		dwt_code_comp_clr(tap, dwt, id);
+}
+#endif
+
+static int dwt_enable(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
+{
+	/* enable the FPB unit */
+	if (jtag_mem_ap_wr32(tap, dwt->base + DWT_CTRL_OFFS, 
+						 FP_KEY | FP_ENABLE) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	return ICE_OK;
+}
+
+static int dwt_disable(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
+{
+	/* disable the FPB unit */
+	if (jtag_mem_ap_wr32(tap, dwt->base + DWT_CTRL_OFFS, 
 						 FP_KEY | FP_DISABLE) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
 		return ICE_ERR_JTAG;
@@ -720,6 +846,12 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 		return ret;
 	}
 
+	/* enable the DWT unit */
+	if ((ret = dwt_enable(tap, &ctrl->dwt)) != ICE_OK) {
+		DCC_LOG(LOG_WARNING, "dwt_enable() failed!"); 
+		return ret;
+	}
+
 	if (dhcsr & DHCSR_S_HALT) {
 	} else {
 		ctrl->core.cache_bmp = 0;
@@ -772,6 +904,16 @@ int cm3ice_release(cm3ice_ctrl_t * ctrl)
 	/* disable the FPB unit */
 	if (fpb_disable(tap, &ctrl->fpb) != ICE_OK) {
 		DCC_LOG(LOG_WARNING, "fpb_disable() failed!"); 
+	}
+
+	/* disable all comparators int the DWT unit */
+	if (dwt_clear(tap, &ctrl->dwt) != ICE_OK) {
+		DCC_LOG(LOG_WARNING, "dwt_clear() failed!"); 
+	}
+
+	/* disable the DWT unit */
+	if (dwt_disable(tap, &ctrl->dwt) != ICE_OK) {
+		DCC_LOG(LOG_WARNING, "dwt_disable() failed!"); 
 	}
 
 	/* disable the halt Debug function */
@@ -949,6 +1091,16 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap,
 		opt->bp_max = ctrl->fpb.code_max;
 		/* default breakpoint's size */
 		opt->bp_defsz = 2;
+	}
+
+	/* check for Flash Patch and Breakpoint Unit */
+	memset(&ctrl->dwt, 0, sizeof(armv7m_dwt_ctrl_t));
+	if (ctrl->dbg_map.dwt != 0x00000000) {
+		dwt_probe(tap, &ctrl->dwt, ctrl->dbg_map.dwt);
+		/* maximum number of hardware breakpoints */
+		opt->wp_max = ctrl->dwt.numcomp;
+		/* default breakpoint's size */
+		opt->wp_defsz = 2;
 	}
 
 	return ICE_OK;
@@ -1222,17 +1374,46 @@ int cm3ice_bp_clr(cm3ice_ctrl_t * ctrl, uint32_t id)
 	return fpb_code_comp_clr(tap, &ctrl->fpb, id);
 }
 
-int cm3ice_wp_set(cm3ice_ctrl_t * ctrl, int n, ice_addr_t addr, 
-				  ice_addr_mask_t mask)
+int cm3ice_wp_set(cm3ice_ctrl_t * ctrl, uint32_t addr, 
+				  uint32_t size, uint32_t * id_ptr)
 {
-	DCC_LOG3(LOG_TRACE, "n=%d, addr=%08x mask=%08x", n, addr, mask);
-	return -1;
+	jtag_tap_t * tap = ctrl->tap;
+	uint32_t comp;
+	int id;
+
+	comp = (addr & 0x3ffffffc) | COMP_ENABLE;
+
+/*	if (size == 2) {
+		if (addr & 0x02) {
+			comp |= COMP_BP_HIGH;
+		} else {
+			comp |= COMP_BP_LOW;
+		}
+	} else if (size == 4) {
+		comp |= COMP_BP_WORD;
+	} else {
+		DCC_LOG1(LOG_WARNING, "invalid BP size: %d!", size); 
+		return -1;
+	}
+*/
+
+	if ((id = dwt_comp_set(tap, &ctrl->dwt, comp)) < 0) {
+		DCC_LOG(LOG_WARNING, "dwt_comp_set() failed!");
+		return id;
+	}
+
+	*id_ptr = id;
+
+	return 0;
 }
 
-int cm3ice_wp_clr(cm3ice_ctrl_t * ctrl, int n)
+int cm3ice_wp_clr(cm3ice_ctrl_t * ctrl, uint32_t id)
 {
-	DCC_LOG1(LOG_TRACE, "n=%d", n);
-	return -1;
+	jtag_tap_t * tap = ctrl->tap;
+
+	DCC_LOG1(LOG_TRACE, "clearing bp %d...", id); 
+
+	return dwt_comp_clr(tap, &ctrl->dwt, id);
 }
 
 /*****************************************************************************

@@ -28,43 +28,112 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "config.h"
+#include <sys/dcclog.h>
 #include "target.h"
 #include "debugger.h"
+#include "eval.h"
+
+int wp_usage(FILE * f, char * msg, char * cmd)
+{
+	if (msg)
+		fprintf(f, "%s\n", msg); 
+	fprintf(f, "Usage: %s [set | clr | en | dis] [all | <ADDR [SIZE]>]\n", 
+			cmd);
+	return -1;
+}
 
 int cmd_watchpoint(FILE * f, int argc, char ** argv)
 {
-#if 0
-	unsigned int addr;
-	unsigned int mask;
-	int i;
-	struct debugger * dbg = &debugger;
+	struct dbg_wp * wp = NULL;
+	value_t val;
+	char * cmd = argv[0];
+	int (* action)(uint32_t, uint32_t);
+	uint32_t addr;
+	uint32_t size;
+	int n;
 
-	if (argc > 3) {
-//		printf(msg_break_usage);
+	argc--;
+	argv++;
+
+	if (argc == 0) {
+		n = 1;
+		fprintf(f, "  # | E | A | HW |       Addr |     Size |\n");
+		while (target_watchpoint_get(wp, &wp) == 0) {
+			fprintf(f, " %2d | %c | %c | %2d | 0x%08x | %8d |\n", 
+					n++, 
+					wp->enabled ? '*' : ' ', 
+					wp->active ? '*' : ' ', 
+					wp->hw_id, wp->addr, wp->size);
+		}
+		return 0;
+	}
+
+	do {
+		if (strcmp(*argv, "set") == 0) {
+			action = target_watchpoint_set;
+		} else if (strcmp(*argv, "clr") == 0) {
+			action = target_watchpoint_clear;
+		} else if (strcmp(*argv, "en") == 0) {
+			action = target_watchpoint_enable;
+		} else if (strcmp(*argv, "dis") == 0) {
+			action = target_watchpoint_disable;
+		} else {
+			action = target_watchpoint_set;
+			break;
+		}
+		argc--;
+		argv++;
+	} while (0);
+
+	if (!argc ||  (strcmp(*argv, "all") == 0)) {
+		if (action == target_watchpoint_set) {
+			return wp_usage(f, "invalid argument", cmd);
+		}
+		argc--;
+		argv++;
+
+		if (argc > 0)
+			return wp_usage(f, "too many arguments", cmd);
+
+		while (target_watchpoint_get(wp, &wp) == 0)
+			action(wp->addr, wp->size);
+
+		return 0;
+	}
+
+	if (argc) {
+		if ((n = eval_uint32(&val, argc, argv)) < 0) {
+			DCC_LOG(LOG_WARNING, "eval_uint32(), addr");
+			wp_usage(f, "invalid argument", cmd);
+			return n;
+		}
+		argc -= n;
+		argv += n;
+		addr = val.uint32;
+		DCC_LOG2(LOG_INFO, "addr=%08x n=%d", addr, n);
+	} else {
+		wp_usage(f, "missing address", cmd);
 		return -1;
 	}
 
-	if (argc > 1) {
-		addr = strtoul(argv[1], NULL, 0);
-
-		if (argc > 2)
-			mask = strtoul(argv[2], NULL, 0);
-		else
-			mask = 0x00000000;
-
-		return target_set_watchpoint(addr, mask);
-	}
-
-	for (i = 0; i < DBG_WATCHPOINT_MAX; i++) {
-		if (dbg->wp[i].mask != 0xffffffff) {
-			fprintf(f, "Watchpoint %d at 0x%08x (mask=0x%08x)\n", 
-						i, dbg->wp[i].addr, dbg->wp[i].mask);
+	if (argc) {
+		if ((n = eval_uint32(&val, argc, argv)) < 0) {
+			DCC_LOG(LOG_WARNING, "eval_uint32(), size");
+			wp_usage(f, "invalid argument", cmd);
+			return n;
 		}
+		size = val.uint32;
+		DCC_LOG2(LOG_TRACE, "size=%d n=%d", size, n);
+		argc -= n;
+		argv += n;
+	} else
+		size = 0;
+
+	if (argc) {
+		wp_usage(f, "too many arguments", cmd);
+		return -1;
 	}
 
-	return 0;
-#endif
-	return 0;
+	return action(addr, size);
 }
 

@@ -95,7 +95,25 @@ struct dbg_bp_ctrl {
 	struct dbg_bp * free;
 };
 
-typedef struct dbg_bp_ctrl dbg_bp_ctrl_t;
+struct dbg_wp {
+	union {
+		struct dbg_wp * next;
+		struct {
+			int16_t hw_id;
+			uint8_t type;
+			uint8_t active:1;
+			uint8_t enabled:1;
+			uint32_t addr;
+			uint32_t size;
+		};
+	};
+};
+
+struct dbg_wp_ctrl {
+	uint16_t cnt;
+	struct dbg_wp ** lst;
+	struct dbg_wp * free;
+};
 
 #define DBG_STACK_MAX 64
 #define DBG_CACHE_MAX 64
@@ -132,7 +150,8 @@ struct debugger {
 	struct mem_range stack;
 	struct mem_range transf;
 
-	dbg_bp_ctrl_t bp_ctrl;
+	struct dbg_bp_ctrl bp_ctrl;
+	struct dbg_wp_ctrl wp_ctrl;
 
 	/* poll control */
 	int halt_cond;
@@ -220,11 +239,24 @@ int target_breakpoint_all_disable(void);
 int target_breakpoint_all_enable(void);
 
 
+
+int target_watchpoint_get(struct dbg_wp * wp, struct dbg_wp ** next);
+
 int target_watchpoint_set(uint32_t addr, uint32_t mask);
 
-int target_watchpoint_delete(int num);
-
 int target_watchpoint_clear(uint32_t addr, uint32_t mask);
+
+int target_watchpoint_enable(uint32_t addr, uint32_t size);
+
+int target_watchpoint_disable(uint32_t addr, uint32_t size);
+
+int target_watchpoint_delete(struct dbg_wp * wp);
+
+int target_watchpoint_all_disable(void);
+
+int target_watchpoint_all_enable(void);
+
+
 
 int target_exp(char * sym, uint32_t offs, uint32_t * vp);
 

@@ -140,6 +140,16 @@ struct armv7m_fpb_ctrl {
 
 typedef struct armv7m_fpb_ctrl armv7m_fpb_ctrl_t;
 
+struct armv7m_dwt_ctrl {
+	uint32_t base; /* FBP unit base address */
+	uint8_t numcomp; /* number of comparators */
+	uint32_t comp_bmp; /* comparators allocation bitmap */
+	uint32_t comp_base; /* base address of comparators */
+};
+
+typedef struct armv7m_dwt_ctrl armv7m_dwt_ctrl_t;
+
+
 struct cm3_core_ctrl {
 	uint32_t reg[CM3_FPSCR + 1]; 
 	uint32_t cache_bmp; /* cache bitmap */
@@ -198,6 +208,7 @@ struct cm3ice_ctrl {
 
 	cm3_core_ctrl_t core;
 	armv7m_fpb_ctrl_t fpb;
+	armv7m_dwt_ctrl_t dwt;
 
 	struct armv7m_map dbg_map;
 };

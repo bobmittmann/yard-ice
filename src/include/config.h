@@ -112,6 +112,7 @@
 #define THINKOS_ENABLE_FPU              0
 
 #define THINKOS_ENABLE_THREAD_VOID      0
+#define THINKOS_ENABLE_PREEMPTION       1
 
 #define THINKOS_DBGMON_STACK_SIZE       480
 
@@ -121,13 +122,13 @@
 
 #define THINKOS_ENABLE_OFAST            0
 
-#define THINKOS_ENABLE_RESET_RAM_VECTORS 0
-#define THINKOS_DBGMON_ENABLE_FLOWCTL    0 
-#define THINKOS_DBGMON_ENABLE_IRQ_MGMT   0 
-#define DMPRINTF_ENABLE_FAST             1
-#define DMPRINTF_ENABLE_UNSIGNED         0
+#define THINKOS_DBGMON_ENABLE_RST_VEC   0 
+#define THINKOS_DBGMON_ENABLE_FLOWCTL   0 
+#define THINKOS_DBGMON_ENABLE_IRQ_MGMT  0 
+#define DMPRINTF_ENABLE_FAST            1
+#define DMPRINTF_ENABLE_UNSIGNED        0
 #define THINKOS_CONSOLE_RX_FIFO_LEN     64
-#define THINKOS_CONSOLE_TX_FIFO_LEN    128
+#define THINKOS_CONSOLE_TX_FIFO_LEN     128
 
 /* -------------------------------------------------------------------------
  * delay

@@ -127,6 +127,10 @@ struct ice_opt {
 	uint16_t bp_max;
 	/* Default size for breakpoints */
 	uint16_t bp_defsz;
+	/* Maximum number of watchpoints */
+	uint16_t wp_max;
+	/* Default size for watchpoints */
+	uint16_t wp_defsz;
 };
 
 typedef struct ice_opt ice_opt_t;
@@ -168,10 +172,10 @@ typedef int (* ice_bp_set_t)(ice_ctrl_t * ctrl, uint32_t addr, uint32_t len,
 
 typedef int (* ice_bp_clr_t)(ice_ctrl_t * ctrl, uint32_t id);
 
-typedef int (* ice_wp_set_t)(ice_ctrl_t * ctrl, int n, ice_addr_t addr, 
-							 ice_addr_mask_t mask);
+typedef int (* ice_wp_set_t)(ice_ctrl_t * ctrl, uint32_t addr, uint32_t len, 
+							 uint32_t * id);
 
-typedef int (* ice_wp_clr_t)(ice_ctrl_t * ctrl, int n);
+typedef int (* ice_wp_clr_t)(ice_ctrl_t * ctrl, uint32_t id);
 
 typedef int (* ice_context_get_t)(ice_ctrl_t * ctrl);
 typedef int (* ice_context_set_t)(ice_ctrl_t * ctrl);
@@ -572,6 +576,18 @@ extern inline int ice_bp_clr(const ice_drv_t * ice, uint32_t id)
 {
 	return ice->op.bp_clr(ice->ctrl, id);
 }
+
+extern inline int ice_wp_set(const ice_drv_t * ice, uint32_t addr, 
+							 uint32_t len, uint32_t * id)
+{
+	return ice->op.wp_set(ice->ctrl, addr, len, id);
+}
+
+extern inline int ice_wp_clr(const ice_drv_t * ice, uint32_t id)
+{
+	return ice->op.wp_clr(ice->ctrl, id);
+}
+
 
 extern inline int ice_info(const ice_drv_t * ice, FILE * f, uint32_t which)
 {

@@ -50,6 +50,10 @@
 #define DBG_BREAKPOINT_MAX 16
 #endif
 
+#ifndef DBG_WATCHPOINT_MAX
+#define DBG_WATCHPOINT_MAX 16
+#endif
+
 #define ENABLE_ICE_POLLING 1
 
 /* Debugger state data */
@@ -71,7 +75,7 @@ static struct dbg_bp dbg_bp_pool[DBG_BREAKPOINT_MAX];
  */
 static struct dbg_bp * dbg_bp_list[DBG_BREAKPOINT_MAX];
 
-static void dbg_bp_init(dbg_bp_ctrl_t * bpctl)
+static void dbg_bp_init(struct dbg_bp_ctrl * bpctl)
 {
 	struct dbg_bp * bp;
 	int i;
@@ -92,7 +96,7 @@ static void dbg_bp_init(dbg_bp_ctrl_t * bpctl)
 
 }
 
-static struct dbg_bp * dbg_bp_new(dbg_bp_ctrl_t * bpctl, 
+static struct dbg_bp * dbg_bp_new(struct dbg_bp_ctrl * bpctl, 
 								  uint32_t addr, uint32_t size)
 {
 	struct dbg_bp * bp;
@@ -117,7 +121,7 @@ static struct dbg_bp * dbg_bp_new(dbg_bp_ctrl_t * bpctl,
 	return bp;
 }
 
-static void dbg_bp_move_to_head(dbg_bp_ctrl_t * bpctl, struct dbg_bp * bp)
+static void dbg_bp_move_to_head(struct dbg_bp_ctrl * bpctl, struct dbg_bp * bp)
 {
 	struct dbg_bp * tmp = NULL;
 	struct dbg_bp * prev = bp;
@@ -137,7 +141,7 @@ static void dbg_bp_move_to_head(dbg_bp_ctrl_t * bpctl, struct dbg_bp * bp)
 	}
 }
 
-static int dbg_bp_delete(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl, 
+static int dbg_bp_delete(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl, 
 						 struct dbg_bp * bp)
 {
 	int i;
@@ -196,7 +200,7 @@ static int dbg_bp_delete(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl,
 	return 0;
 }
 
-static int dbg_bp_enable_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
+static int dbg_bp_enable_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
 	struct dbg_bp * bp = NULL;
 	uint32_t id;
@@ -228,7 +232,7 @@ static int dbg_bp_enable_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
 	return ret;
 }
 
-static int dbg_bp_disable_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
+static int dbg_bp_disable_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
 	struct dbg_bp * bp = NULL;
 	int ret = 0;
@@ -253,7 +257,7 @@ static int dbg_bp_disable_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
 	return ret;
 }
 
-static int dbg_bp_activate(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl, 
+static int dbg_bp_activate(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl, 
 						   struct dbg_bp * bp)
 {
 	uint32_t id;
@@ -290,7 +294,7 @@ static int dbg_bp_activate(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl,
 	return 0;
 }
 
-static int dbg_bp_deactivate(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl, 
+static int dbg_bp_deactivate(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl, 
 						   struct dbg_bp * bp)
 {
 	uint32_t id;
@@ -306,7 +310,7 @@ static int dbg_bp_deactivate(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl,
 	return 0;
 }
 
-static int dbg_bp_activate_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
+static int dbg_bp_activate_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
 	struct dbg_bp * bp = NULL;
 	uint32_t id;
@@ -331,7 +335,7 @@ static int dbg_bp_activate_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
 	return ret;
 }
 
-static int dbg_bp_deactivate_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
+static int dbg_bp_deactivate_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
 	struct dbg_bp * bp = NULL;
 	int ret = 0;
@@ -356,7 +360,7 @@ static int dbg_bp_deactivate_all(ice_drv_t * ice, dbg_bp_ctrl_t * bpctl)
 	return ret;
 }
 
-static struct dbg_bp * dbg_bp_get_next(dbg_bp_ctrl_t * bpctl, 
+static struct dbg_bp * dbg_bp_get_next(struct dbg_bp_ctrl * bpctl, 
 									   struct dbg_bp * bp)
 {
 	int i;
@@ -378,7 +382,7 @@ static struct dbg_bp * dbg_bp_get_next(dbg_bp_ctrl_t * bpctl,
 	return bpctl->lst[0];
 }
 
-static struct dbg_bp * dbg_bp_lookup(dbg_bp_ctrl_t * bpctl, 
+static struct dbg_bp * dbg_bp_lookup(struct dbg_bp_ctrl * bpctl, 
 									 uint32_t addr, uint32_t size)
 {
 	struct dbg_bp * bp;
@@ -390,6 +394,347 @@ static struct dbg_bp * dbg_bp_lookup(dbg_bp_ctrl_t * bpctl,
 		bp = bpctl->lst[pos];
 		if ((bp->addr == addr) && (bp->size == size)) {
 			return bp;
+		}
+	}
+
+	return NULL;
+}
+
+/***********************************************************************
+ Watchpoint management
+ ***********************************************************************/
+
+/* Watchpoint allocation data */
+static struct dbg_wp dbg_wp_pool[DBG_WATCHPOINT_MAX];
+
+/* Watchpoint management data */
+/* This is a list of watchpoints ordered from the most to the least recently
+   used.
+   In most cases the target can support a limited number of active 
+   watchpoints, in this case the top of this list will 
+   correspond to the target's hardware ones.
+ */
+static struct dbg_wp * dbg_wp_list[DBG_WATCHPOINT_MAX];
+
+static void dbg_wp_init(struct dbg_wp_ctrl * wpctl)
+{
+	struct dbg_wp * wp;
+	int i;
+
+	/* initialize the watchpoint poll.
+	 The watchpoint poll consist of a linked list of free
+	 watchpoint structures */
+	wpctl->free = dbg_wp_pool;
+	wpctl->lst = dbg_wp_list;
+	wpctl->cnt = 0;
+
+	wp = wpctl->free;
+	for (i = 1; i < DBG_WATCHPOINT_MAX; i++) {
+		wp->next = &dbg_wp_pool[i];
+		wp = &dbg_wp_pool[i];
+	}
+	wp->next = NULL;
+
+}
+
+static struct dbg_wp * dbg_wp_new(struct dbg_wp_ctrl * wpctl, 
+								  uint32_t addr, uint32_t size)
+{
+	struct dbg_wp * wp;
+
+	if ((wp = wpctl->free) != NULL)
+		wpctl->free = wp->next;
+
+	wp->addr = addr;
+	wp->size = size;
+	wp->active = 0;
+
+	/* insert at the list's tail,
+	   if the list is full drop the last entry */
+
+	if (wpctl->cnt < DBG_WATCHPOINT_MAX)
+		wpctl->cnt++;
+
+	wpctl->lst[wpctl->cnt - 1] = wp;
+	
+	DCC_LOG1(LOG_INFO, "cnt=%d", wpctl->cnt);
+
+	return wp;
+}
+
+static void dbg_wp_move_to_head(struct dbg_wp_ctrl * wpctl, struct dbg_wp * wp)
+{
+	struct dbg_wp * tmp = NULL;
+	struct dbg_wp * prev = wp;
+	int i;
+
+	DCC_LOG1(LOG_INFO, "wpctl->cnt=%d", wpctl->cnt);
+
+	/* moving the list (shifting) */
+	for (i = 0; i < wpctl->cnt; i++) {
+		DCC_LOG1(LOG_INFO, "i=%d", i);
+		tmp = wpctl->lst[i];
+		wpctl->lst[i] = prev;
+		if (tmp == wp) {
+			break;
+		}
+		prev = tmp;
+	}
+}
+
+static int dbg_wp_delete(ice_drv_t * ice, struct dbg_wp_ctrl * wpctl, 
+						 struct dbg_wp * wp)
+{
+	int i;
+	int n;
+
+	/* look up for this watchpoint in the list */
+	for (i = 0; i < wpctl->cnt; i++) {
+		if (wp == wpctl->lst[i])
+			break;
+	}
+
+	n = i;
+
+	if (n == wpctl->cnt) {
+		DCC_LOG(LOG_EXCEPT, "not in the list!!!");
+		abort();
+	}
+
+	/* one less item in the list */
+	wpctl->cnt--;
+
+	/* moving the remaining items in the list one position to the front */
+	for (i = n; i < wpctl->cnt; i++) {
+		wpctl->lst[i] = wpctl->lst[i + 1];
+	}
+
+	DCC_LOG3(LOG_INFO, "n=%d cnt=%d ice->opt.wp_max=%d", 
+			 n, wpctl->cnt, ice->opt.wp_max);
+
+	if (wp->active) {
+		/* clear the current watchpoint */
+		DCC_LOG1(LOG_INFO, "clearing active BP: %d", wp->hw_id);
+		ice_wp_clr(ice, wp->hw_id);
+
+		/* activate the next if not disabled */
+		if (wpctl->cnt >= ice->opt.wp_max) {
+			struct dbg_wp * nxt;
+			uint32_t id;
+
+			nxt = wpctl->lst[ice->opt.wp_max - 1];
+			if (nxt->enabled) {
+				DCC_LOG(LOG_INFO, "seting next BP on list");
+				if (ice_wp_set(ice, nxt->addr, nxt->size, &id) < 0) {
+					DCC_LOG(LOG_EXCEPT, "ice_wp_set() error!");
+				}
+				nxt->active = 1;
+				nxt->hw_id = id;
+			}
+		}
+	} 
+
+	/* release memory */
+	wp->next = wpctl->free;
+	wpctl->free = wp;
+
+	return 0;
+}
+
+static int dbg_wp_enable_all(ice_drv_t * ice, struct dbg_wp_ctrl * wpctl)
+{
+	struct dbg_wp * wp = NULL;
+	uint32_t id;
+	int ret = 0;
+	int n;
+	int i;
+
+	/* activate the watchpoints */
+	n = (wpctl->cnt > ice->opt.wp_max) ? ice->opt.wp_max: wpctl->cnt;
+	for (i = 0; i < n; i++) {
+		wp = wpctl->lst[i];
+		if (!wp->active) {
+			DCC_LOG(LOG_INFO, "activating watchpoint...");
+			if ((ret = ice_wp_set(ice, wp->addr, wp->size, &id)) < 0) {
+				DCC_LOG(LOG_ERROR, "ice_wp_set() error!");
+				return ret;
+			}
+			wp->active = 1;
+			wp->hw_id = id;
+		}
+		wp->enabled = 1;
+	}
+	/* enable the remaining */
+	for (i = n; i < wpctl->cnt; i++) {
+		wp = wpctl->lst[i];
+		wp->enabled = 1;
+	}
+
+	return ret;
+}
+
+static int dbg_wp_disable_all(ice_drv_t * ice, struct dbg_wp_ctrl * wpctl)
+{
+	struct dbg_wp * wp = NULL;
+	int ret = 0;
+	int i;
+
+	/* disable all the watchpoints */
+	for (i = 0; i < wpctl->cnt; i++) {
+		wp = wpctl->lst[i];
+		if (wp->active) {
+			/* deactivate the watchpoints */
+			DCC_LOG1(LOG_INFO, "deactivating watchpoint %d", i);
+			if ((ret = ice_wp_clr(ice, wp->hw_id)) < 0) {
+				DCC_LOG(LOG_ERROR, "ice_wp_clr() error!");
+				return ret;
+			}
+			wp->active = 0;
+			wp->hw_id = -1;
+		}
+		wp->enabled = 0;
+	}
+
+	return ret;
+}
+
+static int dbg_wp_activate(ice_drv_t * ice, struct dbg_wp_ctrl * wpctl, 
+						   struct dbg_wp * wp)
+{
+	uint32_t id;
+
+	if (wp->active)
+		return 0;
+
+	if (wpctl->cnt > ice->opt.wp_max) {
+		struct dbg_wp * nxt;
+		/* we are short of hardware watchpoints,
+		   deactivate the least recently active */
+		nxt = wpctl->lst[ice->opt.wp_max];
+		if (nxt->active) {
+			id = nxt->hw_id;
+			nxt->active = 0;
+			DCC_LOG1(LOG_INFO, "deactivating watchpoint %d", id);
+			ice_wp_clr(ice, id);
+		}
+	} 
+
+	DCC_LOG2(LOG_INFO, "activating watchpoint: 0x%08x(%d) ...", 
+			wp->addr, wp->size);
+
+	if (ice_wp_set(ice, wp->addr, wp->size, &id) < 0) {
+		DCC_LOG(LOG_ERROR, "ice_wp_set() error!");
+		wp->active = 0;
+		wp->hw_id = -1;
+		return -1;
+	} 
+
+	DCC_LOG1(LOG_INFO, "HW watchpoint id=%d", id);
+	wp->active = 1;
+	wp->hw_id = id;
+	return 0;
+}
+
+static int dbg_wp_deactivate(ice_drv_t * ice, struct dbg_wp_ctrl * wpctl, 
+						   struct dbg_wp * wp)
+{
+	uint32_t id;
+
+	if (!wp->active)
+		return 0;
+
+	id = wp->hw_id;
+	wp->active = 0;
+	DCC_LOG1(LOG_INFO, "deactivating watchpoint %d", id);
+	ice_wp_clr(ice, id);
+
+	return 0;
+}
+
+static int dbg_wp_activate_all(ice_drv_t * ice, struct dbg_wp_ctrl * wpctl)
+{
+	struct dbg_wp * wp = NULL;
+	uint32_t id;
+	int ret = 0;
+	int n;
+	int i;
+
+	n = (wpctl->cnt > ice->opt.wp_max) ? ice->opt.wp_max: wpctl->cnt;
+	for (i = 0; i < n; i++) {
+		wp = wpctl->lst[i];
+		if (wp->enabled && !wp->active) {
+			DCC_LOG(LOG_INFO, "activating watchpoint...");
+			if ((ret = ice_wp_set(ice, wp->addr, wp->size, &id)) < 0) {
+				DCC_LOG(LOG_ERROR, "ice_wp_set() error!");
+				return ret;
+			}
+			wp->active = 1;
+			wp->hw_id = id;
+		}
+	}
+
+	return ret;
+}
+
+static int dbg_wp_deactivate_all(ice_drv_t * ice, struct dbg_wp_ctrl * wpctl)
+{
+	struct dbg_wp * wp = NULL;
+	int ret = 0;
+	int n;
+	int i;
+
+	n = (wpctl->cnt > ice->opt.wp_max) ? ice->opt.wp_max: wpctl->cnt;
+	for (i = 0; i < n; i++) {
+		wp = wpctl->lst[i];
+		if (wp->active) {
+			/* deactivate the watchpoints */
+			DCC_LOG1(LOG_INFO, "deactivating watchpoint %d", i);
+			if ((ret = ice_wp_clr(ice, wp->hw_id)) < 0) {
+				DCC_LOG(LOG_ERROR, "ice_wp_clr() error!");
+				return ret;
+			}
+			wp->active = 0;
+			wp->hw_id = -1;
+		}
+	}
+
+	return ret;
+}
+
+static struct dbg_wp * dbg_wp_get_next(struct dbg_wp_ctrl * wpctl, 
+									   struct dbg_wp * wp)
+{
+	int i;
+
+	if (wpctl->cnt == 0)
+		return NULL;
+
+	/* look up for this watchpoint in the list */
+	for (i = 0; i < wpctl->cnt; i++) {
+		if (wp == wpctl->lst[i]) {
+			/* the watchpoint is in the list, return the next item */
+			i++;
+			if (i < wpctl->cnt)
+				return wpctl->lst[i];
+			return NULL;
+		}
+	}
+
+	return wpctl->lst[0];
+}
+
+static struct dbg_wp * dbg_wp_lookup(struct dbg_wp_ctrl * wpctl, 
+									 uint32_t addr, uint32_t size)
+{
+	struct dbg_wp * wp;
+	int pos;
+
+	/* check if a watchpoint with the same address and size 
+	 already exist */
+	for (pos = 0; pos < wpctl->cnt; pos++) {
+		wp = wpctl->lst[pos];
+		if ((wp->addr == addr) && (wp->size == size)) {
+			return wp;
 		}
 	}
 
@@ -596,6 +941,10 @@ static int dbg_status(struct debugger * dbg)
 				if ((ret = dbg_bp_deactivate_all(ice, &dbg->bp_ctrl)) < 0) {
 					DCC_LOG(LOG_WARNING, "dbg_bp_deactivate_all() failed!");
 				}
+				/* deactivate all low level watchpoints ... */
+				if ((ret = dbg_wp_deactivate_all(ice, &dbg->wp_ctrl)) < 0) {
+					DCC_LOG(LOG_WARNING, "dbg_wp_deactivate_all() failed!");
+				}
 				DCC_LOG(LOG_MSG, "[DBG_ST_HALTED]");
 				dbg->state = DBG_ST_HALTED;
 			} else {
@@ -717,6 +1066,13 @@ int target_connect(int force)
 		__os_mutex_unlock(dbg->busy);
 		return ret;
 	}
+
+	if ((ret = dbg_wp_activate_all(ice, &dbg->wp_ctrl)) < 0) {
+		DCC_LOG(LOG_WARNING, "dbg_wp_activate_all() failed!");
+		__os_mutex_unlock(dbg->busy);
+		return ret;
+	}
+
 
 	dbg_status(dbg);
 
@@ -841,6 +1197,13 @@ int target_run(void)
 		__os_mutex_unlock(dbg->busy);
 		return ret;
 	}
+
+	if ((ret = dbg_wp_activate_all(ice, &dbg->wp_ctrl)) < 0) {
+		DCC_LOG(LOG_WARNING, "dbg_wp_activate_all() failed!");
+		__os_mutex_unlock(dbg->busy);
+		return ret;
+	}
+
 
 	if ((ret = ice_run(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->run() fail!");
@@ -1711,94 +2074,266 @@ int target_breakpoint_all_enable(void)
 	return ret;
 }
 
-int target_watchpoint_set(uint32_t addr, uint32_t mask)
+/*****************************************************************************
+ * Watchpoins
+ *****************************************************************************/
+
+int target_watchpoint_get(struct dbg_wp * wp, struct dbg_wp ** next)
 {
-#if 0
 	struct debugger * dbg = &debugger;
-//	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
-	int i;
 
 	__os_mutex_lock(dbg->busy);
 
-	for (i = 0; i < DBG_WATCHPOINT_MAX; i++) {
-		if ((dbg->wp[i].addr == addr) && (dbg->wp[i].mask == mask)) {
-			/* already set */
-			__os_mutex_unlock(dbg->busy);
-			return 0;
-		}
-	}
-
-	for (i = 0; i < DBG_WATCHPOINT_MAX; i++) {
-		if (dbg->wp[i].mask == 0xffffffff) {
-			break;
-		}
-	}
-
-	dbg->wp[i].addr = addr;
-	dbg->wp[i].mask = mask;
-#if 0
-	if (dbg->state == ST_RUNNING) {
-		DCC_LOG(LOG_INFO, "activating (%d) %08x:%08x", i,
-			dbg->wp[i].addr, dbg->wp[i].mask);
-	} else {
-		DCC_LOG(LOG_INFO, "(%d) %08x:%08x", i, 
-			dbg->wp[i].addr, dbg->wp[i].mask);
-	}
-#endif
-	__os_mutex_unlock(dbg->busy);
-	return 0;
-#endif
-	return 0;
-}
-
-int target_watchpoint_delete(int num) 
-{
-#if 0
-	struct debugger * dbg = &debugger;
-//	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
-
-	__os_mutex_lock(dbg->busy);
-
-	if (num >= DBG_WATCHPOINT_MAX) {
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
 		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	wp = dbg_wp_get_next(&dbg->wp_ctrl, wp);
+
+	__os_mutex_unlock(dbg->busy);
+
+	if (wp == NULL) {
+		DCC_LOG(LOG_MSG, "wp == NULL!");
 		return -1;
 	}
 
-	DCC_LOG(LOG_INFO, "(%d) %08x:%08x", num, dbg->wp[num].addr, dbg->wp[num].mask);
-	dbg->wp[num].addr = 0;
-	dbg->wp[num].mask = 0xffffffff;
+	if (next != NULL)
+		*next = wp;
 
-	__os_mutex_unlock(dbg->busy);
-	return 0;
-#endif
 	return 0;
 }
 
-int target_watchpoint_clear(uint32_t addr, uint32_t mask)
+int target_watchpoint_set(uint32_t addr, uint32_t size)
 {
-#if 0
 	struct debugger * dbg = &debugger;
-//	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
-	int i;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	struct dbg_wp * wp = NULL;
 
 	__os_mutex_lock(dbg->busy);
 
-	for (i = 0; i < DBG_WATCHPOINT_MAX; i++) {
-		if ((dbg->wp[i].addr == addr) && (dbg->wp[i].mask == mask)) {
-			DCC_LOG(LOG_INFO, "(%d) %08x:%08x", i, 
-				dbg->wp[i].addr, dbg->wp[i].mask);
-			dbg->wp[i].addr = 0;
-			dbg->wp[i].mask = 0xffffffff;
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	/* use default size if zero */
+	size = (size == 0) ? dbg->ice.opt.wp_defsz : size;
+
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+
+	/* check if a watchpoint with the same address and size 
+	 already exist */
+	if ((wp = dbg_wp_lookup(&dbg->wp_ctrl, addr, size)) == NULL) {
+		/* no watchpoint exist, create a new one */
+		if ((wp = dbg_wp_new(&dbg->wp_ctrl, addr, size)) == NULL) {
+			DCC_LOG(LOG_WARNING, "watchpoint allocation fail!");
 			__os_mutex_unlock(dbg->busy);
-			return 0;
-		}
+			return -1;
+		};
+		DCC_LOG1(LOG_INFO, "new watchpoint: %p", wp);
+	}
+	
+	/* move the to the head */
+	dbg_wp_move_to_head(&dbg->wp_ctrl, wp);
+
+	/* enable the watchpoint */
+	wp->enabled = 1;
+
+	if (!wp->active) {
+		poll_stop(dbg);
+		/* activate the hardware watch point */
+		dbg_wp_activate(ice, &dbg->wp_ctrl, wp);
+		poll_start(dbg);
+	} 
+
+	__os_mutex_unlock(dbg->busy);
+
+	return 0;
+}
+
+int target_watchpoint_clear(uint32_t addr, uint32_t size)
+{
+	struct debugger * dbg = &debugger;
+	struct dbg_wp * wp;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	size = (size == 0) ? dbg->ice.opt.wp_defsz : size;
+
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+
+	/* check if a watchpoint with this address and size exists */
+	if ((wp = dbg_wp_lookup(&dbg->wp_ctrl, addr, size)) == NULL) {
+		DCC_LOG(LOG_WARNING, "watchpoint not found!");
+		ret = -1;
+	} else {
+		poll_stop(dbg);
+		ret = dbg_wp_delete(&dbg->ice, &dbg->wp_ctrl, wp);
+		poll_start(dbg);
 	}
 
 	__os_mutex_unlock(dbg->busy);
-	return 0;
-#endif
-	return 0;
+
+	return ret;
 }
+
+int target_watchpoint_enable(uint32_t addr, uint32_t size)
+{
+	struct debugger * dbg = &debugger;
+	struct dbg_wp * wp;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	size = (size == 0) ? dbg->ice.opt.wp_defsz : size;
+
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+
+	/* check if a watchpoint with the same address and size 
+	 already exist */
+	if ((wp = dbg_wp_lookup(&dbg->wp_ctrl, addr, size)) == NULL) {
+		DCC_LOG(LOG_WARNING, "watchpoint not found!");
+		__os_mutex_unlock(dbg->busy);
+		return -1;
+	} 
+	
+	/* enable the watchpoint */
+	wp->enabled = 1;
+
+	poll_stop(dbg);
+	/* activate the watchpoint */
+	ret = dbg_wp_activate(&dbg->ice, &dbg->wp_ctrl, wp);
+	poll_start(dbg);
+
+	__os_mutex_unlock(dbg->busy);
+
+	return ret;
+}
+
+int target_watchpoint_disable(uint32_t addr, uint32_t size)
+{
+	struct debugger * dbg = &debugger;
+	struct dbg_wp * wp;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	/* use default size if zero */
+	size = (size == 0) ? dbg->ice.opt.wp_defsz : size;
+
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+
+	/* check if a watchpoint with this address and size exists */
+	if ((wp = dbg_wp_lookup(&dbg->wp_ctrl, addr, size)) == NULL) {
+		DCC_LOG(LOG_WARNING, "watchpoint not found!");
+		__os_mutex_unlock(dbg->busy);
+		return -1;
+	} 
+	
+	poll_stop(dbg);
+	/* deactivate the watchpoint */
+	ret = dbg_wp_deactivate(&dbg->ice, &dbg->wp_ctrl, wp);
+	poll_start(dbg);
+
+	/* disable the watchpoint */
+	wp->enabled = 0;
+
+	__os_mutex_unlock(dbg->busy);
+
+	return ret;
+}
+
+
+int target_watchpoint_delete(struct dbg_wp * wp)
+{
+	struct debugger * dbg = &debugger;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+
+	poll_stop(dbg);
+	ret = dbg_wp_delete(&dbg->ice, &dbg->wp_ctrl, wp);
+	poll_start(dbg);
+
+	__os_mutex_unlock(dbg->busy);
+
+	return ret;
+}
+
+int target_watchpoint_all_disable(void)
+{
+	struct debugger * dbg = &debugger;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	poll_stop(dbg);
+	ret = dbg_wp_disable_all(&dbg->ice, &dbg->wp_ctrl);
+	poll_start(dbg);
+
+	__os_mutex_unlock(dbg->busy);
+
+	return ret;
+}
+
+int target_watchpoint_all_enable(void)
+{
+	struct debugger * dbg = &debugger;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	poll_stop(dbg);
+	ret = dbg_wp_enable_all(&dbg->ice, &dbg->wp_ctrl);
+	poll_start(dbg);
+
+	__os_mutex_unlock(dbg->busy);
+
+	return ret;
+}
+
+/*****************************************************************************
+ * Reset
+ *****************************************************************************/
 
 int target_reset(FILE * f, int mode)
 {
@@ -2771,6 +3306,9 @@ void debugger_init(void)
 
 	/* initialize the breakpoint management */
 	dbg_bp_init(&dbg->bp_ctrl);
+
+	/* initialize the watchpoint management */
+	dbg_wp_init(&dbg->wp_ctrl);
 
 	/* open the NULL ICE driver */
 	ice_open(&dbg->ice, &ice_drv_null, &dbg_ice_ctrl_buf.ctrl);
