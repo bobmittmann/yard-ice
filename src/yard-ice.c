@@ -46,6 +46,7 @@
 #include <tcpip/ethif.h>
 #include <tcpip/route.h>
 #include <tcpip/loopif.h>
+#include <tcpip/arp.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/tty.h>
@@ -147,8 +148,9 @@ volatile bool spv_auto_flush = false;
 void __attribute__((noreturn)) supervisor_task(void)
 {
 	struct trace_entry trace;
-	uint32_t clk;
+	bool eth_link_up = false;
 	uint32_t eth_tmo;
+	uint32_t clk;
 
 	DCC_LOG(LOG_TRACE, "1.");
 	INF("<%d> started...", thinkos_thread_self());
