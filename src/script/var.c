@@ -55,7 +55,7 @@ int var_global_add(int mod_id, const char * name, int type, int var_id)
 	var->mod_id = mod_id;
 	var->id = var_id;
 
-	DCC_LOG4(LOG_TRACE, "name:'%s.%s' type:%s id:%d", module_name(mod_id),
+	DCC_LOG4(LOG_MSG, "name:'%s.%s' type:%s id:%d", module_name(mod_id),
 		  name, type_name(type), var_id);
 
 	return 0;

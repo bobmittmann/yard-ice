@@ -58,16 +58,16 @@ static void io_init(void)
 	stm32_gpio_clr(IO_UART5_TX);
 #endif
 	stm32_gpio_mode(IO_UART5_TX, INPUT, SPEED_LOW | PULL_UP);
-}
-
-bool board_init(void)
-{
-	io_init();
 
 	/* Adjust USB OTG FS interrupts priority */
 	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
 	/* Enable USB OTG FS interrupts */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+}
+
+bool board_init(void)
+{
+	io_init();
 
 	return true;
 }

@@ -19,7 +19,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-VERSION_DATE = "2016-02-08"
+VERSION_DATE = "2016-05-23"
 VERSION_MAJOR = "0"
 VERSION_MINOR = "20"
 

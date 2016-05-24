@@ -149,10 +149,13 @@ void __attribute__((noreturn)) supervisor_task(void)
 	struct trace_entry trace;
 	uint32_t clk;
 
+	DCC_LOG(LOG_TRACE, "1.");
 	INF("<%d> started...", thinkos_thread_self());
 
+	DCC_LOG(LOG_TRACE, "2.");
 	trace_tail(&trace);
 
+	DCC_LOG(LOG_TRACE, "3.");
 	clk = thinkos_clock();
 	for (;;) {
 		struct timeval tv;
@@ -197,6 +200,7 @@ void supervisor_init(void)
 	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
 							  &supervisor_inf);
 
+	DCC_LOG(LOG_TRACE, "thinkos_sleep()...");
 	thinkos_sleep(1);
 }
 
