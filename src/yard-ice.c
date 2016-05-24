@@ -148,6 +148,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 {
 	struct trace_entry trace;
 	uint32_t clk;
+	uint32_t eth_tmo;
 
 	DCC_LOG(LOG_TRACE, "1.");
 	INF("<%d> started...", thinkos_thread_self());
@@ -157,6 +158,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 
 	DCC_LOG(LOG_TRACE, "3.");
 	clk = thinkos_clock();
+	eth_tmo = clk + 100;
 	for (;;) {
 		struct timeval tv;
 		char s[64];
@@ -180,6 +182,27 @@ void __attribute__((noreturn)) supervisor_task(void)
 
 		if (spv_auto_flush)
 			trace_flush(&trace);
+
+		if ((int32_t)(clk - eth_tmo) >= 0) {
+			bool up = ethif_link_up();
+			if (up) {
+				if (!eth_link_up) {
+					struct route * rt;
+					INF("Ethernet link UP!");
+					if ((rt = ipv4_route_get(INADDR_ANY, INADDR_ANY)) != NULL) {
+						/* send a gratuitous ARP request to the default gateway */
+						ipv4_arp_query(rt->rt_gateway);
+					}
+				}
+				eth_tmo += 250;
+			} else {
+				if (eth_link_up) {
+					WARN("Ethernet link DOWN!");
+				}
+				eth_tmo += 1000;
+			}
+			eth_link_up = up;
+		}
 	}
 }
 
