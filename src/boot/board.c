@@ -26,13 +26,33 @@
 #include <stdint.h>
 #include <sys/stm32f.h>
 #define __THINKOS_DBGMON__
-#include <thinkos_dmon.h>
+#include <thinkos/dbgmon.h>
 
 #include "board.h"
 #include "version.h"
 
-static void io_init(void)
+void board_init(void)
 {
+	struct stm32_rcc * rcc = STM32_RCC;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* Reset all peripherals except USB_OTG and GPIOA */
+	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
+	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
+	rcc->apb1rstr = ~(0);
+	rcc->apb2rstr = ~(0);
+	/* clear reset bits */
+	rcc->ahb1rstr = 0;
+	rcc->ahb2rstr = 0;
+	rcc->apb1rstr = 0;
+	rcc->apb2rstr = 0;
+	/* disable all peripherals clock sources except USB_OTG and GPIOA */
+	rcc->ahb1enr = (1 << RCC_GPIOA); 
+	rcc->ahb2enr = (1 << RCC_OTGFS);
+	rcc->apb1enr = 0;
+	rcc->apb2enr = 0;
+
 	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
 	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
 	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
@@ -65,127 +85,12 @@ static void io_init(void)
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
-bool board_init(void)
-{
-	io_init();
-
-	return true;
-}
-
-void board_softreset(void)
-{
-	struct stm32_rcc * rcc = STM32_RCC;
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	/* Reset all peripherals except USB_OTG and GPIOA */
-	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
-	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
-	rcc->apb1rstr = ~(0);
-	rcc->apb2rstr = ~(0);
-	/* clear reset bits */
-	rcc->ahb1rstr = 0;
-	rcc->ahb2rstr = 0;
-	rcc->apb1rstr = 0;
-	rcc->apb2rstr = 0;
-	/* disable all peripherals clock sources except USB_OTG and GPIOA */
-	rcc->ahb1enr = (1 << RCC_GPIOA); 
-	rcc->ahb2enr = (1 << RCC_OTGFS);
-	rcc->apb1enr = 0;
-	rcc->apb2enr = 0;
-
-	io_init();
-}
-
 bool board_autoboot(uint32_t tick)
 {
-#if 0
-	if (tick < 2) {
-		if (tick & 1)
-			stm32_gpio_clr(IO_RELAY);
-		else
-			stm32_gpio_set(IO_RELAY);
-	}
-	if (tick == (3 * 8)) 
-		return true;
-#endif
-
-//	DCC_LOG1(LOG_TRACE, "tick=%d", tick);
 	return stm32_gpio_stat(IO_UART5_TX) ? true : false;
 }
 
-extern const uint8_t otg_xflash_pic[];
-extern const unsigned int sizeof_otg_xflash_pic;
-
-struct magic {
-	struct {
-		uint16_t pos;
-		uint16_t cnt;
-	} hdr;
-	struct {
-		uint32_t mask;
-		uint32_t comp;
-	} rec[];
-};
-
-int yflash(uint32_t blk_offs, uint32_t blk_size,
-		   const struct magic * magic, uint32_t opt)
-{
-	uint32_t * yflash_code = (uint32_t *)(0x20001000);
-	int (* yflash_ram)(uint32_t, uint32_t, const struct magic *, uint32_t) = 
-		((void *)yflash_code) + 1;
-	unsigned int pri;
-	int ret;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-
-	__thinkos_memcpy(yflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
-	ret = yflash_ram(blk_offs, blk_size, magic, opt);
-
-	cm3_primask_set(pri);
-
-	return ret;
-}
-
-#define BOARD_ENABLE_UPGRADE 1
-
-void board_upgrade(struct dmon_comm * comm)
-{
-#if BOARD_ENABLE_UPGRADE
-	static const struct magic bootloader_magic = {
-		.hdr = {
-			.pos = 0,
-			.cnt = 4
-		},
-		.rec = {
-			{  0xfffc0000, 0x20000000 },
-			{  0xffff0000, 0x08000000 },
-			{  0xffff0000, 0x08000000 },
-			{  0xffff0000, 0x08000000 }
-		}
-	};
-	yflash(0, 65536, &bootloader_magic, 1);
-#endif
-}
-
-int board_yflash(uint32_t addr, unsigned int size)
-{
-	static const struct magic app_magic = {
-		.hdr = {
-			.pos = 0,
-			.cnt = 3
-		},
-		.rec = {
-			{  0xffffffff, 0x0a0de004 },
-			{  0xffffffff, 0x6e696854 },
-			{  0xffffffff, 0x00534f6b }
-		}
-	};
-
-	return yflash(0x00020000, (128 * 2), &app_magic, 1);
-}
-
+#if 0
 void board_on_appload(void)
 {
 }
@@ -216,8 +121,6 @@ const struct mem_desc flash_desc = {
 	}
 }; 
 
-void yard_ice(void);
-
 const struct thinkos_board this_board = {
 	.name = "YARD-ICE",
 	.hw_ver = {
@@ -243,4 +146,6 @@ const struct thinkos_board this_board = {
 	.upgrade = board_upgrade,
 	.on_appload = board_on_appload
 };
+
+#endif
 

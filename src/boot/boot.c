@@ -34,7 +34,7 @@
 #include <sys/delay.h>
 
 #define __THINKOS_DBGMON__
-#include <thinkos_dmon.h>
+#include <thinkos/dbgmon.h>
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
@@ -42,6 +42,7 @@
 #include "board.h"
 
 void monitor_task(struct dmon_comm * comm);
+void board_init(void);
 
 int main(int argc, char ** argv)
 {
@@ -64,7 +65,8 @@ int main(int argc, char ** argv)
 #endif
 
 	DCC_LOG(LOG_TRACE, "4. board_init().");
-	this_board.init();
+//	this_board.init();
+	board_init();
 
 	DCC_LOG(LOG_TRACE, "5. thinkos_console_init()");
 	thinkos_console_init();
