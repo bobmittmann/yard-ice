@@ -325,7 +325,7 @@ int jtag3ctrl_init(const void * rbf, int size)
 	int ret;
 
 	thinkos_escalate(jtag3ctrl_bus_init, NULL);
-
+	
 	if ((ret = altera_configure(rbf, size)) < 0) {
 		DCC_LOG1(LOG_ERROR, "altera_configure() failed: %d!", ret);
 		INF(" # altera_configure() failed: %d!", ret);

@@ -32,10 +32,6 @@
 #include <sys/serial.h>
 #include <sys/delay.h>
 
-#include <thinkos.h>
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
-
 #include <sys/dcclog.h>
 
 #define UART_TX STM32_GPIOC, 6

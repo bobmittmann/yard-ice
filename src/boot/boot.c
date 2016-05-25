@@ -18,8 +18,8 @@
  */
 
 /** 
- * @file yard-ice.c
- * @brief YARD-ICE application main
+ * @file boot.c
+ * @brief YARD-ICE bootloader main
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
@@ -65,8 +65,10 @@ int main(int argc, char ** argv)
 #endif
 
 	DCC_LOG(LOG_TRACE, "4. board_init().");
-//	this_board.init();
 	board_init();
+
+	/* Wait for the other power supply and subsystems to stabilize */
+	thinkos_sleep(64);
 
 	DCC_LOG(LOG_TRACE, "5. thinkos_console_init()");
 	thinkos_console_init();

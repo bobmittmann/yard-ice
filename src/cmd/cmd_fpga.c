@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stm32f.h>
+#include <sys/dcclog.h>
 #include <hexdump.h>
 
 #include "target.h"

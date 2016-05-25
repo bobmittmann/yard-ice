@@ -35,6 +35,7 @@
 #include "telnet_svc.h"
 #include <sys/tty.h>
 #include <sys/shell.h>
+#include <sys/dcclog.h>
 
 #include <sys/os.h>
 

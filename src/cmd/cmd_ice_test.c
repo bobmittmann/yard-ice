@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/dcclog.h>
 
 #include "debugger.h"
 #include "eval.h"

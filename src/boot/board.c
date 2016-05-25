@@ -20,6 +20,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+/** 
+ * @file board.c
+ * @brief YARD-ICE board
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
 #include <sys/stm32f.h>
 #include <sys/delay.h>
 #include <sys/dcclog.h>
@@ -47,21 +53,16 @@ void board_init(void)
 	rcc->ahb2rstr = 0;
 	rcc->apb1rstr = 0;
 	rcc->apb2rstr = 0;
-	/* disable all peripherals clock sources except USB_OTG and GPIOA */
-	rcc->ahb1enr = (1 << RCC_GPIOA); 
+	/* disable all peripherals clock sources except USB_OTG, GPIOA and GPIOC */
+	rcc->ahb1enr = (1 << RCC_GPIOA) | (1 << RCC_GPIOC); 
 	rcc->ahb2enr = (1 << RCC_OTGFS);
 	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;
 
-	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
+#if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
 
-#if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 
@@ -85,67 +86,8 @@ void board_init(void)
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
-bool board_autoboot(uint32_t tick)
+bool board_autoboot(void)
 {
 	return stm32_gpio_stat(IO_UART5_TX) ? true : false;
 }
-
-#if 0
-void board_on_appload(void)
-{
-}
-
-bool board_configure(struct dmon_comm * comm)
-{
-	return true;
-}
-
-
-const struct mem_desc sram_desc = {
-	.name = "RAM",
-	.blk = {
-		{ 0x20000000, BLK_RW, SZ_16K,  7 }, /* SRAM 1: 112KiB */
-		{ 0x2001c000, BLK_RW, SZ_16K,  1 }, /* SRAM 2: 16KiB */
-		{ 0x00000000, 0, 0, 0 }
-	}
-}; 
-
-const struct mem_desc flash_desc = {
-	.name = "FLASH",
-	.blk = {
-		{ 0x08000000, BLK_RO, SZ_16K,  1 }, /* Boot loader */
-		{ 0x08004000, BLK_RW, SZ_16K,  3 }, /* Application */
-		{ 0x08010000, BLK_RW, SZ_64K,  1 }, /* Application */
-		{ 0x08020000, BLK_RW, SZ_128K, 3 }, /* Application */
-		{ 0x00000000, 0, 0, 0 }
-	}
-}; 
-
-const struct thinkos_board this_board = {
-	.name = "YARD-ICE",
-	.hw_ver = {
-		.major = 0,
-		.minor = 2,
-	},
-	.sw_ver = {
-		.major = VERSION_MAJOR,
-		.minor = VERSION_MINOR,
-	},
-	.memory = {
-		.ram = &sram_desc,
-		.flash = &flash_desc
-	},
-	.application = {
-		.start_addr = 0x08020000,
-		.block_size = 256 * 1024
-	},
-	.init = board_init,
-	.softreset = board_softreset,
-	.autoboot = board_autoboot,
-	.configure = board_configure,
-	.upgrade = board_upgrade,
-	.on_appload = board_on_appload
-};
-
-#endif
 

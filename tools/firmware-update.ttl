@@ -1,0 +1,38 @@
+PATTERN = '..\src\app\release\yard-ice.bin'
+
+findfirst dh PATTERN FNAME
+
+if result=0 then
+  findclose dh
+  messagebox "Firmware file not found!" "File not found!"
+  exit
+endif
+
+findclose dh
+getdir BASEDIR
+strconcat BASEDIR '\..\src\app\release\'
+makepath IMAGE BASEDIR FNAME
+
+;messagebox IMAGE "Firmware!"
+
+sendln
+send 25 ; Ctrl+Y
+wait '[y]?' 'CC'
+
+if result=1 then
+  send 'y'
+else
+  send 24 ; Ctrl+X
+endif
+
+wait 'Ymodem'
+ymodemsend IMAGE
+
+if result=1 then
+  wait 'OK'
+  disconnect
+  mpause 3500
+  connect ''
+  sendln 
+endif
+

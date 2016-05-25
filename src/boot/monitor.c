@@ -20,6 +20,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+/** 
+ * @file monitor.c
+ * @brief YARD-ICE debug monitor
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
 #ifdef CONFIG_H
 #include "config.h"
 #endif
@@ -85,39 +91,45 @@ struct magic {
 #define APPLICATION_BLOCK_SIZE (256 * 1024)
 #define APPLICATION_START_ADDR (0x08000000 + APPLICATION_BLOCK_OFFS)
 
-#define CTRL_B 0x02
-#define CTRL_C 0x03
-#define CTRL_D 0x04
-#define CTRL_E 0x05
-#define CTRL_F 0x06
-#define CTRL_G 0x07
-#define CTRL_H 0x08
-#define CTRL_I 0x09
-#define CTRL_J 0x0a
-#define CTRL_K 0x0b
-#define CTRL_L 0x0c
-#define CTRL_M 0x0d /* CR */
-#define CTRL_N 0x0e
-#define CTRL_O 0x0f
-#define CTRL_P 0x10
-#define CTRL_Q 0x11
-#define CTRL_R 0x12
-#define CTRL_S 0x13
-#define CTRL_T 0x14
-#define CTRL_U 0x15
-#define CTRL_V 0x16
-#define CTRL_W 0x17
-#define CTRL_X 0x18
-#define CTRL_Y 0x19
-#define CTRL_Z 0x1a
+/* ASCII Keyboard codes */
 
-static const char s_monitor_menu[] = 
+#define _NULL_ 0x00 /* Null (Ctrl+@) */
+#define CTRL_A 0x01 /* SOH */
+#define CTRL_B 0x02 /* STX */
+#define CTRL_C 0x03 /* ETX */
+#define CTRL_D 0x04 /* EOT */
+#define CTRL_E 0x05 /* ENQ */
+#define CTRL_F 0x06 /* ACK */
+#define CTRL_G 0x07 /* BEL */
+#define CTRL_H 0x08 /* BS */
+#define CTRL_I 0x09 /* TAB */
+#define CTRL_J 0x0a /* LF */
+#define CTRL_K 0x0b /* VT */
+#define CTRL_L 0x0c /* FF */
+#define CTRL_M 0x0d /* CR */
+#define CTRL_N 0x0e /* SO */
+#define CTRL_O 0x0f /* SI */
+#define CTRL_P 0x10 /* DLE */
+#define CTRL_Q 0x11 /* DC1 */
+#define CTRL_R 0x12 /* DC2 */
+#define CTRL_S 0x13 /* DC3 */
+#define CTRL_T 0x14 /* DC4 */
+#define CTRL_U 0x15 /* NAK */
+#define CTRL_V 0x16 /* SYN */
+#define CTRL_W 0x17 /* ETB */
+#define CTRL_X 0x18 /* CAN */
+#define CTRL_Y 0x19 /* EM */
+#define CTRL_Z 0x1a /* SUB */
+#define _ESC_  0x1b /* ESC (Ctrl+[) */
+#define CTRL_BS 0x1c /* FS  (Ctrl+\) */
+#define _GS_   0x1d /* GS  (Ctrl+]) */
+#define _RS_   0x1e /* RS  (Ctrl+^) */
+#define _US_   0x1f /* US  (Ctrl+_) */
+
+static const char s_help[] = 
 "ThinkOS " VERSION_NUM "\r\n"
 #if (MONITOR_APPTERM_ENABLE)
 " ^C - Stop app\r\n"
-#endif
-#if (MONITOR_UPGRADE_ENABLE)
-" ^L - Upload ThinkOS\r\n"
 #endif
 #if (MONITOR_OSINFO_ENABLE)
 " ^O - OS Info\r\n"
@@ -126,16 +138,21 @@ static const char s_monitor_menu[] =
 #if (MONITOR_APPWIPE_ENABLE)
 " ^W - Wipe App\r\n"
 #endif
-" ^Y - Upload App\r\n"
+" ^Y - Upload YARD-ICE\r\n"
 #if (MONITOR_APPRESTART_ENABLE)
 " ^Z - Restart\r\n"
+#endif
+#if (MONITOR_UPGRADE_ENABLE)
+" ^\\ - Upload ThinkOS\r\n"
 #endif
 ;
 
 static const char s_hr[] = 
-"----\r\n";
+"\r\n----\r\n";
 
 static const char s_error[] = "Error!\r\n";
+
+static const char s_confirm[] = "Confirm [y]?";
 
 #if (MONITOR_OSINFO_ENABLE)
 #define PUTS(S) dmprintf(comm, S) 
@@ -339,8 +356,10 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 		break;
 #endif
 #if (MONITOR_UPGRADE_ENABLE)
-	case CTRL_L:
-		bootloader_yflash();
+	case CTRL_BS:
+		PUTS(s_confirm);
+		if (dmgetc(comm) == 'y')
+			bootloader_yflash();
 		break;
 #endif
 #if (MONITOR_OSINFO_ENABLE)
@@ -350,11 +369,13 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #endif
 	case CTRL_V:
 		PUTS(s_hr);
-		PUTS(s_monitor_menu);
+		PUTS(s_help);
 		break;
 
 	case CTRL_Y:
-		app_yflash();
+		PUTS(s_confirm);
+		if (dmgetc(comm) == 'y')
+			app_yflash();
 		break;
 
 #if (MONITOR_APPWIPE_ENABLE)
