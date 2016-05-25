@@ -25,7 +25,7 @@ VERSION_MINOR = "20"
 
 PROG = thinkos-$(VERSION_MAJOR).$(VERSION_MINOR)
 
-CFILES = boot.c monitor.c board.c 
+CFILES = boot.c monitor.c board.c otg_xflash_pic.c
 
 SDK = ../../thinkos/sdk
 

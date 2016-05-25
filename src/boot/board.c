@@ -114,6 +114,78 @@ bool board_autoboot(uint32_t tick)
 	return stm32_gpio_stat(IO_UART5_TX) ? true : false;
 }
 
+extern const uint8_t otg_xflash_pic[];
+extern const unsigned int sizeof_otg_xflash_pic;
+
+struct magic {
+	struct {
+		uint16_t pos;
+		uint16_t cnt;
+	} hdr;
+	struct {
+		uint32_t mask;
+		uint32_t comp;
+	} rec[];
+};
+
+int yflash(uint32_t blk_offs, uint32_t blk_size,
+		   const struct magic * magic, uint32_t opt)
+{
+	uint32_t * yflash_code = (uint32_t *)(0x20001000);
+	int (* yflash_ram)(uint32_t, uint32_t, const struct magic *, uint32_t) = 
+		((void *)yflash_code) + 1;
+	unsigned int pri;
+	int ret;
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+
+	__thinkos_memcpy(yflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
+	ret = yflash_ram(blk_offs, blk_size, magic, opt);
+
+	cm3_primask_set(pri);
+
+	return ret;
+}
+
+#define BOARD_ENABLE_UPGRADE 1
+
+void board_upgrade(struct dmon_comm * comm)
+{
+#if BOARD_ENABLE_UPGRADE
+	static const struct magic bootloader_magic = {
+		.hdr = {
+			.pos = 0,
+			.cnt = 4
+		},
+		.rec = {
+			{  0xfffc0000, 0x20000000 },
+			{  0xffff0000, 0x08000000 },
+			{  0xffff0000, 0x08000000 },
+			{  0xffff0000, 0x08000000 }
+		}
+	};
+	yflash(0, 65536, &bootloader_magic, 1);
+#endif
+}
+
+int board_yflash(uint32_t addr, unsigned int size)
+{
+	static const struct magic app_magic = {
+		.hdr = {
+			.pos = 0,
+			.cnt = 3
+		},
+		.rec = {
+			{  0xffffffff, 0x0a0de004 },
+			{  0xffffffff, 0x6e696854 },
+			{  0xffffffff, 0x00534f6b }
+		}
+	};
+
+	return yflash(0x00020000, (128 * 2), &app_magic, 1);
+}
+
 void board_on_appload(void)
 {
 }
@@ -123,9 +195,6 @@ bool board_configure(struct dmon_comm * comm)
 	return true;
 }
 
-void board_upgrade(struct dmon_comm * comm)
-{
-}
 
 const struct mem_desc sram_desc = {
 	.name = "RAM",

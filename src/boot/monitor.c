@@ -37,16 +37,8 @@
 #include <sys/dcclog.h>
 #include "version.h"
 
-#ifndef MONITOR_DUMPMEM_ENABLE
-#define MONITOR_DUMPMEM_ENABLE     0
-#endif
-
 #ifndef MONITOR_UPGRADE_ENABLE
-#define MONITOR_UPGRADE_ENABLE     0
-#endif
-
-#ifndef MONITOR_STACKUSAGE_ENABLE
-#define MONITOR_STACKUSAGE_ENABLE  0
+#define MONITOR_UPGRADE_ENABLE     1
 #endif
 
 #ifndef MONITOR_APPWIPE_ENABLE
@@ -65,7 +57,12 @@
 #define MONITOR_FAULT_ENABLE       0
 #endif
 
-#define MONITOR_OSINFO_ENABLE      1
+#define MONITOR_OSINFO_ENABLE      0
+
+#ifndef MONITOR_STACKUSAGE_ENABLE
+#define MONITOR_STACKUSAGE_ENABLE  0
+#endif
+
 
 #define CTRL_B 0x02
 #define CTRL_C 0x03
@@ -104,9 +101,6 @@ static const char monitor_menu[] =
 #if (MONITOR_OSINFO_ENABLE)
 " ^O - OS Info\r\n"
 #endif
-#if (MONITOR_DUMPMEM_ENABLE)
-" Ctrl+S - Show memory\r\n"
-#endif
 #if (MONITOR_STACKUSAGE_ENABLE)
 " Ctrl+U - Stack usage info\r\n"
 #endif
@@ -126,10 +120,16 @@ static const char monitor_menu[] =
 static const char __hr__[] = 
 "----\r\n";
 
+#if (MONITOR_OSINFO_ENABLE)
+#define PUTS(S) dmprintf(comm, S) 
+#else
+#define PUTS(S) dmputs(S, comm) 
+#endif
+
 static void monitor_show_help(struct dmon_comm * comm)
 {
-	dmprintf(comm, __hr__);
-	dmprintf(comm, monitor_menu);
+	PUTS(__hr__);
+	PUTS(monitor_menu);
 }
 
 extern int __heap_end;
@@ -182,7 +182,7 @@ static void monitor_print_fault(struct dmon_comm * comm)
 	struct thinkos_except * xcpt = &thinkos_except_buf;
 
 	switch (xcpt->type == 0) {
-		dmprintf("No fault.\r\n", comm);
+		PUTS("No fault.\r\n");
 		return;
 	}
 
@@ -197,27 +197,30 @@ static void monitor_on_fault(struct dmon_comm * comm)
 		DCC_LOG(LOG_WARNING, "dmon_wait_idle() failed!");
 	}
 	if (dmon_comm_isconnected(comm)) {
-		dmprintf(comm, __hr__);
+		PUTS(__hr__);
 		dmon_print_exception(comm, xcpt);
 	}
 }
 #endif
 
-static const char s_app_invalid[] = 
-"\r\n#ERR: Invalid app!\r\n";
+static const char s_error[] = "Error!\r\n";
+
+int board_yflash(uint32_t addr, unsigned int size);
 
 static void monitor_ymodem_recv(struct dmon_comm * comm, 
 								uint32_t addr, unsigned int size)
 {
-	dmprintf(comm, "\r\nYMODEM (^X cancel) ... ");
 	dbgmon_soft_reset();
-	if (dmon_ymodem_flash(comm, addr, size) < 0) {
-		dmprintf(comm, "Error!\r\n");
+
+//	PUTS("\r\nYmodem...");
+//	if (dmon_ymodem_flash(comm, addr, size) < 0) {
+	if (board_yflash(addr, size) < 0) {
+		PUTS(s_error);
 		return;
 	}	
 
 	if (monitor_app_exec(addr, 0) < 0) {
-		dmprintf(comm, s_app_invalid);
+		PUTS(s_error);
 		return;
 	}
 }
@@ -227,12 +230,12 @@ static void monitor_ymodem_recv(struct dmon_comm * comm,
 static void monitor_app_erase(struct dmon_comm * comm, 
 							  uint32_t addr, unsigned int size)
 {
-	dmprintf(comm, "\r\nErasing app... ");
+	PUTS("\r\nErasing...");
 	dbgmon_soft_reset();
 	if (dmon_app_erase(comm, addr, size))
-		dmprintf(comm, "Ok.\r\n");
+		PUTS("Ok.\r\n");
 	else	
-		dmprintf(comm, "Error!\r\n");
+		PUTS(s_error);
 }
 #endif
 
@@ -257,6 +260,7 @@ void monitor_print_osinfo(struct dmon_comm * comm)
 	uint32_t cycbusy;
 	uint32_t idle;
 #endif
+	const char * tag;
 	int i;
 
 #if THINKOS_ENABLE_PROFILING
@@ -287,22 +291,16 @@ void monitor_print_osinfo(struct dmon_comm * comm)
 			 busy / 10, busy % 10, idle / 10, idle % 10);
 #endif
 
-	dmprintf(comm, " Th |     Tag |       SP |       LR |       PC |  WQ | TmW | CPU %%\r\n");
+	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %%\r\n");
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt->ctx[i] != NULL) {
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
-			dmprintf(comm, "%3d", i + 1);
-#if THINKOS_ENABLE_THREAD_INFO
-			if (rt->th_inf[i] != NULL) {
-				dmprintf(comm, " | %7s", rt->th_inf[i]->tag); 
-			} else {
-				dmprintf(comm, " |     ..."); 
-			}
+			tag = (rt->th_inf[i] != NULL) ? rt->th_inf[i]->tag : "...";
 			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
-#endif
-			dmprintf(comm, " | %08x | %08x | %08x | %3d | %s | %3d.%d\r\n",
+			dmprintf(comm, "%3d %7s %08x %08x %08x %3d %s %3d.%d\r\n",
+					 i + 1, tag,
 					 (uint32_t)rt->ctx[i], rt->ctx[i]->lr, rt->ctx[i]->pc, 
 					 rt->th_stat[i] >> 1, rt->th_stat[i] & 1 ? "Yes" : " No",
 					 busy / 10, busy % 10);
@@ -316,7 +314,7 @@ void monitor_print_osinfo(struct dmon_comm * comm)
 static void monitor_exec(struct dmon_comm * comm, unsigned int addr)
 {
 	if (!dmon_app_exec(addr, false)) {
-		dmprintf(comm, s_app_invalid);
+		PUTS(s_error);
 		return;
 	}
 }
@@ -329,30 +327,19 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 	switch (c) {
 #if (MONITOR_APPTERM_ENABLE)
 	case CTRL_C:
-		dmprintf(comm, "^C\r\n");
+		PUTS("^C\r\n");
 		dbgmon_soft_reset();
 		break;
 #endif
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_L:
 		dbgmon_soft_reset();
-		//			dmprintf(comm, "^L\r\n");
-		//			dmprintf(comm, "Confirm (yes/no)? ");
-		//			dmscanf(comm, "yes%n", &i);
-		//			if (i == 3)
 		this_board.upgrade(comm);
 		break;
 #endif
 #if (MONITOR_OSINFO_ENABLE)
 	case CTRL_O:
 		monitor_print_osinfo(comm);
-		break;
-#endif
-#if (MONITOR_DUMPMEM_ENABLE)
-	case CTRL_S:
-		dmprintf(comm, "^S\r\n");
-		monitor_dump_mem(comm, this_board.application.start_addr, 
-						 this_board.application.block_size);
 		break;
 #endif
 #if (MONITOR_STACKUSAGE_ENABLE)
@@ -380,7 +367,7 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #endif
 #if (MONITOR_APPRESTART_ENABLE)
 	case CTRL_Z:
-		dmprintf(comm, "^Z\r\n");
+		PUTS("^Z\r\n");
 		DCC_LOG(LOG_TRACE, "dbgmon_soft_reset()...");
 		dbgmon_soft_reset();
 		DCC_LOG2(LOG_TRACE, "dbgmon_wait_idle()... active=%d ready=0x%08x",
