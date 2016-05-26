@@ -141,10 +141,9 @@ struct armv7m_fpb_ctrl {
 typedef struct armv7m_fpb_ctrl armv7m_fpb_ctrl_t;
 
 struct armv7m_dwt_ctrl {
-	uint32_t base; /* FBP unit base address */
+	uint32_t base; /* DWT unit base address */
 	uint8_t numcomp; /* number of comparators */
-	uint32_t comp_bmp; /* comparators allocation bitmap */
-	uint32_t comp_base; /* base address of comparators */
+	uint32_t comp_bmp; /* allocation bitmap */
 };
 
 typedef struct armv7m_dwt_ctrl armv7m_dwt_ctrl_t;

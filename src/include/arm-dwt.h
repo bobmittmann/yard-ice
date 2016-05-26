@@ -141,6 +141,29 @@
    1 = Enabled
    This bit is UNK/SBZP if the NOCYCCNT bit is RAO. */
 
+#define DWT_MATCHED            (1 << 24)
+
+#define DWT_DATAVADDR1(ADDR)   ((ADDR) << 16)
+#define DWT_DATAVADDR0(ADDR)   ((ADDR) << 12)
+
+#define DWT_DATAVSIZE_BYTE     (0 << 10)
+#define DWT_DATAVSIZE_HALFWORD (1 << 10)
+#define DWT_DATAVSIZE_WORD     (2 << 10)
+
+#define DWT_LNK1ENA            (1 << 9)
+#define DWT_DATAVMATCH         (1 << 8)
+#define DWT_CYCMATCH           (1 << 7)
+#define DWT_EMITRANGE          (1 << 5)
+
+#define DWT_FUNCTION           (0xf << 0)
+
+#define DWT_DATAV_RO_BKP       (5 << 0)
+#define DWT_DATAV_WO_BKP       (6 << 0)
+#define DWT_DATAV_RW_BKP       (7 << 0)
+
+#define DWT_DATAV_RO_CMP       (9 << 0)
+#define DWT_DATAV_WO_CMP       (10 << 0)
+#define DWT_DATAV_RW_CMP       (11 << 0)
 
 #define DWT_CTRL_OFFS    0
 #define DWT_CYCCNT_OFFS  4

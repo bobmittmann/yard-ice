@@ -205,6 +205,10 @@ static int fpb_disable(jtag_tap_t * tap, armv7m_fpb_ctrl_t * fpb)
   ARM DWT (Data Watchpoint and Trace Unit)
  ****************************************************************************/
 
+#define COMP_OFFS 0
+#define MASK_OFFS 4
+#define FUNC_OFFS 8
+
 static int dwt_probe(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt, 
 					  uint32_t addr)
 {
@@ -212,7 +216,7 @@ static int dwt_probe(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt,
 
 	dwt->base = addr;
 
-	DCC_LOG1(LOG_TRACE, "FPB @ 0x%08x", dwt->base); 
+	DCC_LOG1(LOG_TRACE, "DWT @ 0x%08x", dwt->base); 
 
 	if (jtag_mem_ap_rd32(tap, dwt->base + DWT_CTRL_OFFS, 
 						 &ctrl) != JTAG_ADI_ACK_OK_FAULT) {
@@ -220,10 +224,7 @@ static int dwt_probe(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt,
 		return ICE_ERR_JTAG;
 	}
 
-	DCC_LOG2(LOG_TRACE, "FPB: code=%d lit=%d", FP_NUM_CODE(fp_ctrl),
-			 FP_NUM_LIT(fp_ctrl));
 	dwt->numcomp = DWT_NUMCOMP(ctrl);
-	dwt->comp_base = dwt->base + DWT_COMP_OFFS;
 	dwt->comp_bmp = 0;
 
 	return ICE_OK;
@@ -233,22 +234,28 @@ static int dwt_clear(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
 {
 	int id;
 
+	/* clear the allocation flag */
 	dwt->comp_bmp = 0;
 
 	for (id = 0; id < dwt->numcomp; id++) {
-		if (jtag_mem_ap_wr32(tap, dwt->comp_base + 4 * id, 
+		uint32_t wp_base;
+
+		wp_base = dwt->base + DWT_COMP_OFFS + 16 * id;
+		/* Reset the function register */
+		if (jtag_mem_ap_wr32(tap, wp_base + FUNC_OFFS, 
 							 0) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
 			return ICE_ERR_JTAG;
 		}
 	}
 
-	return 0;
+	return ICE_OK;
 }
 
 static int dwt_comp_set(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt, 
-							 uint32_t comp)
+						uint32_t comp, uint32_t mask, uint32_t func)
 {
+	uint32_t wp_base;
 	int id;
 
 	id = ffs(~dwt->comp_bmp) - 1;
@@ -258,8 +265,20 @@ static int dwt_comp_set(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt,
 		return ICE_ERR_UNDEF;
 	}
 
-	if (jtag_mem_ap_wr32(tap, dwt->comp_base + 4 * id, 
+	wp_base = dwt->base + DWT_COMP_OFFS + 16 * id;
+
+	if (jtag_mem_ap_wr32(tap, wp_base + COMP_OFFS, 
 						 comp) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+	if (jtag_mem_ap_wr32(tap, wp_base + MASK_OFFS, 
+						 mask) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+	if (jtag_mem_ap_wr32(tap, wp_base + FUNC_OFFS, 
+						 func) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
 		return ICE_ERR_JTAG;
 	}
@@ -272,6 +291,8 @@ static int dwt_comp_set(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt,
 static int dwt_comp_clr(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt, 
 							 int id)
 {
+	uint32_t wp_base;
+
 	if (id >= dwt->numcomp) {
 		DCC_LOG1(LOG_WARNING, "invalid hardware BP: %d !", id);
 		return ICE_ERR_ARG;
@@ -283,42 +304,11 @@ static int dwt_comp_clr(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt,
 	/* clear the allocation flag */
 	dwt->comp_bmp &= ~(1 << id);
 
-	if (jtag_mem_ap_wr32(tap, dwt->comp_base + 4 * id, 
+	wp_base = dwt->base + DWT_COMP_OFFS + 16 * id;
+
+	/* Reset the function register */
+	if (jtag_mem_ap_wr32(tap, wp_base + FUNC_OFFS, 
 						 0) != JTAG_ADI_ACK_OK_FAULT) {
-		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
-		return ICE_ERR_JTAG;
-	}
-
-	return ICE_OK;
-}
-
-#if 0
-static void dwt_code_comp_clr_all(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
-{
-	int id;
-
-	for (id = 0; id < dwt->code_max; id++)
-		dwt_code_comp_clr(tap, dwt, id);
-}
-#endif
-
-static int dwt_enable(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
-{
-	/* enable the FPB unit */
-	if (jtag_mem_ap_wr32(tap, dwt->base + DWT_CTRL_OFFS, 
-						 FP_KEY | FP_ENABLE) != JTAG_ADI_ACK_OK_FAULT) {
-		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
-		return ICE_ERR_JTAG;
-	}
-
-	return ICE_OK;
-}
-
-static int dwt_disable(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt)
-{
-	/* disable the FPB unit */
-	if (jtag_mem_ap_wr32(tap, dwt->base + DWT_CTRL_OFFS, 
-						 FP_KEY | FP_DISABLE) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
 		return ICE_ERR_JTAG;
 	}
@@ -846,11 +836,6 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 		return ret;
 	}
 
-	/* enable the DWT unit */
-	if ((ret = dwt_enable(tap, &ctrl->dwt)) != ICE_OK) {
-		DCC_LOG(LOG_WARNING, "dwt_enable() failed!"); 
-		return ret;
-	}
 
 	if (dhcsr & DHCSR_S_HALT) {
 	} else {
@@ -909,11 +894,6 @@ int cm3ice_release(cm3ice_ctrl_t * ctrl)
 	/* disable all comparators int the DWT unit */
 	if (dwt_clear(tap, &ctrl->dwt) != ICE_OK) {
 		DCC_LOG(LOG_WARNING, "dwt_clear() failed!"); 
-	}
-
-	/* disable the DWT unit */
-	if (dwt_disable(tap, &ctrl->dwt) != ICE_OK) {
-		DCC_LOG(LOG_WARNING, "dwt_disable() failed!"); 
 	}
 
 	/* disable the halt Debug function */
@@ -1097,10 +1077,10 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap,
 	memset(&ctrl->dwt, 0, sizeof(armv7m_dwt_ctrl_t));
 	if (ctrl->dbg_map.dwt != 0x00000000) {
 		dwt_probe(tap, &ctrl->dwt, ctrl->dbg_map.dwt);
-		/* maximum number of hardware breakpoints */
+		/* maximum number of hardware watchpoints */
 		opt->wp_max = ctrl->dwt.numcomp;
-		/* default breakpoint's size */
-		opt->wp_defsz = 2;
+		/* default watchpoints' size */
+		opt->wp_defsz = 4;
 	}
 
 	return ICE_OK;
@@ -1378,26 +1358,35 @@ int cm3ice_wp_set(cm3ice_ctrl_t * ctrl, uint32_t addr,
 				  uint32_t size, uint32_t * id_ptr)
 {
 	jtag_tap_t * tap = ctrl->tap;
-	uint32_t comp;
+	uint32_t comp = addr;
+	uint32_t func;
+	uint32_t mask;
+
 	int id;
 
-	comp = (addr & 0x3ffffffc) | COMP_ENABLE;
-
-/*	if (size == 2) {
-		if (addr & 0x02) {
-			comp |= COMP_BP_HIGH;
-		} else {
-			comp |= COMP_BP_LOW;
-		}
-	} else if (size == 4) {
-		comp |= COMP_BP_WORD;
+	if (size == 4) {
+		func = DWT_DATAVSIZE_WORD;
+		mask = 2;
+	} else if (size == 2) {
+		func = DWT_DATAVSIZE_HALFWORD;
+		mask = 1;
+	} else if (size == 1) {
+		func = DWT_DATAVSIZE_BYTE;
+		mask = 0;
 	} else {
-		DCC_LOG1(LOG_WARNING, "invalid BP size: %d!", size); 
+		DCC_LOG1(LOG_WARNING, "invalid WP size: %d!", size); 
 		return -1;
 	}
+/*
+	if (access == 1) {
+		func |= DWT_DATAV_RO_BKP;
+	} else if (access == 2) {
+		func |= DWT_DATAV_WO_BKP;
+	} else
 */
+	func |= DWT_DATAV_RW_BKP;
 
-	if ((id = dwt_comp_set(tap, &ctrl->dwt, comp)) < 0) {
+	if ((id = dwt_comp_set(tap, &ctrl->dwt, comp, mask, func)) < 0) {
 		DCC_LOG(LOG_WARNING, "dwt_comp_set() failed!");
 		return id;
 	}
