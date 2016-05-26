@@ -292,7 +292,8 @@ int network_config(void)
 	/* The UID register is located in a system area not mapped
 	   in the MPU user region. We need to escalate the privilege to 
 	   have access to this area. */
-	thinkos_escalate(stm32f_get_esn, &esn);
+//	thinkos_escalate(stm32f_get_esn, &esn);
+	stm32f_get_esn(&esn);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
 	ethaddr[0] = (ethaddr[0] & 0xfc) | 0x02; /* Locally administered MAC */
 

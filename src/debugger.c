@@ -786,7 +786,7 @@ static int hw_reset(const ice_drv_t * ice, const target_info_t * target)
 	if (target->has_nrst == YES)
 		jtag_nrst_pulse(ms);
 	else
-		__os_sleep(ms);
+		thinkos_sleep(ms);
 
 	if (target->has_trst == YES)
 		jtag_trst(false);
@@ -813,36 +813,36 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 
 	DCC_LOG1(LOG_INFO, "thread start: <%d>...", id);
 
-	__os_mutex_lock(dbg->poll_mutex);
+	thinkos_mutex_lock(dbg->poll_mutex);
 	for (;;) {
 		if (!dbg->poll_enabled) {
 			while (!dbg->poll_start_req) {
 				/* synchronize */
 				DCC_LOG(LOG_TRACE, "cond wait .........");
-				__os_cond_wait(dbg->poll_cond, dbg->poll_mutex);
+				thinkos_cond_wait(dbg->poll_cond, dbg->poll_mutex);
 			}
 			dbg->poll_enabled = true;
-			__os_cond_signal(dbg->poll_cond);
-			__os_mutex_unlock(dbg->poll_mutex);
+			thinkos_cond_signal(dbg->poll_cond);
+			thinkos_mutex_unlock(dbg->poll_mutex);
 		} else {
-			__os_mutex_unlock(dbg->poll_mutex);
+			thinkos_mutex_unlock(dbg->poll_mutex);
 			/* TODO: polling rate */
-			__os_sleep(100);
+			thinkos_sleep(100);
 		}
 
 		ice_st = ice_poll(ice, &dbg->comm);
 
-		__os_mutex_lock(dbg->poll_mutex);
+		thinkos_mutex_lock(dbg->poll_mutex);
 
 		if (dbg->poll_stop_req) {
 			dbg->poll_enabled = false;
-			__os_cond_signal(dbg->poll_cond);
+			thinkos_cond_signal(dbg->poll_cond);
 		}
 
 		if (ice_st & ICE_ST_HALT) {
 			DCC_LOG(LOG_TRACE, "break!!!!");
 			dbg->poll_enabled = false;
-			__os_cond_broadcast(dbg->halt_cond);
+			thinkos_cond_broadcast(dbg->halt_cond);
 		}
 
 		if (ice_st & ICE_ST_FAULT) {
@@ -850,7 +850,7 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 			dbg->poll_enabled = false;
 		}
 	}
-	__os_mutex_unlock(dbg->poll_mutex);
+	thinkos_mutex_unlock(dbg->poll_mutex);
 
 	return 0;
 }
@@ -867,7 +867,7 @@ static int poll_start(struct debugger * dbg)
 		return OK;
 
 	/* sync */
-	__os_mutex_lock(dbg->poll_mutex);
+	thinkos_mutex_lock(dbg->poll_mutex);
 
 	if (!dbg->poll_enabled) {
 		/* send a signal to the ICE driver, requesting to start polling */
@@ -875,15 +875,15 @@ static int poll_start(struct debugger * dbg)
 		/* wakeup the poll thread */
 		dbg->poll_start_req = true;
 
-		__os_cond_signal(dbg->poll_cond);
+		thinkos_cond_signal(dbg->poll_cond);
 		do {
 			/* synchronize */
-			__os_cond_wait(dbg->poll_cond, dbg->poll_mutex);
+			thinkos_cond_wait(dbg->poll_cond, dbg->poll_mutex);
 		} while (!dbg->poll_enabled);
 		dbg->poll_start_req = false;
 	}
 	/* release mutex */
-	__os_mutex_unlock(dbg->poll_mutex);
+	thinkos_mutex_unlock(dbg->poll_mutex);
 #endif
 
 	return OK;
@@ -894,7 +894,7 @@ static int poll_stop(struct debugger * dbg)
 #if (ENABLE_ICE_POLLING)	
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 
-	__os_mutex_lock(dbg->poll_mutex);
+	thinkos_mutex_lock(dbg->poll_mutex);
 
 	if (dbg->poll_enabled) {
 		/* send a signal to the ICE driver, requesting to
@@ -904,13 +904,13 @@ static int poll_stop(struct debugger * dbg)
 		dbg->poll_stop_req = true;
 		do {
 			/* synchronize */
-			__os_cond_wait(dbg->poll_cond, dbg->poll_mutex);
+			thinkos_cond_wait(dbg->poll_cond, dbg->poll_mutex);
 		} while (dbg->poll_enabled);
 		dbg->poll_stop_req = false;
 	}
 
 	/* release mutex */
-	__os_mutex_unlock(dbg->poll_mutex);
+	thinkos_mutex_unlock(dbg->poll_mutex);
 #endif
 	return OK;
 }
@@ -979,8 +979,8 @@ int target_status(void)
 
 	DCC_LOG(LOG_MSG, "try_lock");
 
-	if (__os_mutex_trylock(dbg->busy) < 0) {
-		DCC_LOG(LOG_TRACE, "__os_mutex_trylock() failed!");
+	if (thinkos_mutex_trylock(dbg->busy) < 0) {
+		DCC_LOG(LOG_TRACE, "thinkos_mutex_trylock() failed!");
 		return DBG_ST_BUSY;
 	}
 
@@ -988,7 +988,7 @@ int target_status(void)
 
 	DCC_LOG(LOG_MSG, ".");
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return status;
 }
@@ -998,26 +998,26 @@ int target_halt_wait(int tmo)
 	struct debugger * dbg = &debugger;
 	int status;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
 	/* halt wait */
 	while (dbg->poll_enabled) {
 		DCC_LOG(LOG_TRACE, "poll enabled waiting...");
-		if (__os_cond_timedwait(dbg->halt_cond, dbg->busy, tmo) < 0) {
-			__os_mutex_unlock(dbg->busy);
+		if (thinkos_cond_timedwait(dbg->halt_cond, dbg->busy, tmo) < 0) {
+			thinkos_mutex_unlock(dbg->busy);
 			return ERR_TIMEOUT;
 		}
 	}
 
 	status = dbg_status(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return status;
 }
@@ -1031,18 +1031,18 @@ int target_connect(int force)
 
 	DCC_LOG1(LOG_TRACE, "target=0x%p", dbg->target);
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_UNCONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
 	if ((dbg->state == DBG_ST_RUNNING) || (dbg->state == DBG_ST_HALTED)) {
 		DCC_LOG(LOG_TRACE, "already connected");
 		if (!force) {
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return OK;
 		}
 	}
@@ -1054,7 +1054,7 @@ int target_connect(int force)
 
 	if ((ret = ice_connect(ice, cpu->idmask, cpu->idcomp)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->connect() failed!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	} 
 
@@ -1063,20 +1063,20 @@ int target_connect(int force)
 
 	if ((ret = dbg_bp_activate_all(ice, &dbg->bp_ctrl)) < 0) {
 		DCC_LOG(LOG_WARNING, "dbg_bp_activate_all() failed!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
 	if ((ret = dbg_wp_activate_all(ice, &dbg->wp_ctrl)) < 0) {
 		DCC_LOG(LOG_WARNING, "dbg_wp_activate_all() failed!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
 
 	dbg_status(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	DCC_LOG(LOG_TRACE, "done.");
 
@@ -1089,11 +1089,11 @@ int target_release(void)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1108,7 +1108,7 @@ int target_release(void)
 		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1122,14 +1122,14 @@ int target_halt(int method)
 
 	DCC_LOG(LOG_TRACE, "-----------------------------------------"); 
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state != DBG_ST_RUNNING) {
 		if (dbg->state != DBG_ST_HALTED) {
 			DCC_LOG(LOG_WARNING, "invalid state"); 
 			ret = ERR_STATE;
 		}
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
@@ -1140,7 +1140,7 @@ int target_halt(int method)
 		DCC_LOG(LOG_WARNING, "drv->halt() fail!");
 		dbg->state = DBG_ST_OUTOFSYNC;
 		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
@@ -1148,25 +1148,25 @@ int target_halt(int method)
 XXX: this may be necessary for the cortex M3
 	poll_start(dbg);
 
-	__os_mutex_lock(dbg->poll_mutex);
+	thinkos_mutex_lock(dbg->poll_mutex);
 
 	/* wait .. */
 	while (dbg->poll_enabled) {
 		DCC_LOG(LOG_TRACE, "poll enabled waiting...");
-		if (__os_cond_timedwait(dbg->halt_cond, dbg->poll_mutex, 500) < 0) {
+		if (thinkos_cond_timedwait(dbg->halt_cond, dbg->poll_mutex, 500) < 0) {
 			DCC_LOG(LOG_WARNING, "TIMEOUT!!!!!");
-			__os_mutex_unlock(dbg->poll_mutex);
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->poll_mutex);
+			thinkos_mutex_unlock(dbg->busy);
 			return ERR_TIMEOUT;
 		}
 	}
 
-	__os_mutex_unlock(dbg->poll_mutex);
+	thinkos_mutex_unlock(dbg->poll_mutex);
 #endif
 
 	dbg_status(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1179,28 +1179,28 @@ int target_run(void)
 
 	DCC_LOG(LOG_TRACE, "-----------------------------------------"); 
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
 	if (dbg->state == DBG_ST_RUNNING) {
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return OK;
 	}
 
 	if ((ret = dbg_bp_activate_all(ice, &dbg->bp_ctrl)) < 0) {
 		DCC_LOG(LOG_WARNING, "dbg_bp_activate_all() failed!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
 	if ((ret = dbg_wp_activate_all(ice, &dbg->wp_ctrl)) < 0) {
 		DCC_LOG(LOG_WARNING, "dbg_wp_activate_all() failed!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
@@ -1217,7 +1217,7 @@ int target_run(void)
 		dbg_status(dbg);
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1228,11 +1228,11 @@ int target_step(void)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state != DBG_ST_HALTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1240,7 +1240,7 @@ int target_step(void)
 		DCC_LOG(LOG_WARNING, "drv->step() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1253,11 +1253,11 @@ int target_context_show(FILE * f)
 
 	DCC_LOG(LOG_TRACE, "-----------------------------------------"); 
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state != DBG_ST_HALTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1266,7 +1266,7 @@ int target_context_show(FILE * f)
 		DCC_LOG(LOG_WARNING, "ice_context_show() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1281,11 +1281,11 @@ int target_insn_fetch(uint32_t addr, void * insn)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if ((ret = ice_insn_fetch(ice, addr, insn)) < 0) {
 		DCC_LOG(LOG_WARNING, "ice_insn_fetch() fail!");
 	}
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1296,11 +1296,11 @@ int target_insn_show(FILE * f, uint32_t addr, void * insn)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if ((ret = ice_insn_show(ice, addr, insn, f)) < 0) {
 		DCC_LOG(LOG_WARNING, "ice_show_insn() fail!");
 	}
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1351,11 +1351,11 @@ int target_print_insn(FILE * f, uint32_t addr)
 	struct disassemble_info dinfo;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1366,7 +1366,7 @@ int target_print_insn(FILE * f, uint32_t addr)
 		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
 		dbg->state = DBG_ST_OUTOFSYNC;
 		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
@@ -1389,7 +1389,7 @@ int target_print_insn(FILE * f, uint32_t addr)
 	/* restart polling */
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1405,18 +1405,18 @@ int target_register_get(int reg, uint32_t * val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state != DBG_ST_HALTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
 	if ((ret = ice_reg_get(ice, reg, val)) < 0) {
 		DCC_LOG(LOG_WARNING, "ice_reg_get() fail!");
 	}
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1427,11 +1427,11 @@ int target_register_set(int reg, uint32_t val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state != DBG_ST_HALTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1439,7 +1439,7 @@ int target_register_set(int reg, uint32_t val)
 		DCC_LOG(LOG_WARNING, "ice_reg_set() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1450,11 +1450,11 @@ int target_pc_get(uint32_t * val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if ((ret = ice_pc_get(ice, val)) < 0) {
 		DCC_LOG(LOG_WARNING, "ice_pc_get() fail!");
 	}
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1465,11 +1465,11 @@ int target_pc_set(uint32_t val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if ((ret = ice_pc_set(ice, val)) < 0) {
 		DCC_LOG(LOG_WARNING, "ice_pc_set() fail!");
 	}
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1480,11 +1480,11 @@ int target_sp_get(uint32_t * val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if ((ret = ice_sp_get(ice, val)) < 0) {
 		DCC_LOG(LOG_WARNING, "ice_sp_get() fail!");
 	}
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1495,11 +1495,11 @@ int target_sp_set(uint32_t val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if ((ret = ice_sp_set(ice, val)) < 0) {
 		DCC_LOG(LOG_WARNING, "ice_sp_set() fail!");
 	}
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1511,11 +1511,11 @@ int target_ifa_get(uint32_t * val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	
 	if (dbg->state != DBG_ST_HALTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1523,7 +1523,7 @@ int target_ifa_get(uint32_t * val)
 		DCC_LOG(LOG_WARNING, "ice_ifa_get() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1534,11 +1534,11 @@ int target_ifa_set(uint32_t val)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state != DBG_ST_HALTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1546,7 +1546,7 @@ int target_ifa_set(uint32_t val)
 		DCC_LOG(LOG_WARNING, "ice_ifa_set() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1557,11 +1557,11 @@ int target_goto(uint32_t addr, int opt)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state != DBG_ST_HALTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1569,7 +1569,7 @@ int target_goto(uint32_t addr, int opt)
 		DCC_LOG(LOG_WARNING, "ice_go_to() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1586,11 +1586,11 @@ int target_mem_read(uint32_t addr, void * ptr, int len)
 	if (len == 0)
 		return 0;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1608,7 +1608,7 @@ int target_mem_read(uint32_t addr, void * ptr, int len)
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1627,11 +1627,11 @@ int target_mem_write(uint32_t addr, const void * ptr, int len)
 	if (len == 0)
 		return 0;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1649,7 +1649,7 @@ int target_mem_write(uint32_t addr, const void * ptr, int len)
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 	
 	return ret;
 }
@@ -1663,11 +1663,11 @@ int target_mem_erase(uint32_t addr, int len)
 
 	DCC_LOG2(LOG_INFO, "addr=0x%08x len=%d", addr, len);
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1685,7 +1685,7 @@ int target_mem_erase(uint32_t addr, int len)
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 	
 	return ret;
 }
@@ -1705,11 +1705,11 @@ int target_nand_bb_check(uint32_t block)
 	
 	DCC_LOG1(LOG_INFO, "block=%d", block);
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1728,7 +1728,7 @@ int target_nand_bb_check(uint32_t block)
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1742,11 +1742,11 @@ int target_nand_block_erase(uint32_t block, bool force)
 	
 	DCC_LOG1(LOG_INFO, "block=%d", block);
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1777,7 +1777,7 @@ int target_nand_block_erase(uint32_t block, bool force)
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1790,11 +1790,11 @@ int target_nand_dev_get(int dev_id, nand_dev_t ** nandp)
 	if (nandp == NULL)
 		return -1;
 	
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	*nandp = nand_dev_get(dev_id);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -1806,11 +1806,11 @@ int target_nand_chip_get(int dev_id, int chip_id, nand_chip_t ** chipp)
 	if (chipp == NULL)
 		return -1;
 	
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	*chipp = nand_chip_get(dev_id, chip_id);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -1825,17 +1825,17 @@ int target_breakpoint_get(struct dbg_bp * bp, struct dbg_bp ** next)
 {
 	struct debugger * dbg = &debugger;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
 	bp = dbg_bp_get_next(&dbg->bp_ctrl, bp);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	if (bp == NULL) {
 		DCC_LOG(LOG_MSG, "bp == NULL!");
@@ -1854,11 +1854,11 @@ int target_breakpoint_set(uint32_t addr, uint32_t size)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	struct dbg_bp * bp = NULL;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1873,7 +1873,7 @@ int target_breakpoint_set(uint32_t addr, uint32_t size)
 		/* no breakpoint exist, create a new one */
 		if ((bp = dbg_bp_new(&dbg->bp_ctrl, addr, size)) == NULL) {
 			DCC_LOG(LOG_WARNING, "breakpoint allocation fail!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return -1;
 		};
 		DCC_LOG1(LOG_INFO, "new breakpoint: %p", bp);
@@ -1892,7 +1892,7 @@ int target_breakpoint_set(uint32_t addr, uint32_t size)
 		poll_start(dbg);
 	} 
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -1903,11 +1903,11 @@ int target_breakpoint_clear(uint32_t addr, uint32_t size)
 	struct dbg_bp * bp;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1925,7 +1925,7 @@ int target_breakpoint_clear(uint32_t addr, uint32_t size)
 		poll_start(dbg);
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1936,11 +1936,11 @@ int target_breakpoint_enable(uint32_t addr, uint32_t size)
 	struct dbg_bp * bp;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1952,7 +1952,7 @@ int target_breakpoint_enable(uint32_t addr, uint32_t size)
 	 already exist */
 	if ((bp = dbg_bp_lookup(&dbg->bp_ctrl, addr, size)) == NULL) {
 		DCC_LOG(LOG_WARNING, "breakpoint not found!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return -1;
 	} 
 	
@@ -1964,7 +1964,7 @@ int target_breakpoint_enable(uint32_t addr, uint32_t size)
 	ret = dbg_bp_activate(&dbg->ice, &dbg->bp_ctrl, bp);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -1975,11 +1975,11 @@ int target_breakpoint_disable(uint32_t addr, uint32_t size)
 	struct dbg_bp * bp;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -1991,7 +1991,7 @@ int target_breakpoint_disable(uint32_t addr, uint32_t size)
 	/* check if a breakpoint with this address and size exists */
 	if ((bp = dbg_bp_lookup(&dbg->bp_ctrl, addr, size)) == NULL) {
 		DCC_LOG(LOG_WARNING, "breakpoint not found!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return -1;
 	} 
 	
@@ -2003,7 +2003,7 @@ int target_breakpoint_disable(uint32_t addr, uint32_t size)
 	/* disable the breakpoint */
 	bp->enabled = 0;
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2014,10 +2014,10 @@ int target_breakpoint_delete(struct dbg_bp * bp)
 	struct debugger * dbg = &debugger;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2026,7 +2026,7 @@ int target_breakpoint_delete(struct dbg_bp * bp)
 	ret = dbg_bp_delete(&dbg->ice, &dbg->bp_ctrl, bp);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2036,10 +2036,10 @@ int target_breakpoint_all_disable(void)
 	struct debugger * dbg = &debugger;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2047,7 +2047,7 @@ int target_breakpoint_all_disable(void)
 	ret = dbg_bp_disable_all(&dbg->ice, &dbg->bp_ctrl);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2057,11 +2057,11 @@ int target_breakpoint_all_enable(void)
 	struct debugger * dbg = &debugger;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2069,7 +2069,7 @@ int target_breakpoint_all_enable(void)
 	ret = dbg_bp_enable_all(&dbg->ice, &dbg->bp_ctrl);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2082,17 +2082,17 @@ int target_watchpoint_get(struct dbg_wp * wp, struct dbg_wp ** next)
 {
 	struct debugger * dbg = &debugger;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
 	wp = dbg_wp_get_next(&dbg->wp_ctrl, wp);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	if (wp == NULL) {
 		DCC_LOG(LOG_MSG, "wp == NULL!");
@@ -2111,11 +2111,11 @@ int target_watchpoint_set(uint32_t addr, uint32_t size)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	struct dbg_wp * wp = NULL;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2130,7 +2130,7 @@ int target_watchpoint_set(uint32_t addr, uint32_t size)
 		/* no watchpoint exist, create a new one */
 		if ((wp = dbg_wp_new(&dbg->wp_ctrl, addr, size)) == NULL) {
 			DCC_LOG(LOG_WARNING, "watchpoint allocation fail!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return -1;
 		};
 		DCC_LOG1(LOG_INFO, "new watchpoint: %p", wp);
@@ -2149,7 +2149,7 @@ int target_watchpoint_set(uint32_t addr, uint32_t size)
 		poll_start(dbg);
 	} 
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -2160,11 +2160,11 @@ int target_watchpoint_clear(uint32_t addr, uint32_t size)
 	struct dbg_wp * wp;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2182,7 +2182,7 @@ int target_watchpoint_clear(uint32_t addr, uint32_t size)
 		poll_start(dbg);
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2193,11 +2193,11 @@ int target_watchpoint_enable(uint32_t addr, uint32_t size)
 	struct dbg_wp * wp;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2209,7 +2209,7 @@ int target_watchpoint_enable(uint32_t addr, uint32_t size)
 	 already exist */
 	if ((wp = dbg_wp_lookup(&dbg->wp_ctrl, addr, size)) == NULL) {
 		DCC_LOG(LOG_WARNING, "watchpoint not found!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return -1;
 	} 
 	
@@ -2221,7 +2221,7 @@ int target_watchpoint_enable(uint32_t addr, uint32_t size)
 	ret = dbg_wp_activate(&dbg->ice, &dbg->wp_ctrl, wp);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2232,11 +2232,11 @@ int target_watchpoint_disable(uint32_t addr, uint32_t size)
 	struct dbg_wp * wp;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2248,7 +2248,7 @@ int target_watchpoint_disable(uint32_t addr, uint32_t size)
 	/* check if a watchpoint with this address and size exists */
 	if ((wp = dbg_wp_lookup(&dbg->wp_ctrl, addr, size)) == NULL) {
 		DCC_LOG(LOG_WARNING, "watchpoint not found!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return -1;
 	} 
 	
@@ -2260,7 +2260,7 @@ int target_watchpoint_disable(uint32_t addr, uint32_t size)
 	/* disable the watchpoint */
 	wp->enabled = 0;
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2271,10 +2271,10 @@ int target_watchpoint_delete(struct dbg_wp * wp)
 	struct debugger * dbg = &debugger;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2283,7 +2283,7 @@ int target_watchpoint_delete(struct dbg_wp * wp)
 	ret = dbg_wp_delete(&dbg->ice, &dbg->wp_ctrl, wp);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2293,10 +2293,10 @@ int target_watchpoint_all_disable(void)
 	struct debugger * dbg = &debugger;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2304,7 +2304,7 @@ int target_watchpoint_all_disable(void)
 	ret = dbg_wp_disable_all(&dbg->ice, &dbg->wp_ctrl);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2314,11 +2314,11 @@ int target_watchpoint_all_enable(void)
 	struct debugger * dbg = &debugger;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2326,7 +2326,7 @@ int target_watchpoint_all_enable(void)
 	ret = dbg_wp_enable_all(&dbg->ice, &dbg->wp_ctrl);
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2342,7 +2342,7 @@ int target_reset(FILE * f, int mode)
 	target_info_t * target = (target_info_t *)dbg->target; 
 	int ret = 0;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (mode == RST_AUTO)
 		mode = target->reset_mode;
@@ -2363,7 +2363,7 @@ int target_reset(FILE * f, int mode)
 	} else if (mode == RST_SOFT) {
 		if (dbg->state < DBG_ST_CONNECTED) {
 			DCC_LOG(LOG_WARNING, "invalid state"); 
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ERR_STATE;
 		}
 	}
@@ -2422,7 +2422,7 @@ int target_reset(FILE * f, int mode)
 		}
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2437,11 +2437,11 @@ int target_init(FILE * f)
 
 	DCC_LOG1(LOG_TRACE, "target=0x%p", target);
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -2477,7 +2477,7 @@ int target_init(FILE * f)
 		dbg->state = DBG_ST_RUNNING;
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2491,7 +2491,7 @@ int target_probe(FILE * f)
 
 	DCC_LOG(LOG_INFO, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	/* stop polling */
 	poll_stop(dbg);
@@ -2508,7 +2508,7 @@ int target_probe(FILE * f)
 		}
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2521,7 +2521,7 @@ int target_tap_trst(unsigned int mode)
 
 	DCC_LOG(LOG_INFO, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	/* release the target */
 	poll_stop(dbg);
@@ -2551,7 +2551,7 @@ int target_tap_trst(unsigned int mode)
 		}
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2564,7 +2564,7 @@ int target_nrst(unsigned int mode, unsigned int ms)
 
 	DCC_LOG(LOG_INFO, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	/* release the target */
 	poll_stop(dbg);
@@ -2586,12 +2586,12 @@ int target_nrst(unsigned int mode, unsigned int ms)
 		break;
 	default:
 		if ((ret = jtag_nrst(1)) == JTAG_OK) {
-			__os_sleep(ms);
+			thinkos_sleep(ms);
 			ret = jtag_nrst(0);
 		}
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2602,11 +2602,11 @@ int target_tap_reset(void)
 
 	DCC_LOG(LOG_INFO, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	jtag_tap_reset();
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -2619,7 +2619,7 @@ int target_power_ctl(bool on)
 
 	DCC_LOG(LOG_INFO, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (on) {
 		ext_pwr_on();
@@ -2647,7 +2647,7 @@ int target_power_ctl(bool on)
 		dbg->ext_pwr = 0;
 	}	
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -2671,14 +2671,14 @@ int target_relay(bool on)
 
 	DCC_LOG(LOG_INFO, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (on)
 		relay_on();
 	else
 		relay_off();
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -2708,7 +2708,7 @@ int target_send(int data)
 	struct debugger * dbg = &debugger;
 //	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	/* TODO: check the return ... */
 //	arm7ice_dcc_write(data);
@@ -2716,7 +2716,7 @@ int target_send(int data)
 //	if (dbg->state == ST_RUNNING)
 //		ice->poll(ice->arg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 	return 0;
 }
 
@@ -2734,7 +2734,7 @@ int ice_drv_select(struct debugger * dbg, const ice_drv_info_t * info)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (ice->info != info) {
 		DCC_LOG(LOG_TRACE, "ICE driver change...");
@@ -2752,7 +2752,7 @@ int ice_drv_select(struct debugger * dbg, const ice_drv_info_t * info)
 		/* load the ICE controller driver */
 		if ((ret = ice_open(ice, info, &dbg_ice_ctrl_buf.ctrl)) < 0) {
 			DCC_LOG(LOG_ERROR, "ICE controller open fail!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ret;
 		}
 
@@ -2760,7 +2760,7 @@ int ice_drv_select(struct debugger * dbg, const ice_drv_info_t * info)
 			   ice->info->name, ice->info->version, ice->info->vendor);
 	} 
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 
@@ -2802,15 +2802,15 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	if (!dbg->ext_pwr) { 
 		ext_pwr_on();
 		/* FIXME: configurable power on time */
-		__os_sleep(200);
+		thinkos_sleep(200);
 		dbg->ext_pwr = 1;
 	}
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if ((target == dbg->target) && (!force)) {
 		DCC_LOG1(LOG_TRACE, "Keeping target: '%s'", target->name);
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return 0;
 	}
 
@@ -2845,7 +2845,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		/* load the ICE controller driver */
 		if ((ret = ice_open(ice, info, &dbg_ice_ctrl_buf.ctrl)) < 0) {
 			DCC_LOG(LOG_ERROR, "ICE controller open fail!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ret;
 		}
 
@@ -2887,7 +2887,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		/* adjust the JTAG TCK frequency */
 		if ((ret = jtag_tck_freq_set(jtag_clk)) != JTAG_OK) {
 			DCC_LOG(LOG_ERROR, "jtag_clk_set()!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ret;
 		}
 
@@ -2950,7 +2950,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		if (jtag_chain_probe(irlen, 32, &cnt) != JTAG_OK) {
 			if (target->arch->cpu->irlength == 0) {
 				DCC_LOG(LOG_ERROR, "IR length !");
-				__os_mutex_unlock(dbg->busy);
+				thinkos_mutex_unlock(dbg->busy);
 				return -1;
 			} 
 			irlen[0] = target->arch->cpu->irlength;
@@ -2969,7 +2969,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 	if (cnt == 0) {
 		DCC_LOG(LOG_WARNING, "No TAPs defined!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return 0;
 	}
 
@@ -2979,7 +2979,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	/* initializing the jtag chain */
 	if ((ret = jtag_chain_init(irlen, cnt)) != JTAG_OK) {
 		DCC_LOG(LOG_ERROR, "JTAG chain fail!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ret;
 	}
 
@@ -2987,7 +2987,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		DCC_LOG(LOG_TRACE, "Target pre config callback...");
 		if ((ret = target->pre_config(f, ice, target)) < 0) {
 			DCC_LOG(LOG_ERROR, "target->pre_config() fail!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ret;
 		}
 		cnt = jtag_tap_tell();
@@ -3001,13 +3001,13 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		for (i = 0; i < cnt; i++) {
 			if ((ret = jtag_tap_get(&tap, i)) != JTAG_OK) {
 				DCC_LOG(LOG_ERROR, "jtag_tap_get()!");
-				__os_mutex_unlock(dbg->busy);
+				thinkos_mutex_unlock(dbg->busy);
 				return ret;
 			}
 
 			if ((ret = jtag_tap_idcode(tap, &idcode)) != JTAG_OK) {
 				DCC_LOG(LOG_ERROR, "jtag_tap_idcode()!");
-				__os_mutex_unlock(dbg->busy);
+				thinkos_mutex_unlock(dbg->busy);
 				return ret;
 			}
 
@@ -3023,13 +3023,13 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 		if (tap_pos < 0) {
 			DCC_LOG(LOG_WARNING, "no suitable CPU found()!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return -1;
 		}
 	} else {
 		if (tap_pos > cnt) {
 			DCC_LOG1(LOG_ERROR, "TAP position (%d) is out of bounds!", tap_pos);
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			/* XXX: this is a JTAG error and shuld not be used in
 			   a high level function... */
 			return JTAG_ERR_INVALID_TAP;
@@ -3037,12 +3037,12 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 		if ((ret = jtag_tap_get(&tap, tap_pos)) != JTAG_OK) {
 			DCC_LOG(LOG_ERROR, "jtag_tap_get()!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ret;
 		}
 		if ((ret = jtag_tap_idcode(tap, &idcode)) != JTAG_OK) {
 			DCC_LOG(LOG_ERROR, "jtag_tap_idcode()!");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ret;
 		}
 
@@ -3051,7 +3051,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 		if ((idcode & target->arch->cpu->idmask) != target->arch->cpu->idcomp) {
 			DCC_LOG(LOG_TRACE, "invalid IDCODE");
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return -1;
 		}
 
@@ -3065,7 +3065,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 	if (ice_configure(ice, tap, &ice->opt, target->ice_cfg) < 0) {
 		DCC_LOG(LOG_ERROR, "ICE controller configurarion fail!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return -1;
 	}
 
@@ -3089,7 +3089,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	dbg->state = DBG_ST_UNCONNECTED;
 	DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -3101,17 +3101,17 @@ int target_config(FILE * f)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if ((target = dbg->target) == NULL) {
 		DCC_LOG(LOG_ERROR, "NULL target!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_NULL_TARGET;
 	}
 
 	if (dbg->state < DBG_ST_UNCONNECTED) {
 		DCC_LOG(LOG_ERROR, "Invalid state!");
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -3121,7 +3121,7 @@ int target_config(FILE * f)
 		if ((ret = ice_release(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "drv->release() failed! [DBG_ST_OUTOFSYNC]");
 			dbg->state = DBG_ST_OUTOFSYNC;
-			__os_mutex_unlock(dbg->busy);
+			thinkos_mutex_unlock(dbg->busy);
 			return ERR_OUTOFSYNC;
 		} 
 		
@@ -3141,7 +3141,7 @@ int target_config(FILE * f)
 		ret = 0;
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -3154,7 +3154,7 @@ int target_ice_test(FILE * f, uint32_t req, uint32_t argc, uint32_t argv[])
 
 	DCC_LOG(LOG_TRACE, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	/* stop polling */
 	poll_stop(dbg);
@@ -3169,7 +3169,7 @@ int target_ice_test(FILE * f, uint32_t req, uint32_t argc, uint32_t argv[])
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -3182,7 +3182,7 @@ int target_ice_info(FILE * f, uint32_t which)
 
 	DCC_LOG(LOG_TRACE, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	/* stop polling */
 	poll_stop(dbg);
@@ -3191,7 +3191,7 @@ int target_ice_info(FILE * f, uint32_t which)
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -3206,7 +3206,7 @@ int target_test(FILE * f, uint32_t val)
 
 	DCC_LOG(LOG_TRACE, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	/* stop polling */
 	poll_stop(dbg);
@@ -3223,7 +3223,7 @@ int target_test(FILE * f, uint32_t val)
 		}
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -3268,7 +3268,7 @@ void debugger_except(const char * msg)
 {
 	struct debugger * dbg = &debugger;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state > DBG_ST_UNCONNECTED) {
 		/* FIXME: if the target is connected a proper shutdown sohuld be 
@@ -3281,7 +3281,7 @@ void debugger_except(const char * msg)
 	dbg->state = DBG_ST_FAULT;
 	DCC_LOG(LOG_TRACE, "[DBG_ST_FAULT]");
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 }
 
 int mod_ice_register(struct debugger * dbg);
@@ -3301,7 +3301,7 @@ void debugger_init(void)
 {
 	struct debugger * dbg = &debugger;
 
-	dbg->busy = __os_mutex_alloc();
+	dbg->busy = thinkos_mutex_alloc();
 	DCC_LOG1(LOG_TRACE, "debugger busy mutex: %d", dbg->busy);
 
 	/* initialize the breakpoint management */
@@ -3332,9 +3332,9 @@ void debugger_init(void)
 
 	/* FIXME: the dcc semaphore must be created/destroyed in the
 	   TAP sctructure */
-	dbg->poll_mutex = __os_mutex_alloc();
-	dbg->poll_cond = __os_cond_alloc();
-	dbg->halt_cond = __os_cond_alloc();
+	dbg->poll_mutex = thinkos_mutex_alloc();
+	dbg->poll_cond = thinkos_cond_alloc();
+	dbg->halt_cond = thinkos_cond_alloc();
 	dbg->poll_enabled = false;
 	dbg->poll_stop_req = false;
 	dbg->poll_start_req = false;
@@ -3347,7 +3347,7 @@ void debugger_init(void)
 	dbg->poll_thread = thinkos_thread_create_inf((void *)dbg_poll_task, 
 						(void *)dbg, &dbg_poll_inf);
 
-	DCC_LOG1(LOG_TRACE, "__os_thread_create()=%d", dbg->poll_thread);
+	DCC_LOG1(LOG_TRACE, "thinkos_thread_create()=%d", dbg->poll_thread);
 
 	mod_ice_register(dbg);
 }
@@ -3358,7 +3358,7 @@ int target_enable_ice_poll(bool flag)
 
 	DCC_LOG(LOG_TRACE, ".");
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	poll_stop(dbg);
 
@@ -3366,7 +3366,7 @@ int target_enable_ice_poll(bool flag)
 
 	poll_start(dbg);
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return 0;
 }
@@ -3383,11 +3383,11 @@ int target_int_enable(void)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -3395,7 +3395,7 @@ int target_int_enable(void)
 		DCC_LOG(LOG_WARNING, "drv->int_enable() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }
@@ -3406,11 +3406,11 @@ int target_int_disable(void)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	__os_mutex_lock(dbg->busy);
+	thinkos_mutex_lock(dbg->busy);
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		__os_mutex_unlock(dbg->busy);
+		thinkos_mutex_unlock(dbg->busy);
 		return ERR_STATE;
 	}
 
@@ -3418,7 +3418,7 @@ int target_int_disable(void)
 		DCC_LOG(LOG_WARNING, "drv->int_disable() fail!");
 	}
 
-	__os_mutex_unlock(dbg->busy);
+	thinkos_mutex_unlock(dbg->busy);
 
 	return ret;
 }

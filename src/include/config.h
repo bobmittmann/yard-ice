@@ -78,6 +78,7 @@
 #define THINKOS_ENABLE_SANITY_CHECK     0
 
 #define THINKOS_ENABLE_CTL              0
+#define THINKOS_ENABLE_CRITICAL         0
 
 #define THINKOS_ENABLE_SCHED_DEBUG      0
 
@@ -108,7 +109,7 @@
 #define THINKOS_ENABLE_ERROR_TRAP       0
 
 #define THINKOS_ENABLE_MPU              0
-#define THINKOS_ENABLE_ESCALATE         1
+#define THINKOS_ENABLE_ESCALATE         0
 #define THINKOS_ENABLE_FPU              0
 
 #define THINKOS_ENABLE_THREAD_VOID      0

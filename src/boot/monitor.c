@@ -86,6 +86,9 @@ struct magic {
 #define MONITOR_OSINFO_ENABLE      1
 #endif
 
+#ifndef MONITOR_PAUSE_ENABLE
+#define MONITOR_PAUSE_ENABLE       1
+#endif
 
 #define APPLICATION_BLOCK_OFFS 0x00020000
 #define APPLICATION_BLOCK_SIZE (256 * 1024)
@@ -133,6 +136,9 @@ static const char s_help[] =
 #endif
 #if (MONITOR_OSINFO_ENABLE)
 " ^O - OS Info\r\n"
+#endif
+#if (MONITOR_PAUSE_ENABLE)
+" ^P - Pause app\r\n"
 #endif
 " ^V - Help\r\n"
 #if (MONITOR_APPWIPE_ENABLE)
@@ -346,6 +352,30 @@ static bool app_exec(void)
 	return true;
 }
 
+#if (MONITOR_PAUSE_ENABLE)
+static void pause_all(void)
+{
+	unsigned int wq;
+	unsigned int irq;
+
+
+	/* clear all bits on all queues */
+	for (wq = 0; wq < THINKOS_WQ_LST_END; ++wq) 
+		thinkos_rt.wq_lst[wq] = 0;
+
+#if ((THINKOS_THREADS_MAX) < 32) 
+	thinkos_rt.wq_ready = 1 << (THINKOS_THREADS_MAX);
+#endif
+
+	for (irq = 0; irq < THINKOS_IRQ_MAX; ++irq) {
+		if (thinkos_rt.irq_th[irq] != THINKOS_THREAD_IDLE)
+			cm3_irq_disable(irq);
+	}
+
+	__thinkos_defer_sched();
+}
+#endif
+
 static bool monitor_process_input(struct dmon_comm * comm, int c)
 {
 	switch (c) {
@@ -371,6 +401,13 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 		PUTS(s_hr);
 		PUTS(s_help);
 		break;
+
+#if (MONITOR_PAUSE_ENABLE)
+	case CTRL_P:
+		PUTS("^P\r\n");
+		pause_all();
+		break;
+#endif
 
 	case CTRL_Y:
 		PUTS(s_confirm);
