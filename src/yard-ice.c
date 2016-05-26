@@ -40,7 +40,7 @@
 #include <thinkos.h>
 #ifndef THINKAPP
 #define __THINKOS_DBGMON__
-#include <thinkos_dmon.h>
+#include <thinkos/dbgmon.h>
 #endif
 
 #include <tcpip/ethif.h>
@@ -405,6 +405,7 @@ int init_target(void)
 }
 
 #ifndef THINKAPP
+void board_init(void);
 void monitor_task(struct dmon_comm * comm);
 
 void monitor_init(void)
@@ -439,11 +440,13 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
+#ifndef UDELAY_FACTOR 
 	DCC_LOG(LOG_TRACE, " 1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
+#endif
 
 	DCC_LOG(LOG_TRACE, " 2. this_board.init().");
-	this_board.init();
+	board_init();
 
 	DCC_LOG(LOG_TRACE, " 3. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));

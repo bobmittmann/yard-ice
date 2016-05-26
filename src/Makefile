@@ -21,50 +21,28 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-PROG = yard-ice
+all: thinkos yard-ice
 
-CFILES = yard-ice.c debugger.c ice_drv.c\
-		 mod_mem.c fmt_freq.c mem_hexdump.c targets.c\
-		 i2c-master.c mod_ice.c shell.c lookup.c console.c\
-		 io.c boot/monitor.c boot/board.c
-
-SDK = ../thinkos/sdk
-
-LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil $(SDK)/libthinkos\
-		  $(SDK)/libc $(SDK)/libice-comm $(SDK)/libtcpip $(SDK)/libstm32drv\
-		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc libaltera\
-		  $(SDK)/libtrace $(SDK)/libtty $(SDK)/libxmodem\
-		  $(SDK)/libshell $(SDK)/libconsole libopcodes\
-		  arch jtag script cmd nand jtag3drv\
-		  armice cm3ice targets tftp gdb vcom telnet comm 
-
-LIBS = cm3 stm32f util thinkos c ice-comm tcpip stm32drv bitvec hexdump \
-	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
-	targets tftp shell console tty gdb vcom telnet crc xmodem comm 
-
-VERSION_DATE = "2016-03-21"
-VERSION_MAJOR = "0"
-VERSION_MINOR = "28"
-
-CDEFS = CONFIG_H
-CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,--gc-sections 
-INCPATH = $(SDK)/include include
-
-MACH = stm32f207
-include ../thinkos/mk/stm32f2xx.mk
+clean: thinkos_clean yard-ice_clean
 
 help:
 	@echo 'Targets:'
 	@echo
-	@echo '  all        - Build YARD-ICE'
+	@echo '  all        - Build ThinkOS and YARD-ICE'
 	@echo '  clean      - Remove most generated files'
-	@echo '  jtagload   - Build YARD-ICE and try to load it into target'
-	@echo
-	@echo '  make V=0|1 [targets] 0 => quiet build (default), 1 => verbose build'
-	@echo '  make O=dir [targets] Locate all output files in "dir"'
-	@echo '  make D=0|1 [targets] 0 => release (default), 1 => debug'
 	@echo
 
-.PHONY: help
+thinkos:
+	$(MAKE) -C boot all
+
+yard-ice:
+	$(MAKE) -C app all
+
+thinkos_clean:
+	$(MAKE) -C boot clean
+
+yard-ice_clean:
+	$(MAKE) -C app clean
+
+.PHONY: thinkos yard-ice thinkos_clean  yard-ice_clean help
 
