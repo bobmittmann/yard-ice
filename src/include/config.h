@@ -209,7 +209,7 @@
  * Trace 
  * ------------------------------------------------------------------------- */
 
-#define TRACE_LEVEL 5
+#define TRACE_LEVEL TRACE_LVL_YAP 
 
 #endif /* __CONFIG_H__ */
 

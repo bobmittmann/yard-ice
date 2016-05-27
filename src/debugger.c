@@ -32,6 +32,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <trace.h>
+
+#define LOG_LEVEL LOG_MSG
+#include <sys/dcclog.h>
+
 #include <yard-ice/drv.h>
 
 #include "var.h"

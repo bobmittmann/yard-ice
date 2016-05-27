@@ -614,7 +614,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if (dp_stickyerr_get(tap)) {
 			/* The comm block is invalid and resulted in
 			   a MEM-AP access error */
-			DCC_LOG(LOG_WARNING, "JTAD DP STICKYERR flag set!");
+			DCC_LOG(LOG_WARNING, "JTAG DP STICKYERR flag set!");
 			dp_stickyerr_clr(tap);
 			/* Set the COMM address as invalid */
 			ctrl->comm_addr = 0x00000000;
@@ -808,7 +808,7 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 	int ret;
 
 	if (dp_stickyerr_get(tap)) {
-		DCC_LOG(LOG_WARNING, "JTAD DP STICKYERR flag set!");
+		DCC_LOG(LOG_WARNING, "JTAG DP STICKYERR flag set!");
 		dp_stickyerr_clr(tap);
 	}
 
@@ -870,7 +870,7 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 			 (dhcsr & DHCSR_C_DEBUGEN) ? 1 : 0);
 
 	if (dp_stickyerr_get(tap)) {
-		DCC_LOG(LOG_ERROR, "JTAD DP STICKYERR flag is set!");
+		DCC_LOG(LOG_ERROR, "JTAG DP STICKYERR flag is set!");
 		return -1;
 	}
 
@@ -1286,7 +1286,7 @@ static int core_read_memory(bfd_vma addr, uint8_t * buf,
 	if (dp_stickyerr_get(ctrl->tap)) {
 		DCC_LOG1(LOG_WARNING, "addr=0x%08x, STICKYERR flag set!", addr);
 		dp_stickyerr_clr(ctrl->tap);
-		return -1;
+		return ICE_ERR_JTAG;
 	}
 
 	memcpy(buf, data, len);
