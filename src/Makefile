@@ -21,28 +21,33 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-all: thinkos yard-ice
+all: release 
 
-clean: thinkos_clean yard-ice_clean
+clean: release_clean debug_clean
 
 help:
 	@echo 'Targets:'
 	@echo
 	@echo '  all        - Build ThinkOS and YARD-ICE'
+	@echo '  debug      - Build ThinkOS with debug options'
 	@echo '  clean      - Remove most generated files'
 	@echo
 
-thinkos:
+release:
 	$(MAKE) -C boot all
-
-yard-ice:
 	$(MAKE) -C app all
 
-thinkos_clean:
-	$(MAKE) -C boot clean
+debug:
+	$(MAKE) D=2 -C boot all
+	$(MAKE) D=1 -C app all
 
-yard-ice_clean:
-	$(MAKE) -C app clean
+release_clean:
+	$(MAKE) D=1 -C boot clean
+	$(MAKE) D=1 -C app clean
 
-.PHONY: thinkos yard-ice thinkos_clean  yard-ice_clean help
+debug_clean:
+	$(MAKE) D=1 -C boot clean
+	$(MAKE) D=1 -C app clean
+
+.PHONY: release debug release_clean debug_clean help
 

@@ -438,7 +438,7 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 	int len;
 	int blksize = TFTP_SEGSIZE; 
 
-	DCC_LOG1(LOG_TRACE, "thread: %d", __os_thread_self());
+	DCC_LOG1(LOG_TRACE, "thread: %d", thinkos_thread_self());
 
 	if ((udp = udp_alloc()) == NULL) {
 		DCC_LOG(LOG_WARNING, "udp_alloc() fail!");
@@ -794,7 +794,7 @@ uint32_t tftpd_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
 const struct thinkos_thread_inf tftpd_inf = {
 	.stack_ptr = tftpd_stack, 
 	.stack_size = sizeof(tftpd_stack),
-	.priority = __OS_PRIORITY_HIGHEST,
+	.priority = 1,
 	.thread_id = 2,
 	.paused = false,
 	.tag = "TFTPD"

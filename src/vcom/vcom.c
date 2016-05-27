@@ -26,13 +26,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <thinkos.h>
 
 #include <netinet/in.h>
 #include <tcpip/tcp.h>
 
 #include <sys/dcclog.h>
 #include <sys/serial.h>
-#include <sys/os.h>
 
 #include <sys/stm32f.h>
 #include <trace.h>
@@ -497,7 +497,7 @@ int __attribute__((noreturn)) serial_input_task(struct vcom * vcom)
 	int len;
 	int ret;
 
-	DCC_LOG1(LOG_TRACE, "<%d> started...", __os_thread_self());
+	DCC_LOG1(LOG_TRACE, "<%d> started...", thinkos_thread_self());
 
 	for (;;) {
 		if ((len = serial_send(serial, buf, VCOM_BUF_SIZE)) < 0) {

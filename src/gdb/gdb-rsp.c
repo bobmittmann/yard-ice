@@ -35,7 +35,6 @@
 #include <netinet/in.h>
 #include <tcpip/tcp.h>
 
-#include <sys/os.h>
 #include <trace.h>
 
 #include "gdb_rspd.h"
@@ -870,7 +869,7 @@ static int rsp_continue(struct gdb_rspd * gdb, struct tcp_pcb * tp,
 	} 
 
 	/* signal that we are now running */
-//	__os_flag_set(gdb->run_flag);
+//	thinkos_flag_set(gdb->run_flag);
 	thinkos_flag_set(gdb->run_flag);
 
 	return tcp_send(tp, "+", 1, TCP_SEND_NOWAIT);
@@ -1052,8 +1051,8 @@ int __attribute__((noreturn)) gdb_brk_task(struct gdb_rspd * gdb)
 	int sig = 5;
 	int state;
 
-	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
-	INF("<%d>", __os_thread_self());
+	DCC_LOG1(LOG_TRACE, "<%d>", thinkos_thread_self());
+	INF("<%d>", thinkos_thread_self());
 
 	for (;;) {
 		/* wait for a connection */
@@ -1102,8 +1101,8 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 	int c;
 	int state;
 
-	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
-	INF("<%d>", __os_thread_self());
+	DCC_LOG1(LOG_TRACE, "<%d>", thinkos_thread_self());
+	INF("<%d>", thinkos_thread_self());
 
 	for (;;) {
 		if ((tp = tcp_accept(svc)) == NULL) {

@@ -67,7 +67,11 @@ struct magic {
 
 
 #ifndef MONITOR_UPGRADE_ENABLE
+#if DEBUG
+#define MONITOR_UPGRADE_ENABLE     0
+#else
 #define MONITOR_UPGRADE_ENABLE     1
+#endif
 #endif
 
 #ifndef MONITOR_APPWIPE_ENABLE
@@ -144,7 +148,9 @@ static const char s_help[] =
 #if (MONITOR_APPWIPE_ENABLE)
 " ^W - Wipe App\r\n"
 #endif
+#if (MONITOR_UPGRADE_ENABLE)
 " ^Y - Upload YARD-ICE\r\n"
+#endif
 #if (MONITOR_APPRESTART_ENABLE)
 " ^Z - Restart\r\n"
 #endif
@@ -166,6 +172,7 @@ static const char s_confirm[] = "Confirm [y]?";
 #define PUTS(S) dmputs(S, comm) 
 #endif
 
+#if (MONITOR_UPGRADE_ENABLE)
 static int yflash(uint32_t blk_offs, uint32_t blk_size,
 		   const struct magic * magic, uint32_t opt)
 {
@@ -205,7 +212,6 @@ static void app_yflash(void)
 	yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic, 1);
 }
 
-#if (MONITOR_UPGRADE_ENABLE)
 static void bootloader_yflash(void)
 {
 	static const struct magic bootloader_magic = {
@@ -320,7 +326,7 @@ static void thread_exec(void (* func)(int))
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
 	__thinkos_thread_abort(thread_id);
 
-	DCC_LOG1(LOG_TRACE, "__thinkos_thread_init(mode=%d)", mode);
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
 	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, (void *)NULL);
 
 #if THINKOS_ENABLE_THREAD_INFO
@@ -409,11 +415,13 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 		break;
 #endif
 
+#if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_Y:
 		PUTS(s_confirm);
 		if (dmgetc(comm) == 'y')
 			app_yflash();
 		break;
+#endif
 
 #if (MONITOR_APPWIPE_ENABLE)
 	case CTRL_W:

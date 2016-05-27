@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <jtag.h>
 
-#include <sys/os.h>
+#include <thinkos.h>
 
 #include <sys/dcclog.h>
 
@@ -42,7 +42,7 @@ int jtag_nrst_pulse(unsigned int ms)
 	DCC_LOG1(LOG_INFO, "%d ms", ms);
 
 	jtag_nrst(true);
-	__os_sleep(ms);
+	thinkos_sleep(ms);
 	jtag_nrst(false);
 
 	return JTAG_OK;

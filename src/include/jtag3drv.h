@@ -174,7 +174,7 @@
 #define DESC_LEN(DESC) ((DESC & 0x3ff) + 1)
 
 #include <stdint.h>
-#include <sys/os.h>
+#include <thinkos.h>
 #include <sys/stm32f.h>
 #include "jtag.h"
 
@@ -294,7 +294,7 @@ jtag3drv_int_wait(unsigned int irq_mask) {
 	struct stm32f_exti * exti = STM32F_EXTI;
 	uint32_t isr;
 	while (((isr = reg_rd(REG_INT_ST)) & irq_mask) == 0) {
-		__os_int_wait(JTAG3DRV_IRQ);
+		thinkos_irq_wait(JTAG3DRV_IRQ);
    		exti->pr = (1 << 6); /* clear external interrupt pending flag */
 	}
 	return isr;

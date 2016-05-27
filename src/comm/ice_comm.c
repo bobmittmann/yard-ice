@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/os.h>
+#include <thinkos.h>
 
 #include "ice_comm.h"
 #include "dbglog.h"
@@ -43,7 +43,7 @@ int ice_comm_open(ice_comm_t * comm)
 		/* Reset the queue */
 //		comm->tx_head = comm->tx_tail;
 //		comm->rx_head = comm->rx_tail;
-		__os_sem_init(comm->rx_sem, 0);
+		thinkos_sem_init(comm->rx_sem, 0);
 		DCC_LOG(LOG_TRACE, "semaphore initialized...");
 		comm->open = 1;
 	}
@@ -56,7 +56,7 @@ int ice_comm_close(ice_comm_t * comm)
 	DCC_LOG(LOG_TRACE, ".");
 
 	if (comm->open) {
-		__os_sem_post(comm->rx_sem);
+		thinkos_sem_post(comm->rx_sem);
 //		comm->tx_head = 0;
 //		comm->tx_tail = 0;
 //		comm->rx_head = 0;
@@ -94,7 +94,7 @@ int ice_comm_read(ice_comm_t * comm, void * buf, int len, int tmo)
 		DCC_LOG(LOG_MSG, "block");
 
 		/* wait for data to became available in the buffer */
-		ret = __os_sem_timedwait(comm->rx_sem, tmo);
+		ret = thinkos_sem_timedwait(comm->rx_sem, tmo);
 
 		if (ret < 0) {
 			DCC_LOG(LOG_TRACE, "timeout!!!");
@@ -161,7 +161,7 @@ int ice_comm_write(ice_comm_t * comm, const void * buf,
 		if ((head - comm->tx.tail) == ICE_COMM_TX_BUF_LEN) {
 			DCC_LOG(LOG_MSG, "block");
 			/* wait the end of operation */
-			__os_sem_timedwait(comm->tx_sem, tmo);
+			thinkos_sem_timedwait(comm->tx_sem, tmo);
 		}
 
 		if ((head - comm->tx.tail) == ICE_COMM_TX_BUF_LEN) {
@@ -203,11 +203,11 @@ int ice_comm_init(ice_comm_t * comm)
 
 	comm->rx.head = 0;
 	comm->rx.tail = 0;
-	comm->rx_sem = __os_sem_alloc(0);
+	comm->rx_sem = thinkos_sem_alloc(0);
 
 	comm->tx.head = 0;
 	comm->tx.tail = 0;
-	comm->tx_sem = __os_sem_alloc(ICE_COMM_TX_BUF_LEN);
+	comm->tx_sem = thinkos_sem_alloc(ICE_COMM_TX_BUF_LEN);
 
 	DCC_LOG2(LOG_TRACE, "[INIT] rx_sem=%d tx_sem=%d",
 			 comm->rx_sem, comm->tx_sem);
@@ -217,10 +217,10 @@ int ice_comm_init(ice_comm_t * comm)
 
 int ice_comm_done(ice_comm_t * comm)
 {
-	__os_sem_free(comm->rx_sem);
+	thinkos_sem_free(comm->rx_sem);
 	comm->rx_sem = -1;
 
-	__os_sem_free(comm->tx_sem);
+	thinkos_sem_free(comm->tx_sem);
 	comm->tx_sem = -1;
 
 	DCC_LOG(LOG_TRACE, "[DONE]");

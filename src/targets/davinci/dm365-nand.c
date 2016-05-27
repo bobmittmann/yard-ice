@@ -25,7 +25,7 @@
 
 #include <sys/dcclog.h>
 
-#include <sys/os.h>
+#include <thinkos.h>
 #include "nand.h"
 #include "target/davinci.h"
 
@@ -119,13 +119,13 @@ int dm365_nand_ecc_correct(const void * arg, nand_chip_t * chip,
 
 	/* This sum may overflow, but is ok because we are dealing 
 	   with time differences */
-	tm_top = __os_ms_ticks() + chip->tmo_ms;
+	tm_top = thinkos_clock() + chip->tmo_ms;
 
 	for (;;) {
 		state = AEMIF_REG_RD(AEMIF_NANDFSR) & NANDFSR_ECC_STATE_MASK;
 		if (state <= NANDFSR_ECC_COMPLETE)
 			break;
-		tm_cmp = __os_ms_ticks();
+		tm_cmp = thinkos_clock();
 		if ((int32_t)(tm_top - tm_cmp) < 0)
 			break;
 	}
@@ -264,7 +264,7 @@ int dm365_nand_ready_wait(void * arg, nand_chip_t * chip)
 	
 	DCC_LOG(LOG_INFO, ".");
 
-	tm_top = __os_ms_ticks() + chip->tmo_ms;
+	tm_top = thinkos_clock() + chip->tmo_ms;
 
 #if 0
 	/* Wait for the status to show busy, and then after that
@@ -280,7 +280,7 @@ int dm365_nand_ready_wait(void * arg, nand_chip_t * chip)
 #endif
 
 	while (!(AEMIF_REG_RD(AEMIF_NANDFSR) & NANDFSR_READY)) {
-		tm_cmp = __os_ms_ticks();
+		tm_cmp = thinkos_clock();
 		if ((int32_t)(tm_top - tm_cmp) < 0)
 			return -1;
 	}

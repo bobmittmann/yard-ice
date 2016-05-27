@@ -1,11 +1,16 @@
 #!/bin/sh
 
 JTAGTOOL_ADDR=192.168.10.50
-BUILD_NAME=yard-ice
+TOOLS_DIR=../thinkos/tools
+THINKOS=boot/debug/thinkos-0.20
+THINKAPP=app/debug/yard-ice
 
-../../tools/tftp_load.py -q -i -e -r  -a 0x08000000 -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.bin 
+${TOOLS_DIR}/tftp_load.py -q -i -e -a 0x08000000 -h ${JTAGTOOL_ADDR} ${THINKOS}.bin 
+if [ $? == 0 ] ; then
+	${TOOLS_DIR}/tftp_load.py -q -e -r -a 0x08020000 -h ${JTAGTOOL_ADDR} ${THINKAPP}.bin 
+fi
 
 if [ $? == 0 ] ; then
-	../../tools/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf
+	${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${THINKOS}.elf ${THINKAPP}.elf
 fi
 

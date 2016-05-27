@@ -27,12 +27,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <thinkos.h>
 
 #include <netinet/in.h>
 #include <tcpip/tcp.h>
 #include <arpa/telnet.h>
-
-#include <sys/os.h>
 
 #include <sys/dcclog.h>
 #include <trace.h>
@@ -511,7 +510,7 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 	int pos;
 
 	DCC_LOG3(LOG_TRACE, "<%d> len=%d msec=%d", 
-			 __os_thread_self(), len, msec);
+			 thinkos_thread_self(), len, msec);
 
 	/* rx.tail can oly be changed inside this function, it is declared 
 	   as volatile, for performance reasons we read it only once at 

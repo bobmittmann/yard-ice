@@ -30,7 +30,7 @@
 #include <at91sam/at91sam_mc.h>
 #include <at91sam/at91sam_dbgu.h>
 
-#include <sys/os.h>
+#include <thinkos.h>
 
 #include "armice.h"
 #include "target/at91sam7.h"
@@ -988,7 +988,7 @@ int at91sam7_reset(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 	ice_exec(ice,  addr, r, 2);
 
 	/* wait 10ms for the reset to complete. */
-	__os_sleep(10);
+	thinkos_sleep(10);
 
 	return 0;
 }

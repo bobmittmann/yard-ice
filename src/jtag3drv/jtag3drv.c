@@ -69,7 +69,7 @@ int jtag_tck_freq_set(unsigned int tck_freq)
 
 	reg_wr(REG_CKGEN_DIV, div - 2);
 
-	__os_sleep(5);
+	thinkos_sleep(5);
 
 	/* cache the interface tck_freq */
 	jtag3drv.tck_freq = fmain / (div + 2);

@@ -59,7 +59,7 @@ int cmd_relay(FILE * f, int argc, char ** argv)
 				}
 				fprintf(f, "Target relay cycle...\n");
 				if ((err = target_relay(false)) == 0) {
-					__os_sleep(ms);
+					thinkos_sleep(ms);
 					err = target_relay(true);
 				}
 			} else {

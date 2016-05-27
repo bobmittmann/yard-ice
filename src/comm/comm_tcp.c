@@ -33,8 +33,8 @@
 #include <tcpip/tcp.h>
 #include <netinet/in.h>
 #include <time.h>
-#include <sys/os.h>
 #include <trace.h>
+#include <thinkos.h>
 
 #include "jtag_arm.h"
 #include "armice.h"
@@ -116,7 +116,7 @@ void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 	int port = 1001;
 	int n;
 
-	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
+	DCC_LOG1(LOG_TRACE, "<%d>", thinkos_thread_self());
 
 	for (;;) {
 

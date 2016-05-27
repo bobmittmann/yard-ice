@@ -62,7 +62,7 @@ int cmd_power(FILE * f, int argc, char ** argv)
 				}
 				fprintf(f, "Target power cycle...\n");
 				if ((err = target_power_ctl(0)) == 0) {
-					__os_sleep(ms);
+					thinkos_sleep(ms);
 					err = target_power_ctl(1);
 				}
 			} else {

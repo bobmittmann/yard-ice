@@ -33,7 +33,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
-#include <sys/os.h>
+#include <thinkos.h>
 
 #include "jtag_adi.h"
 #include "cm3ice.h"
@@ -685,7 +685,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			rem--;
 			if (rem == (ICE_COMM_RX_BUF_LEN / 2)) {
 				DCC_LOG(LOG_MSG, "DCC notify!");
-				__os_sem_post(comm->rx_sem);
+				thinkos_sem_post(comm->rx_sem);
 			}
 		}
 

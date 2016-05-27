@@ -433,13 +433,13 @@ int main(int argc, char ** argv)
 
 	io_init();
 
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
+
 #ifdef THINKAPP
 	DCC_LOG(LOG_TRACE, " 1. thinkos_udelay_factor().");
 	thinkos_udelay_factor(&udelay_factor);
 #else
-	DCC_LOG_INIT();
-	DCC_LOG_CONNECT();
-
 #ifndef UDELAY_FACTOR 
 	DCC_LOG(LOG_TRACE, " 1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();

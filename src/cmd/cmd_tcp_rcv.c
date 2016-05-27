@@ -229,7 +229,7 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 	rem = TCP_RCV_BUF_LEN;
 	ptr = buf;
 
-	start = __os_ms_ticks();
+	start = thinkos_clock();
 
 //	clock_gettime(CLOCK_REALTIME, &start);
 
@@ -272,7 +272,7 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 	//	ms = ((end.tv_sec - start.tv_sec) * 1000) + 
 	//		((end.tv_nsec - start.tv_nsec) / 1000000);
 
-		ms = (int32_t)(__os_ms_ticks() - start);
+		ms = (int32_t)(thinkos_clock() - start);
 
 		fprintf(f, "\n - EOT: size=%d tm=%d[ms] speed=%d[bytes/sec]\n", 
 				size, ms, (size * 1000) / ms);

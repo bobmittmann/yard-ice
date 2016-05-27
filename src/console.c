@@ -31,11 +31,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <thinkos.h>
 
 #include <sys/console.h>
 #include <sys/tty.h>
 #include <sys/shell.h>
-#include <sys/os.h>
 #include <trace.h>
 
 #include "command.h"

@@ -35,7 +35,7 @@
 #include <at91sam/at91sam_ccfg.h>
 #include <at91sam/at91sam_pio.h>
 
-#include <sys/os.h>
+#include <thinkos.h>
 
 #include "armice.h"
 #include "target/at91sam9.h"
@@ -152,7 +152,7 @@ void at91_sdram_config(const ice_drv_t * ice, int chips, int cols,
 	}
 
 	/* 1. A minimum pause of 200us is provided to precede any signal toggle */
-	__os_sleep(2);
+	thinkos_sleep(2);
 
 	ice_wr32(ice, AT91_BASE_SDRAMC + SDRAMC_MR, SDRAMC_MODE_NOP_CMD);
 	ice_wr32(ice, mem, 0);
@@ -542,7 +542,7 @@ int at91sam9_reset(FILE * f, const struct ice_drv * ice,
 	ice_wr32(ice, AT91_BASE_RSTC + RSTC_CR, 
 			  RSTC_KEY(0xa5) | RSTC_PROCRST);
 
-//	__os_sleep(100);
+//	thinkos_sleep(100);
 
 	return 0;
 }

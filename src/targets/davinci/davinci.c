@@ -25,7 +25,6 @@
 
 #include <crc.h>
 #include <stdlib.h>
-#include <sys/os.h>
 
 #include "target.h"
 #include "armice.h"
