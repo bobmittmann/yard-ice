@@ -300,19 +300,25 @@ static void print_osinfo(struct dmon_comm * comm)
 			 busy / 10, busy % 10, idle / 10, idle % 10);
 #endif
 
-	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %%\r\n");
+	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %% Locks\r\n");
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt->ctx[i] != NULL) {
+			int j;
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
 			tag = (rt->th_inf[i] != NULL) ? rt->th_inf[i]->tag : "...";
 			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
-			dmprintf(comm, "%3d %7s %08x %08x %08x %3d %s %3d.%d\r\n",
+			dmprintf(comm, "%3d %7s %08x %08x %08x %3d %s %3d.%d",
 					 i + 1, tag,
 					 (uint32_t)rt->ctx[i], rt->ctx[i]->lr, rt->ctx[i]->pc, 
 					 rt->th_stat[i] >> 1, rt->th_stat[i] & 1 ? "Yes" : " No",
 					 busy / 10, busy % 10);
+			for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
+				if (rt->lock[j] == i)
+					dmprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
+			}
+			dmprintf(comm, "\r\n");
 		}
 	}
 }

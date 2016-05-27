@@ -926,21 +926,19 @@ static int dbg_status(struct debugger * dbg)
 	int ice_st;
 	int ret;
 
-	DCC_LOG(LOG_MSG, "1.");
+	DCC_LOG(LOG_MSG, "start.");
 
 	if (dbg->state > DBG_ST_UNCONNECTED) {
-
-		DCC_LOG(LOG_MSG, "2.");
 
 		if ((ice_st = ice_status(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "ice_status() failed!");
 			return ice_st;
 		};
 
-		DCC_LOG(LOG_MSG, "3.");
-
 		if (ice_st & ICE_ST_HALT) {
 			if (dbg->state != DBG_ST_HALTED) {
+				DCC_LOG(LOG_MSG, "not halted, stop polling.");
+				poll_stop(dbg);
 				/* deactivate all low level breakpoints ... */
 				if ((ret = dbg_bp_deactivate_all(ice, &dbg->bp_ctrl)) < 0) {
 					DCC_LOG(LOG_WARNING, "dbg_bp_deactivate_all() failed!");
@@ -981,7 +979,7 @@ int target_status(void)
 	int status;
 
 
-	DCC_LOG(LOG_MSG, "try_lock");
+	DCC_LOG1(LOG_MSG, "try_lock(%d)", dbg->busy);
 
 	if (thinkos_mutex_trylock(dbg->busy) < 0) {
 		DCC_LOG(LOG_TRACE, "thinkos_mutex_trylock() failed!");
@@ -990,7 +988,7 @@ int target_status(void)
 
 	status = dbg_status(dbg);
 
-	DCC_LOG(LOG_MSG, ".");
+	DCC_LOG(LOG_JABBER, ".");
 
 	thinkos_mutex_unlock(dbg->busy);
 
