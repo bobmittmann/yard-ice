@@ -143,7 +143,8 @@ struct debugger {
 
 	uint8_t ext_pwr;
 
-	int busy;
+	int target_mutex;
+	int ice_mutex;
 
 	struct mem_range dasm;
 	struct mem_range dump;
@@ -157,11 +158,8 @@ struct debugger {
 	int halt_cond;
 	int poll_cond;
 	int poll_thread;
-	int poll_mutex;
 
 	volatile bool poll_enabled;
-	volatile bool poll_stop_req;
-	volatile bool poll_start_req;
 
 	/* debug communication control */
 	ice_comm_t comm;
