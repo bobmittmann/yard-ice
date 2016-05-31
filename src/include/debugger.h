@@ -220,7 +220,7 @@ int target_reset(FILE * f, int mode);
 
 int target_init(FILE * f);
 
-int target_breakpoint_get(struct dbg_bp * bp, struct dbg_bp ** next);
+int target_breakpoint_next(struct dbg_bp * bp, struct dbg_bp ** next);
 
 int target_breakpoint_set(uint32_t addr, uint32_t size);
 

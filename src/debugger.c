@@ -33,7 +33,7 @@
 #include <ctype.h>
 #include <trace.h>
 
-#define LOG_LEVEL LOG_MSG
+#define LOG_LEVEL LOG_INFO
 #include <sys/dcclog.h>
 
 #include <yard-ice/drv.h>
@@ -943,17 +943,19 @@ int target_status(void)
 	struct debugger * dbg = &debugger;
 	int status;
 
-
 	DCC_LOG1(LOG_MSG, "try_lock(%d)", dbg->target_mutex);
-
 	if (thinkos_mutex_trylock(dbg->target_mutex) < 0) {
-		DCC_LOG(LOG_TRACE, "thinkos_mutex_trylock() failed!");
+		DCC_LOG(LOG_TRACE, "thinkos_mutex_trylock(target) failed!");
 		return DBG_ST_BUSY;
 	}
 
-	status = dbg_status(dbg);
-
-	DCC_LOG(LOG_JABBER, ".");
+	if (thinkos_mutex_trylock(dbg->ice_mutex) < 0) {
+		DCC_LOG(LOG_TRACE, "thinkos_mutex_trylock(ice) failed!");
+		status = dbg->state;
+	} else {
+		status = dbg_status(dbg);
+		thinkos_mutex_unlock(dbg->ice_mutex);
+	}
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -983,7 +985,9 @@ int target_halt_wait(int tmo)
 		}
 	}
 
+	thinkos_mutex_lock(dbg->ice_mutex);
 	status = dbg_status(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1032,14 +1036,12 @@ int target_connect(int force)
 		} else if ((ret = dbg_wp_activate_all(ice, &dbg->wp_ctrl)) < 0) {
 			DCC_LOG(LOG_WARNING, "dbg_wp_activate_all() failed!");
 		} else {
+			dbg_status(dbg);
 			DCC_LOG(LOG_TRACE, "done.");
 		}
 	}
 
 	thinkos_mutex_unlock(dbg->ice_mutex);
-
-	if (ret >= 0)
-		dbg_status(dbg);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1074,6 +1076,7 @@ int target_release(void)
 	}
 
 	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	thinkos_mutex_unlock(dbg->target_mutex);
 
 	return ret;
@@ -1104,7 +1107,6 @@ int target_halt(int method)
 	thinkos_mutex_lock(dbg->ice_mutex);
 	/* request the core to stop */
 	ret = ice_halt_req(ice);
-	thinkos_mutex_unlock(dbg->ice_mutex);
 	
 	/* request the core to stop */
 	if (ret < 0) {
@@ -1115,6 +1117,7 @@ int target_halt(int method)
 		dbg_status(dbg);
 	}
 
+	thinkos_mutex_unlock(dbg->ice_mutex);
 	thinkos_mutex_unlock(dbg->target_mutex);
 
 	return ret;
@@ -1156,12 +1159,10 @@ int target_run(void)
 		   due to a breakpoint befor this functions exit. */
 		dbg->state = DBG_ST_CONNECTED;
 		DCC_LOG(LOG_TRACE, "[DBG_ST_CONNECTED]");
+		dbg_status(dbg);
 	}
 
 	thinkos_mutex_unlock(dbg->ice_mutex);
-
-	if (ret >= 0)
-		dbg_status(dbg);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1328,6 +1329,9 @@ int target_print_insn(FILE * f, uint32_t addr)
 		dinfo.symbol_at_address_func = symbol_at_address;
 		ice_mem_unlock(ice);
 	}
+
+	/* restart polling */
+	poll_start(dbg);
 	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	if (ret >= 0) {
@@ -1335,9 +1339,6 @@ int target_print_insn(FILE * f, uint32_t addr)
 		ret = ice_print_insn(ice, addr, &dinfo);
 		fprintf(f, "\n");
 	}
-
-	/* restart polling */
-	poll_start(dbg);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1557,8 +1558,8 @@ int target_mem_read(uint32_t addr, void * ptr, int len)
 
 	/* stop polling */
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	if ((ret = ice_mem_lock(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
 	} else {
@@ -1567,9 +1568,9 @@ int target_mem_read(uint32_t addr, void * ptr, int len)
 		}
 		ice_mem_unlock(ice);
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1600,8 +1601,8 @@ int target_mem_write(uint32_t addr, const void * ptr, int len)
 
 	/* stop polling */
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	if ((ret = ice_mem_lock(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
 	} else {
@@ -1610,9 +1611,9 @@ int target_mem_write(uint32_t addr, const void * ptr, int len)
 		}
 		ice_mem_unlock(ice);
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 	
@@ -1638,8 +1639,8 @@ int target_mem_erase(uint32_t addr, int len)
 
 	/* stop polling */
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	if ((ret = ice_mem_lock(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
 	} else {
@@ -1648,9 +1649,9 @@ int target_mem_erase(uint32_t addr, int len)
 		}
 		ice_mem_unlock(ice);
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 	
@@ -1682,8 +1683,8 @@ int target_nand_bb_check(uint32_t block)
 
 	/* stop polling */
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	if ((ret = ice_mem_lock(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
 	} else {
@@ -1693,9 +1694,9 @@ int target_nand_bb_check(uint32_t block)
 		}
 		ice_mem_unlock(ice);
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1721,8 +1722,8 @@ int target_nand_block_erase(uint32_t block, bool force)
 
 	/* stop polling */
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	if ((ret = ice_mem_lock(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
 	} else {
@@ -1744,9 +1745,9 @@ int target_nand_block_erase(uint32_t block, bool force)
 
 		ice_mem_unlock(ice);
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1792,7 +1793,7 @@ int target_nand_chip_get(int dev_id, int chip_id, nand_chip_t ** chipp)
  * Breakpoints and Watchpoins
  *****************************************************************************/
 
-int target_breakpoint_get(struct dbg_bp * bp, struct dbg_bp ** next)
+int target_breakpoint_next(struct dbg_bp * bp, struct dbg_bp ** next)
 {
 	struct debugger * dbg = &debugger;
 
@@ -1859,10 +1860,12 @@ int target_breakpoint_set(uint32_t addr, uint32_t size)
 	if (!bp->active) {
 		poll_stop(dbg);
 		thinkos_mutex_lock(dbg->ice_mutex);
+
 		/* activate the hardware break point */
 		dbg_bp_activate(ice, &dbg->bp_ctrl, bp);
-		thinkos_mutex_unlock(dbg->ice_mutex);
+
 		poll_start(dbg);
+		thinkos_mutex_unlock(dbg->ice_mutex);
 	} 
 
 	thinkos_mutex_unlock(dbg->target_mutex);
@@ -1895,9 +1898,11 @@ int target_breakpoint_clear(uint32_t addr, uint32_t size)
 	} else {
 		poll_stop(dbg);
 		thinkos_mutex_lock(dbg->ice_mutex);
+
 		ret = dbg_bp_delete(&dbg->ice, &dbg->bp_ctrl, bp);
-		thinkos_mutex_unlock(dbg->ice_mutex);
+
 		poll_start(dbg);
+		thinkos_mutex_unlock(dbg->ice_mutex);
 	}
 
 	thinkos_mutex_unlock(dbg->target_mutex);
@@ -1936,10 +1941,12 @@ int target_breakpoint_enable(uint32_t addr, uint32_t size)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	/* activate the breakpoint */
 	ret = dbg_bp_activate(&dbg->ice, &dbg->bp_ctrl, bp);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -1974,10 +1981,12 @@ int target_breakpoint_disable(uint32_t addr, uint32_t size)
 	
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	/* deactivate the breakpoint */
 	ret = dbg_bp_deactivate(&dbg->ice, &dbg->bp_ctrl, bp);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	/* disable the breakpoint */
 	bp->enabled = 0;
@@ -2002,9 +2011,11 @@ int target_breakpoint_delete(struct dbg_bp * bp)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = dbg_bp_delete(&dbg->ice, &dbg->bp_ctrl, bp);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -2025,9 +2036,11 @@ int target_breakpoint_all_disable(void)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = dbg_bp_disable_all(&dbg->ice, &dbg->bp_ctrl);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -2049,9 +2062,11 @@ int target_breakpoint_all_enable(void)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = dbg_bp_enable_all(&dbg->ice, &dbg->bp_ctrl);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -2129,10 +2144,12 @@ int target_watchpoint_set(uint32_t addr, uint32_t size)
 	if (!wp->active) {
 		poll_stop(dbg);
 		thinkos_mutex_lock(dbg->ice_mutex);
+
 		/* activate the hardware watch point */
 		dbg_wp_activate(ice, &dbg->wp_ctrl, wp);
-		thinkos_mutex_unlock(dbg->ice_mutex);
+
 		poll_start(dbg);
+		thinkos_mutex_unlock(dbg->ice_mutex);
 	} 
 
 	thinkos_mutex_unlock(dbg->target_mutex);
@@ -2165,9 +2182,11 @@ int target_watchpoint_clear(uint32_t addr, uint32_t size)
 	} else {
 		poll_stop(dbg);
 		thinkos_mutex_lock(dbg->ice_mutex);
+
 		ret = dbg_wp_delete(&dbg->ice, &dbg->wp_ctrl, wp);
-		thinkos_mutex_unlock(dbg->ice_mutex);
+
 		poll_start(dbg);
+		thinkos_mutex_unlock(dbg->ice_mutex);
 	}
 
 	thinkos_mutex_unlock(dbg->target_mutex);
@@ -2206,10 +2225,12 @@ int target_watchpoint_enable(uint32_t addr, uint32_t size)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	/* activate the watchpoint */
 	ret = dbg_wp_activate(&dbg->ice, &dbg->wp_ctrl, wp);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -2244,10 +2265,12 @@ int target_watchpoint_disable(uint32_t addr, uint32_t size)
 	
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	/* deactivate the watchpoint */
 	ret = dbg_wp_deactivate(&dbg->ice, &dbg->wp_ctrl, wp);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	/* disable the watchpoint */
 	wp->enabled = 0;
@@ -2273,9 +2296,11 @@ int target_watchpoint_delete(struct dbg_wp * wp)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = dbg_wp_delete(&dbg->ice, &dbg->wp_ctrl, wp);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -2296,9 +2321,11 @@ int target_watchpoint_all_disable(void)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = dbg_wp_disable_all(&dbg->ice, &dbg->wp_ctrl);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -2320,9 +2347,11 @@ int target_watchpoint_all_enable(void)
 
 	poll_stop(dbg);
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = dbg_wp_enable_all(&dbg->ice, &dbg->wp_ctrl);
-	thinkos_mutex_unlock(dbg->ice_mutex);
+
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -2346,6 +2375,7 @@ int target_reset(FILE * f, int mode)
 		mode = target->reset_mode;
 
 	poll_stop(dbg);
+	thinkos_mutex_lock(dbg->ice_mutex);
 
 	if (mode == RST_HARD)  {
 		if (dbg->state >= DBG_ST_CONNECTED) {
@@ -2361,12 +2391,14 @@ int target_reset(FILE * f, int mode)
 	} else if (mode == RST_SOFT) {
 		if (dbg->state < DBG_ST_CONNECTED) {
 			DCC_LOG(LOG_WARNING, "invalid state"); 
+
+			poll_start(dbg);
+			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return ERR_STATE;
 		}
 	}
 
-	thinkos_mutex_lock(dbg->ice_mutex);
 	switch (mode) {
 	case RST_SOFT:
 		fprintf(f, " - software reset...\n");
@@ -2416,11 +2448,11 @@ int target_reset(FILE * f, int mode)
 			dbg->state = DBG_ST_HALTED;
 		} else {
 			DCC_LOG(LOG_TRACE, "[DBG_ST_RUNNING], start polling...");
-			poll_start(dbg);
 			dbg->state = DBG_ST_RUNNING;
 		}
 	}
 
+	poll_start(dbg);
 	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
@@ -2447,7 +2479,6 @@ int target_init(FILE * f)
 	}
 
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
 
 	if (dbg->target->clk_slow_on_connect) {
@@ -2476,10 +2507,10 @@ int target_init(FILE * f)
 		dbg->state = DBG_ST_HALTED;
 	} else {
 		DCC_LOG(LOG_TRACE, "[DBG_ST_RUNNING], start polling...");
-		poll_start(dbg);
 		dbg->state = DBG_ST_RUNNING;
 	}
 
+	poll_start(dbg);
 	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
@@ -3197,10 +3228,9 @@ int target_ice_test(FILE * f, uint32_t req, uint32_t argc, uint32_t argv[])
 
 	/* stop polling */
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = ice_test(ice, f, req, argc, argv);
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	if (dbg->state > DBG_ST_CONNECTED) {
 		/* force a status update */
@@ -3209,6 +3239,7 @@ int target_ice_test(FILE * f, uint32_t req, uint32_t argc, uint32_t argv[])
 	}
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -3227,12 +3258,12 @@ int target_ice_info(FILE * f, uint32_t which)
 
 	/* stop polling */
 	poll_stop(dbg);
-
 	thinkos_mutex_lock(dbg->ice_mutex);
+
 	ret = ice_info(ice, f, which);
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
@@ -3376,6 +3407,7 @@ void debugger_init(void)
 	dbg->transf.size = 64 * 1024;
 
 	dbg->ice_mutex = thinkos_mutex_alloc();
+	DCC_LOG1(LOG_TRACE, "debugger ice_mutex mutex: %d", dbg->ice_mutex);
 
 	/* FIXME: the dcc semaphore must be created/destroyed in the
 	   TAP sctructure */
@@ -3405,10 +3437,12 @@ int target_enable_ice_poll(bool flag)
 	thinkos_mutex_lock(dbg->target_mutex);
 
 	poll_stop(dbg);
+	thinkos_mutex_lock(dbg->ice_mutex);
 
 	dbg->cfg.enable_ice_polling = flag;
 
 	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 

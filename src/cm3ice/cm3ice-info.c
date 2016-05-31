@@ -33,6 +33,8 @@
 #include "cm3ice.h"
 #include "dbglog.h"
 #include "hexdump.h"
+#include "arm-fpb.h"
+#include "arm-dwt.h"
 
 void print_stat(FILE * f, uint32_t stat)
 {
@@ -640,17 +642,166 @@ void cm3_vc_disable(FILE * f, jtag_tap_t * tap)
 }
 
 
+/* Instrumentation Trace Macrocell */
+#define ARMV7M_ITM_ADDR 0xe0000000
+/* Data Watchpoint and Trace */
+#define ARMV7M_DWT_ADDR 0xe0001000
+/* Flash Patch and Breakpoint */
+#define ARMV7M_FPB_ADDR 0xe0002000
+/* System Control Space */
+#define ARMV7M_SCS_ADDR 0xe000ed00
+/*   System Control Block */
+#define ARMV7M_SCB_ADDR 0xe000ed00
+/*   Debug Control Block */
+#define ARMV7M_DCB_ADDR 0xe000edf0
+/* Trace Port Interface Unit */
+#define ARMV7M_TPIU_ADDR 0xe0040000
+/* Embedded Trace Macrocell  */
+#define ARMV7M_ETM_ADDR 0xe0041000
 
-int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which)
+#define FP_CTRL_OFFS  0x00000000 /* FlashPatch Control Register */
+#define FP_REMAP_OFFS 0x00000004 /* FlashPatch Remap register */
+#define FP_COMP0_OFFS 0x00000008 /* FlashPatch Comparator register 0 */
+#define FP_LSR_OFFS   0x00000fb4 /*  */
+void fpb_info(FILE * f, jtag_tap_t * tap)
+{
+	uint32_t ctrl;
+	uint32_t remap;
+	uint32_t lsr;
+	int i;
+
+	fprintf(f, "- FPB (Flash Patch and Breakpoint):\n");
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_FPB_ADDR + FP_CTRL_OFFS, 
+						 &ctrl) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_FPB_ADDR + FP_REMAP_OFFS, 
+						 &remap) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_FPB_ADDR + FP_LSR_OFFS, 
+						 &lsr) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+
+	fprintf(f, " *  CTRL = 0x%08x\n", ctrl);
+	fprintf(f, " * REMAP = 0x%08x\n", remap);
+	fprintf(f, " *   LSR = 0x%08x\n", lsr);
+
+	fprintf(f, "   ID       COMP TYPE\n");
+	for (i = 0; i < FP_NUM_CODE(ctrl) + FP_NUM_LIT(ctrl); ++i) {
+		uint32_t comp;
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_FPB_ADDR + FP_COMP0_OFFS + 4 * i, 
+							 &comp) != JTAG_ADI_ACK_OK_FAULT)
+			return;
+		fprintf(f, "   %2d 0x%08x %s\n", i, comp, 
+				i < FP_NUM_CODE(ctrl) ? "code" : "literal" );
+	}
+}
+
+#define DWT_CTRL_OFFS     0
+#define DWT_CYCCNT_OFFS   4
+#define DWT_CPICNT_OFFS   8
+#define DWT_EXCCNT_OFFS   12
+#define DWT_SLEEPCNT_OFFS 16 
+#define DWT_LSUCNT_OFFS   20
+#define DWT_FOLDCNT_OFFS  24 
+#define DWT_PCSR_OFFS     28
+#define DWT_COMP0_OFFS    32
+
+#define COMP_OFFS 0
+#define MASK_OFFS 4
+#define FUNC_OFFS 8
+void dwt_info(FILE * f, jtag_tap_t * tap)
+{
+	uint32_t ctrl; /* RW - Control Register */
+	uint32_t cyccnt; /* RW -Cycle Count Register */
+	uint32_t cpicnt; /* RW - CPI Count Register */
+	uint32_t exccnt; /* RW - Exception Overhead Count Register */
+	uint32_t sleepcnt; /* RW - Sleep Count Register */
+	uint32_t lsucnt; /* RW - LSU Count Register */
+	uint32_t foldcnt; /* RW - Folded-instruction Count Register */
+	uint32_t pcsr; /* RO - Program Counter Sample Register */
+	int i;
+
+	fprintf(f, "- DWT (Data Watchpoint and Trace Unit):\n");
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_CTRL_OFFS, 
+						 &ctrl) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_CYCCNT_OFFS, 
+						 &cyccnt) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_CPICNT_OFFS, 
+						 &cpicnt ) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_EXCCNT_OFFS, 
+						 &exccnt) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_SLEEPCNT_OFFS, 
+						 &sleepcnt) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_LSUCNT_OFFS, 
+						 &lsucnt) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_FOLDCNT_OFFS, 
+						 &foldcnt) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DWT_ADDR + DWT_PCSR_OFFS, 
+						 &pcsr) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+	fprintf(f, " *     CTRL = 0x%08x\n", ctrl);
+	fprintf(f, " *   CYCCNT = 0x%08x\n", cyccnt);
+	fprintf(f, " *   CPICNT = 0x%08x\n", cpicnt );
+	fprintf(f, " *   EXCCNT = 0x%08x\n", exccnt);
+	fprintf(f, " * SLEEPCNT = 0x%08x\n", sleepcnt);
+	fprintf(f, " *   LSUCNT = 0x%08x\n", lsucnt);
+	fprintf(f, " *  FOLDCNT = 0x%08x\n", foldcnt);
+	fprintf(f, " *     PCSR = 0x%08x\n", pcsr);
+	fprintf(f, "   ID       COMP       MASK       FUNC\n");
+	
+	for (i = 0; i < DWT_NUMCOMP(ctrl); ++i) {
+		uint32_t base;
+		uint32_t comp;
+		uint32_t mask;
+		uint32_t func;
+
+		base = ARMV7M_DWT_ADDR + DWT_COMP0_OFFS + 16 * i;
+		/* Reset the function register */
+		if (jtag_mem_ap_rd32(tap, base + COMP_OFFS, 
+							 &comp) != JTAG_ADI_ACK_OK_FAULT) {
+			return;
+		}
+		if (jtag_mem_ap_rd32(tap, base + MASK_OFFS, 
+							 &mask) != JTAG_ADI_ACK_OK_FAULT) {
+			return;
+		}
+		if (jtag_mem_ap_rd32(tap, base + FUNC_OFFS, 
+							 &func) != JTAG_ADI_ACK_OK_FAULT) {
+			return;
+		}
+		fprintf(f, "   %2d 0x%08x 0x%08x 0x%08x\n", i, comp, mask, func);
+	}
+}
+
+void mpu_info(FILE * f, jtag_tap_t * tap)
+{
+	fprintf(f, "- MPU (Memory Protection Unit):\n");
+}
+
+int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, unsigned int which)
 {
 	jtag_tap_t * tap = ctrl->tap;
 	DCC_LOG1(LOG_TRACE, "which=%d", which);
 
 	switch(which) {
 	case 1:
-		mem_ap_info(f, tap);
+		dp_stickyerr_check(f, tap);
+		csb_misc_info(f, tap);
+		debug_info(f, tap);
+		fault_info(f, tap);
 		break;
 	case 2:
+		mem_ap_info(f, tap);
 		dap_info(f, tap);
 		break;
 	case 3:
@@ -663,17 +814,32 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which)
 		fault_info(f, tap);
 		break;
 	case 6:
-		cm3_vc_enable(f, tap);
+		fpb_info(f, tap);
 		break;
 	case 7:
+		dwt_info(f, tap);
+		break;
+	case 8:
+		mpu_info(f, tap);
+		break;
+	case 10:
 		cm3_vc_disable(f, tap);
+		break;
+	case 11:
+		cm3_vc_enable(f, tap);
 		break;
 	default:
 		fprintf(f, "== Cortex M3 ICE ==\n");
-		dp_stickyerr_check(f, tap);
-		csb_misc_info(f, tap);
-		debug_info(f, tap);
-		fault_info(f, tap);
+		fprintf(f, "1 - CSB\n");
+		fprintf(f, "2 - DBG/AP MEM/AP\n");
+		fprintf(f, "3 - CPUID\n");
+		fprintf(f, "4 - Debug status\n");
+		fprintf(f, "5 - Fault status\n");
+		fprintf(f, "6 - FPB\n");
+		fprintf(f, "7 - DWT\n");
+		fprintf(f, "8 - MPU\n");
+		fprintf(f, "9 - VC enable/disable\n");
+		break;
 	}
 
 #if 0
