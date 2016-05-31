@@ -145,6 +145,14 @@ void rtc_init(void)
 FILE * volatile spv_fout;
 volatile bool spv_auto_flush = false;
 
+void trace_output_set(FILE * f, bool flush)
+{
+	WARN("trace output set to 0x%08x", f);
+
+	spv_fout = f;
+	spv_auto_flush = flush;
+}
+
 void __attribute__((noreturn)) supervisor_task(void)
 {
 	struct trace_entry trace;
