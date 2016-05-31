@@ -1181,7 +1181,6 @@ int target_run(void)
 
 	thinkos_mutex_unlock(dbg->ice_mutex);
 
-	}
 	thinkos_mutex_unlock(dbg->target_mutex);
 
 	return ret;

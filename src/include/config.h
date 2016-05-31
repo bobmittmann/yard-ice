@@ -30,26 +30,21 @@
    ThinkOS configuration
    -------------------------------------------------------------------------- */
 
-#define THINKOS_IRQ_MAX                 80
-#define THINKOS_ENABLE_IRQ_CTL          1
-
-#define THINKOS_ENABLE_IDLE_WFI         1
-#define THINKOS_IDLE_STACK_BSS          0
-#define THINKOS_IDLE_STACK_ALLOC        1
-
-#define THINKOS_ENABLE_CLOCK            1
-
-#define THINKOS_ENABLE_TIMESHARE        0
-#define THINKOS_SCHED_LIMIT_MAX         32
-#define THINKOS_SCHED_LIMIT_MIN         1
-
 #define THINKOS_THREADS_MAX             20
 #define THINKOS_ENABLE_THREAD_ALLOC     1
+#define THINKOS_ENABLE_THREAD_INFO      1
+#define THINKOS_ENABLE_THREAD_STAT      1
 
 #define THINKOS_ENABLE_JOIN             0
 #define THINKOS_ENABLE_PAUSE            0
 #define THINKOS_ENABLE_CANCEL           0
 #define THINKOS_ENABLE_EXIT             0
+#define THINKOS_ENABLE_TERMINATE        0
+#define THINKOS_ENABLE_BREAK            0
+
+#define THINKOS_ENABLE_TIMESHARE        0
+#define THINKOS_SCHED_LIMIT_MAX         32
+#define THINKOS_SCHED_LIMIT_MIN         1
 
 #define THINKOS_MUTEX_MAX               16
 #define THINKOS_ENABLE_MUTEX_ALLOC      1
@@ -70,58 +65,63 @@
 #define THINKOS_GATE_MAX                16
 #define THINKOS_ENABLE_GATE_ALLOC       1
 
-#define THINKOS_ENABLE_THREAD_STAT      1
 #define THINKOS_ENABLE_TIMED_CALLS      1
+#define THINKOS_ENABLE_CLOCK            1
+#define THINKOS_ENABLE_ALARM            1
+#define THINKOS_ENABLE_SLEEP            1
+
+#define THINKOS_ENABLE_CTL              0
+
+#define THINKOS_ENABLE_PREEMPTION       1
+#define THINKOS_ENABLE_CRITICAL         0
+#define THINKOS_ENABLE_ESCALATE         0
+
+#define THINKOS_IRQ_MAX                 80
+#define THINKOS_ENABLE_IRQ_CTL          1
+
+#define THINKOS_ENABLE_CONSOLE          1
+#define THINKOS_ENABLE_COMM             0
+
+#define THINKOS_ENABLE_MPU              0
+#define THINKOS_ENABLE_FPU              0
+
+#define THINKOS_ENABLE_PROFILING        1
 
 #define THINKOS_ENABLE_ARG_CHECK        0
 #define THINKOS_ENABLE_DEADLOCK_CHECK   0
 #define THINKOS_ENABLE_SANITY_CHECK     0
 
-#define THINKOS_ENABLE_CTL              0
-#define THINKOS_ENABLE_CRITICAL         0
-
-#define THINKOS_ENABLE_SCHED_DEBUG      0
-
-#define THINKOS_ENABLE_RT_DEBUG         0
-
-#define THINKOS_ENABLE_BREAK            0
-
-#define THINKOS_ENABLE_PROFILING        1
-
-#define THINKOS_ENABLE_MONITOR          1
-#define THINKOS_ENABLE_DMCLOCK          1
-
-#define THINKOS_ENABLE_CONSOLE          1
-
-#define THINKOS_EXCEPT_STACK_SIZE       320
 #define THINKOS_ENABLE_EXCEPTIONS       0
 #define THINKOS_UNROLL_EXCEPTIONS       0
 #define THINKOS_ENABLE_EXCEPT_CLEAR     0
+#define THINKOS_STDERR_FAULT_DUMP       0
 #define THINKOS_ENABLE_BUSFAULT         0
 #define THINKOS_ENABLE_USAGEFAULT       0
 #define THINKOS_ENABLE_MEMFAULT         0
+#define THINKOS_ENABLE_HARDFAULT        0
+#define THINKOS_ENABLE_ERROR_TRAP       0
 #define THINKOS_SYSRST_ONFAULT          0
-#define THINKOS_STDERR_FAULT_DUMP       0
+
+#define THINKOS_EXCEPT_STACK_SIZE       320
+
+#define THINKOS_ENABLE_MONITOR          1
+#define THINKOS_ENABLE_DMCLOCK          1
+#define THINKOS_ENABLE_DEBUG_STEP       0
 #define THINKOS_ENABLE_DEBUG_BKPT       0
 #define THINKOS_ENABLE_DEBUG_WPT        0
-#define THINKOS_ENABLE_DEBUG_STEP       0
 #define THINKOS_ENABLE_DEBUG_FAULT      0
-#define THINKOS_ENABLE_ERROR_TRAP       0
 
-#define THINKOS_ENABLE_MPU              0
-#define THINKOS_ENABLE_ESCALATE         0
-#define THINKOS_ENABLE_FPU              0
-
+#define THINKOS_ENABLE_STACK_INIT       0
 #define THINKOS_ENABLE_THREAD_VOID      0
-#define THINKOS_ENABLE_PREEMPTION       1
-
-#define THINKOS_DBGMON_STACK_SIZE       320
-
-#define THINKOS_ENABLE_STACK_INIT       1
+#define THINKOS_ENABLE_IDLE_WFI         1
+#define THINKOS_IDLE_STACK_BSS          1
+#define THINKOS_IDLE_STACK_ALLOC        0
 
 #define THINKOS_ASM_SCHEDULER           1
-
 #define THINKOS_ENABLE_OFAST            0
+
+#define THINKOS_ENABLE_SCHED_DEBUG      0
+#define THINKOS_ENABLE_RT_DEBUG         0
 
 #define THINKOS_DBGMON_ENABLE_RST_VEC   0 
 #define THINKOS_DBGMON_ENABLE_FLOWCTL   0 
