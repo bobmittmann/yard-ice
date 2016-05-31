@@ -58,7 +58,7 @@ int cmd_breakpoint(FILE * f, int argc, char ** argv)
 	if (argc == 0) {
 		n = 1;
 		fprintf(f, "  # | E | A | HW |       Addr |     Size |\n");
-		while (target_breakpoint_get(bp, &bp) == 0) {
+		while (target_breakpoint_next(bp, &bp) == 0) {
 			fprintf(f, " %2d | %c | %c | %2d | 0x%08x | %8d |\n", 
 					n++, 
 					bp->enabled ? '*' : ' ', 
@@ -95,7 +95,7 @@ int cmd_breakpoint(FILE * f, int argc, char ** argv)
 		if (argc > 0)
 			return bp_usage(f, "too many arguments", cmd);
 
-		while (target_breakpoint_get(bp, &bp) == 0)
+		while (target_breakpoint_next(bp, &bp) == 0)
 			action(bp->addr, bp->size);
 
 		return 0;

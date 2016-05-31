@@ -91,7 +91,11 @@ struct magic {
 #endif
 
 #ifndef MONITOR_PAUSE_ENABLE
-#define MONITOR_PAUSE_ENABLE       1
+#define MONITOR_PAUSE_ENABLE       0
+#endif
+
+#ifndef MONITOR_STACKUSAGE_ENABLE
+#define MONITOR_STACKUSAGE_ENABLE  0
 #endif
 
 #define APPLICATION_BLOCK_OFFS 0x00020000
@@ -256,6 +260,8 @@ static void app_erase(struct dmon_comm * comm,
 #define CYCCNT_MAX ((THINKOS_THREADS_MAX) + 1)
 #endif
 
+int __scan_stack(void * stack, unsigned int size);
+
 static void print_osinfo(struct dmon_comm * comm)
 {
 	struct thinkos_rt * rt = &thinkos_rt;
@@ -300,25 +306,42 @@ static void print_osinfo(struct dmon_comm * comm)
 			 busy / 10, busy % 10, idle / 10, idle % 10);
 #endif
 
-	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %% Locks\r\n");
+#if (MONITOR_STACKUSAGE_ENABLE)
+	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %% Stack Locks\r\n");
+#else
+	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %%\r\n");
+#endif
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt->ctx[i] != NULL) {
+#if (MONITOR_LOCKINFO_ENABLE)
 			int j;
+#endif
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
 			tag = (rt->th_inf[i] != NULL) ? rt->th_inf[i]->tag : "...";
 			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
+#if (MONITOR_LOCKINFO_ENABLE)
 			dmprintf(comm, "%3d %7s %08x %08x %08x %3d %s %3d.%d",
+#else
+			dmprintf(comm, "%3d %7s %08x %08x %08x %3d %s %3d.%d\r\n",
+#endif
 					 i + 1, tag,
 					 (uint32_t)rt->ctx[i], rt->ctx[i]->lr, rt->ctx[i]->pc, 
 					 rt->th_stat[i] >> 1, rt->th_stat[i] & 1 ? "Yes" : " No",
 					 busy / 10, busy % 10);
+
+#if (MONITOR_STACKUSAGE_ENABLE)
+			dmprintf(comm, " %5d", __scan_stack(rt->th_inf[i]->stack_ptr, 
+												rt->th_inf[i]->stack_size));
+#endif
+#if (MONITOR_LOCKINFO_ENABLE)
 			for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
 				if (rt->lock[j] == i)
 					dmprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
 			}
 			dmprintf(comm, "\r\n");
+#endif
 		}
 	}
 }

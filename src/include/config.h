@@ -117,7 +117,7 @@
 
 #define THINKOS_DBGMON_STACK_SIZE       320
 
-#define THINKOS_ENABLE_STACK_INIT       0
+#define THINKOS_ENABLE_STACK_INIT       1
 
 #define THINKOS_ASM_SCHEDULER           1
 
