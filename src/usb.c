@@ -95,6 +95,8 @@ const uint8_t * const cdc_acm_str[] = {
 
 const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
 
+void trace_output_set(FILE * f, bool flush);
+
 int usb_task(void * arg)
 {
 	uint64_t  esn = *((uint64_t *)STM32F_UID);
@@ -114,6 +116,10 @@ int usb_task(void * arg)
 	f_tty = tty_fopen(tty);
 
 	for (;;) {
+		usb_cdc_dte_wait(cdc);
+
+		trace_output_set(f_tty, true);
+
 		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
 	}
 }

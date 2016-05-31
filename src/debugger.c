@@ -824,17 +824,23 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 			DCC_LOG(LOG_TRACE, "cond wait .........");
 			thinkos_cond_wait(dbg->poll_cond, dbg->ice_mutex);
 		}
+		INF("ICE poll start!");
 
 		ice_st = ice_poll(ice, &dbg->comm);
 
-		dbg->poll_enabled = false;
+		if (!dbg->poll_enabled) {
+			INF("ICE poll stop!");
+		} else
+			dbg->poll_enabled = false;
 
 		if (ice_st & ICE_ST_HALT) {
+			INF("ICE break!!!!");
 			DCC_LOG(LOG_TRACE, "break!!!!");
 			thinkos_cond_broadcast(dbg->halt_cond);
 		}
 
 		if (ice_st & ICE_ST_FAULT) {
+			INF("ICE fault!!!!");
 			DCC_LOG(LOG_WARNING, "fault!!!!");
 		}
 	}
@@ -897,10 +903,12 @@ static int dbg_status(struct debugger * dbg)
 
 		if ((ice_st = ice_status(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "ice_status() failed!");
+			WARN("ice_status() failed!");
 			return ice_st;
 		};
 
 		if (ice_st & ICE_ST_HALT) {
+			INF("ice_status() halted!");
 			if (dbg->state != DBG_ST_HALTED) {
 				DCC_LOG(LOG_MSG, "not halted, stop polling.");
 				poll_stop(dbg);
@@ -918,6 +926,7 @@ static int dbg_status(struct debugger * dbg)
 				DCC_LOG(LOG_MSG, "already halted do nothing ...");
 			}
 		} else {
+			INF("ice_status() running!");
 			if (dbg->state != DBG_ST_RUNNING) {
 				DCC_LOG(LOG_MSG, "[DBG_ST_RUNNING], start polling...");
 				dbg->state = DBG_ST_RUNNING;
@@ -928,6 +937,7 @@ static int dbg_status(struct debugger * dbg)
 		}
 
 	} else {
+		WARN("unconnected!");
 		DCC_LOG(LOG_MSG, "unconnected!");
 	}
 
@@ -1041,6 +1051,8 @@ int target_connect(int force)
 	if (ret >= 0)
 		dbg_status(dbg);
 
+	INF("target connected!");
+
 	thinkos_mutex_unlock(dbg->target_mutex);
 
 	return ret;
@@ -1072,6 +1084,8 @@ int target_release(void)
 		dbg->state = DBG_ST_UNCONNECTED;
 		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
 	}
+
+	INF("target disconnected!");
 
 	thinkos_mutex_unlock(dbg->ice_mutex);
 	thinkos_mutex_unlock(dbg->target_mutex);
@@ -1132,11 +1146,13 @@ int target_run(void)
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
+		WARN("invalid state!"); 
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_STATE;
 	}
 
 	if (dbg->state == DBG_ST_RUNNING) {
+		WARN("running!"); 
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return OK;
 	}
@@ -1155,13 +1171,15 @@ int target_run(void)
 		/* set the state as CONNECTED. The core may stop
 		   due to a breakpoint befor this functions exit. */
 		dbg->state = DBG_ST_CONNECTED;
+		INF("run: [CONNECTED]"); 
 		DCC_LOG(LOG_TRACE, "[DBG_ST_CONNECTED]");
 	}
 
 	thinkos_mutex_unlock(dbg->ice_mutex);
 
-	if (ret >= 0)
+	if (ret >= 0) {
 		dbg_status(dbg);
+	}
 
 	thinkos_mutex_unlock(dbg->target_mutex);
 
