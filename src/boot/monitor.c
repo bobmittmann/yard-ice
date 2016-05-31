@@ -91,7 +91,11 @@ struct magic {
 #endif
 
 #ifndef MONITOR_PAUSE_ENABLE
-#define MONITOR_PAUSE_ENABLE       0
+#define MONITOR_PAUSE_ENABLE       1
+#endif
+
+#ifndef MONITOR_LOCKINFO_ENABLE
+#define MONITOR_LOCKINFO_ENABLE    0
 #endif
 
 #ifndef MONITOR_STACKUSAGE_ENABLE
