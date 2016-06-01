@@ -2,7 +2,7 @@
 
 JTAGTOOL_ADDR=192.168.10.50
 TOOLS_DIR=../thinkos/tools
-THINKOS=boot/debug/thinkos-0.20
+THINKOS=boot/debug/thinkos-0.21
 THINKAPP=app/debug/yard-ice
 
 ${TOOLS_DIR}/tftp_load.py -q -i -e -a 0x08000000 -h ${JTAGTOOL_ADDR} ${THINKOS}.bin 
