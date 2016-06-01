@@ -95,7 +95,7 @@ struct magic {
 #endif
 
 #ifndef MONITOR_LOCKINFO_ENABLE
-#define MONITOR_LOCKINFO_ENABLE    0
+#define MONITOR_LOCKINFO_ENABLE    1
 #endif
 
 #ifndef MONITOR_STACKUSAGE_ENABLE
@@ -313,7 +313,11 @@ static void print_osinfo(struct dmon_comm * comm)
 #if (MONITOR_STACKUSAGE_ENABLE)
 	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %% Stack Locks\r\n");
 #else
+#if (MONITOR_LOCKINFO_ENABLE)
+	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %% Locks\r\n");
+#else
 	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW CPU %%\r\n");
+#endif
 #endif
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
@@ -495,6 +499,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint8_t * ptr;
 	int cnt;
 
+	DCC_LOG(LOG_TRACE, "dbgmon_wait_idle()...");
 	dbgmon_wait_idle();
 
 	if (board_autoboot()) {

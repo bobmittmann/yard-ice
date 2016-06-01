@@ -51,6 +51,13 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
+	{
+		int i;
+
+		for(i = 0; i < 16; ++i)
+			DCC_LOG1(LOG_TRACE, "%d.", i);
+	}
+
 #ifndef UDELAY_FACTOR 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
@@ -68,24 +75,27 @@ int main(int argc, char ** argv)
 	board_init();
 
 	/* Wait for the other power supply and subsystems to stabilize */
+	DCC_LOG(LOG_TRACE, "5. thinkos_sleep().");
 	thinkos_sleep(64);
 
-	DCC_LOG(LOG_TRACE, "5. thinkos_console_init()");
+	DCC_LOG(LOG_TRACE, "6. thinkos_console_init()");
 	thinkos_console_init();
 
-	DCC_LOG(LOG_TRACE, "6. usb_comm_init()");
+	DCC_LOG(LOG_TRACE, "7. usb_comm_init()");
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-	DCC_LOG(LOG_TRACE, "7. thinkos_dbgmon_init()");
+	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon_init()");
 	thinkos_dbgmon_init(comm, monitor_task);
 
 #if THINKOS_ENABLE_MPU
-	DCC_LOG(LOG_TRACE, "8. thinkos_userland()");
+	DCC_LOG(LOG_TRACE, "9. thinkos_userland()");
 	thinkos_userland();
 #endif
 
-	DCC_LOG(LOG_TRACE, "9. thinkos_thread_abort()");
+	DCC_LOG(LOG_TRACE, "10. thinkos_thread_abort()");
 	thinkos_thread_abort(0);
+
+	DCC_LOG(LOG_ERROR, "11. unreachable code reched!!!");
 
 	return 0;
 }

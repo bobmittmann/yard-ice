@@ -91,3 +91,12 @@ bool board_autoboot(void)
 	return stm32_gpio_stat(IO_UART5_TX) ? true : false;
 }
 
+#if 0
+/* Reset on exception */
+void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+{
+	__tdump();
+	cm3_sysrst();
+}
+#endif
+

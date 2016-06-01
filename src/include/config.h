@@ -30,7 +30,7 @@
    ThinkOS configuration
    -------------------------------------------------------------------------- */
 
-#define THINKOS_THREADS_MAX             20
+#define THINKOS_THREADS_MAX             32
 #define THINKOS_ENABLE_THREAD_ALLOC     1
 #define THINKOS_ENABLE_THREAD_INFO      1
 #define THINKOS_ENABLE_THREAD_STAT      1
@@ -39,7 +39,7 @@
 #define THINKOS_ENABLE_PAUSE            0
 #define THINKOS_ENABLE_CANCEL           0
 #define THINKOS_ENABLE_EXIT             0
-#define THINKOS_ENABLE_TERMINATE        0
+#define THINKOS_ENABLE_TERMINATE        1
 #define THINKOS_ENABLE_BREAK            0
 
 #define THINKOS_ENABLE_TIMESHARE        0
@@ -123,6 +123,7 @@
 #define THINKOS_ENABLE_SCHED_DEBUG      0
 #define THINKOS_ENABLE_RT_DEBUG         0
 
+#define THINKOS_DBGMON_STACK_SIZE       360
 #define THINKOS_DBGMON_ENABLE_RST_VEC   0 
 #define THINKOS_DBGMON_ENABLE_FLOWCTL   0 
 #define THINKOS_DBGMON_ENABLE_IRQ_MGMT  0 
