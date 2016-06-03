@@ -574,10 +574,12 @@ int main(int argc, char ** argv)
 	telnet_shell();
 #endif
 
-	thinkos_sleep(250);
+	for (;;) {
+		thinkos_sleep(250);
 
-	DCC_LOG(LOG_TRACE, "25. stdio_shell().");
-	stdio_shell();
+		DCC_LOG(LOG_TRACE, "25. stdio_shell().");
+		stdio_shell();
+	}
 
 	return 0;
 }
