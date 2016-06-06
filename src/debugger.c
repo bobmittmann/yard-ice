@@ -2422,6 +2422,7 @@ int target_reset(FILE * f, int mode)
 	case RST_SOFT:
 		fprintf(f, " - software reset...\n");
 		DCC_LOG(LOG_TRACE, "software reset...");
+		INF("soft reset...");
 		if ((ret = soft_reset(f, ice, dbg->target, dbg->mem)) < 0) {
 			DCC_LOG(LOG_WARNING, "software reset failed!");
 			/* XXX: ERROR */
@@ -2430,6 +2431,7 @@ int target_reset(FILE * f, int mode)
 	case RST_HARD:
 		fprintf(f, " - hardware reset...\n");
 		DCC_LOG(LOG_TRACE, "hardware reset...");
+		INF("hard reset...");
 		if ((ret = hw_reset(ice, target)) < 0) {
 			DCC_LOG(LOG_WARNING, "hardware reset failed!");
 		}
@@ -2437,6 +2439,7 @@ int target_reset(FILE * f, int mode)
 	case RST_CORE:
 		fprintf(f, " - core reset...\n");
 		DCC_LOG(LOG_TRACE, "core reset...");
+		INF("core reset...");
 		if ((ret = ice_core_reset(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "core reset failed!");
 		}
@@ -2444,6 +2447,7 @@ int target_reset(FILE * f, int mode)
 	case RST_SYS:
 		fprintf(f, " - system reset...\n");
 		DCC_LOG(LOG_TRACE, "system reset...");
+		INF("system reset...");
 		if ((ret = ice_system_reset(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "system reset failed!");
 		}
@@ -2451,6 +2455,7 @@ int target_reset(FILE * f, int mode)
 	case RST_DBG:
 		fprintf(f, " - debug reset...\n");
 		DCC_LOG(LOG_TRACE, "debug reset...");
+		INF("debug reset...");
 		if ((ret = dbg_reset(ice, target)) < 0) {
 			DCC_LOG(LOG_WARNING, "debug reset failed!");
 		}
@@ -2639,6 +2644,8 @@ int target_nrst(unsigned int mode, unsigned int ms)
 		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
 	}
 
+	INF("nRST");
+
 	switch (mode) {
 	case 0:
 		ret = jtag_nrst(0);
@@ -2668,6 +2675,8 @@ int target_tap_reset(void)
 	thinkos_mutex_lock(dbg->target_mutex);
 
 	thinkos_mutex_lock(dbg->ice_mutex);
+
+	INF("TAP reset...");
 	jtag_tap_reset();
 	thinkos_mutex_unlock(dbg->ice_mutex);
 

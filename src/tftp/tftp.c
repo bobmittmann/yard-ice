@@ -126,7 +126,7 @@ int tftp_ack(struct udp_pcb * udp, int block, struct sockaddr_in * sin)
 
 	DCC_LOG1(LOG_TRACE, "block: %d", block);
 
-	DBG("TFTP: ACK, block=%d", block);
+	YAP("TFTP: ACK, block=%d", block);
 
 	hdr.th_opcode = htons(TFTP_ACK);
 	hdr.th_block = htons(block);
@@ -269,12 +269,15 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 		}
 
 		if ((e = ice_mem_by_name(ice, dbg->mem, fname)) == NULL) {
+			WARN("TFTP memory '%s' not found!", fname);
 			DCC_LOG(LOG_TRACE, "memory not found!");
 			return 0;
 		}
 
 		DCC_LOG2(LOG_TRACE, "mem: %08x,%d", e->addr.base + e->addr.offs, 
 				 e->blk.count * e->blk.size);
+		DBG("TFTP mem: %08x,%d", e->addr.base + e->addr.offs, 
+			e->blk.count * e->blk.size);
 
 		dbg->transf.base = e->addr.base + e->addr.offs;
 		dbg->transf.size = e->blk.count * e->blk.size;
@@ -663,7 +666,7 @@ send_data:
 				DCC_LOG2(LOG_TRACE, "block=%d len=%d", 
 						 htons(hdr->th_block), len);
 
-				DBG("TFTP: DATA block=%d len=%d", htons(hdr->th_block), len);
+				YAP("TFTP: DATA block=%d len=%d", htons(hdr->th_block), len);
 
 				if (htons(hdr->th_block) != (block + 1)) {
 					/* retransmission, just ack */
@@ -761,7 +764,7 @@ send_data:
 				break;
 			}
 
-			DBG("TFTP: UDP receive ...");
+			YAP("TFTP: UDP receive ...");
 
 			if ((len = udp_recv_tmo(udp, buf, MAX_TFTP_MSG, &sin, 5000)) < 0) {
 				if (len == -ETIMEDOUT) {

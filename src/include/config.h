@@ -210,7 +210,7 @@
  * Trace 
  * ------------------------------------------------------------------------- */
 
-#define TRACE_LEVEL TRACE_LVL_YAP 
+#define TRACE_LEVEL TRACE_LVL_DBG
 
 #endif /* __CONFIG_H__ */
 

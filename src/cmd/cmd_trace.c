@@ -40,60 +40,64 @@ extern volatile bool spv_auto_flush;
 
 int cmd_trace(FILE * f, int argc, char ** argv)
 {
-	struct trace_entry trace;
-	struct timeval tv;
 	bool flush = false;
-	char s[80];
+	bool dump = true;
 
 	argc--;
 	argv++;
 
-	if (argc) {
+	while (argc) {
 		if ((strcmp(*argv, "sup") == 0) || (strcmp(*argv, "s") == 0)) {
 			fprintf(f, "Supervisory trace set to this console.\n");
 			spv_fout = f;
-			return 0;
-		}
-
-		if ((strcmp(*argv, "auto") == 0) || (strcmp(*argv, "a") == 0)) {
+			flush = true;
+		} else if ((strcmp(*argv, "auto") == 0) || 
+				   (strcmp(*argv, "a") == 0)) {
 			fprintf(f, "Supervisory auto-flush enabled.\n");
 			spv_auto_flush = true;
-			return 0;
-		}
-
-		if ((strcmp(*argv, "keep") == 0) || (strcmp(*argv, "k") == 0)) {
+			dump = false;
+		} else if ((strcmp(*argv, "keep") == 0) || 
+				   (strcmp(*argv, "k") == 0)) {
 			fprintf(f, "Supervisory auto-flush disabled.\n");
 			spv_auto_flush = false;
-			return 0;
-		}
-
-		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "f") == 0)) {
+			dump = false;
+		} else if ((strcmp(*argv, "flush") == 0) || 
+				   (strcmp(*argv, "f") == 0)) {
 			fprintf(f, "flush\n");
 			flush = true;
 		} else { 
 			return ERR_PARM;
 		}	
+
+		argc--;
+		argv++;
 	}
 
-	fprintf(f, "---------\n");
+	if (dump || flush) {
+		struct trace_entry trace;
+		struct timeval tv;
+		char s[80];
 
-	trace_tail(&trace);
+		fprintf(f, "---------\n");
 
-	while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
-		trace_ts2timeval(&tv, trace.dt);
-		if (trace.ref->lvl <= TRACE_LVL_WARN)
-			fprintf(f, "%s %2d.%06d: %s,%d: %s\n",
-					trace_lvl_nm[trace.ref->lvl],
-					(int)tv.tv_sec, (int)tv.tv_usec,
-					trace.ref->func, trace.ref->line, s);
-		else
-			fprintf(f, "%s %2d.%06d: %s\n",
-					trace_lvl_nm[trace.ref->lvl],
-					(int)tv.tv_sec, (int)tv.tv_usec, s);
+		trace_tail(&trace);
+
+		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+			trace_ts2timeval(&tv, trace.dt);
+			if (trace.ref->lvl <= TRACE_LVL_WARN)
+				fprintf(f, "%s %2d.%06d: %s,%d: %s\n",
+						trace_lvl_nm[trace.ref->lvl],
+						(int)tv.tv_sec, (int)tv.tv_usec,
+						trace.ref->func, trace.ref->line, s);
+			else
+				fprintf(f, "%s %2d.%06d: %s\n",
+						trace_lvl_nm[trace.ref->lvl],
+						(int)tv.tv_sec, (int)tv.tv_usec, s);
+		}
+
+		if (flush)
+			trace_flush(&trace);
 	}
-
-	if (flush)
-		trace_flush(&trace);
 
 	return 0;
 }

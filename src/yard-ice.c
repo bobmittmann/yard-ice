@@ -75,12 +75,7 @@
 #define ENABLE_NETWORK 0
 #endif
 
-#ifndef ENABLE_USB
-#define ENABLE_USB 0
-#endif
-
 #ifndef ENABLE_MONITOR
-#undef ENABLE_USB
 #define ENABLE_MONITOR 0
 #endif
 
@@ -432,7 +427,6 @@ void io_init(void);
 int stdio_shell(void);
 FILE * console_shell(void);
 int telnet_shell(void);
-int usb_shell(void);
 int sys_start(void);
 
 int main(int argc, char ** argv)
@@ -560,12 +554,6 @@ int main(int argc, char ** argv)
 	INF("* starting console shell ... ");
 	DCC_LOG(LOG_TRACE, "22. console_shell().");
 	console_shell();
-#endif
-
-#if ENABLE_USB
-	INF("* starting USB shell ... ");
-	DCC_LOG(LOG_TRACE, "23. usb_shell().");
-	usb_shell();
 #endif
 
 #if ENABLE_TELNET
