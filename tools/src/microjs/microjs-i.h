@@ -252,7 +252,7 @@ struct sym_fnd {
 
 /* Class Descriptor */
 struct sym_cld {
-	uint8_t def;
+	uint8_t cid;
 };
 
 /* Function Call Descriptor */
@@ -437,23 +437,32 @@ static inline int sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp) {
    Externals (Library)
    -------------------------------------------------------------------------- */
 
-static inline struct classdef * ext_classdef_get(
+
+static inline struct classdef * lib_classdef_get(
 	const struct ext_libdef * libdef, int cid) {
 	return (struct classdef *)&libdef->classtab->cdef[cid];
 }
 
-static inline struct extdef * sym_extern_get(const struct ext_libdef * libdef, 
+static inline struct extdef * lib_extern_get(const struct ext_libdef * libdef, 
 											 unsigned int xid) {
 	return (struct extdef *)&libdef->xdef[xid];
 }
 
-static inline const char * sym_extern_name(const struct ext_libdef * libdef, 
+static inline const char * lib_extern_name(const struct ext_libdef * libdef, 
 										   unsigned int xid) {
 	return libdef->xdef[xid].nm;
 }
 
-int sym_extern_lookup(const struct ext_libdef * libdef, 
-					  const char * s, unsigned int len);
+static inline const char * lib_class_name(const struct ext_libdef * libdef, 
+										   unsigned int cid) {
+	return libdef->classtab->cdef[cid].nm;
+}
+
+int lib_lookup(const struct ext_libdef * libdef, const char * s, 
+			   unsigned int len);
+
+int lib_member_lookup(const struct ext_libdef * libdef, 
+					  unsigned int cid, const char * s, unsigned int len);
 
 
 #ifdef __cplusplus

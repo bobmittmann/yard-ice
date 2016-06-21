@@ -75,12 +75,7 @@
 #define ENABLE_NETWORK 0
 #endif
 
-#ifndef ENABLE_USB
-#define ENABLE_USB 0
-#endif
-
 #ifndef ENABLE_MONITOR
-#undef ENABLE_USB
 #define ENABLE_MONITOR 0
 #endif
 
@@ -144,6 +139,14 @@ void rtc_init(void)
 
 FILE * volatile spv_fout;
 volatile bool spv_auto_flush = false;
+
+void trace_output_set(FILE * f, bool flush)
+{
+	WARN("trace output set to 0x%08x", f);
+
+	spv_fout = f;
+	spv_auto_flush = flush;
+}
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
@@ -424,7 +427,6 @@ void io_init(void);
 int stdio_shell(void);
 FILE * console_shell(void);
 int telnet_shell(void);
-int usb_shell(void);
 int sys_start(void);
 
 int main(int argc, char ** argv)
@@ -433,13 +435,13 @@ int main(int argc, char ** argv)
 
 	io_init();
 
-	DCC_LOG_INIT();
-	DCC_LOG_CONNECT();
-
 #ifdef THINKAPP
 	DCC_LOG(LOG_TRACE, " 1. thinkos_udelay_factor().");
 	thinkos_udelay_factor(&udelay_factor);
 #else
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
+
 #ifndef UDELAY_FACTOR 
 	DCC_LOG(LOG_TRACE, " 1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
@@ -554,22 +556,18 @@ int main(int argc, char ** argv)
 	console_shell();
 #endif
 
-#if ENABLE_USB
-	INF("* starting USB shell ... ");
-	DCC_LOG(LOG_TRACE, "23. usb_shell().");
-	usb_shell();
-#endif
-
 #if ENABLE_TELNET
 	INF("* starting TELNET server ... ");
 	DCC_LOG(LOG_TRACE, "24. telnet_shell().");
 	telnet_shell();
 #endif
 
-	thinkos_sleep(250);
+	for (;;) {
+		thinkos_sleep(250);
 
-	DCC_LOG(LOG_TRACE, "25. stdio_shell().");
-	stdio_shell();
+		DCC_LOG(LOG_TRACE, "25. stdio_shell().");
+		stdio_shell();
+	}
 
 	return 0;
 }

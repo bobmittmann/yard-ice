@@ -39,8 +39,7 @@ CFILES = show_asm.c cmd_beep.c \
 	  cmd_ice_info.c cmd_bb_scan.c cmd_runtest.c \
 	  cmd_irpause.c cmd_drpause.c cmd_i2c.c cmd_en_dis.c \
 	  cmd_trace.c cmd_relay.c cmd_scrub.c \
-	  cmd_fpga.c cmd_xflash.c otg_xflash_pic.c \
-	  uart_xflash_pic.c xflash.c
-
+	  cmd_fpga.c 
+	  
 include ../../thinkos/mk/lib.mk
 

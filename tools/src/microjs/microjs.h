@@ -70,6 +70,7 @@ enum {
 	ERR_NOT_IMPLEMENTED     = 24,
 	ERR_ATTR_NOT_ARRAY      = 25,
 	ERR_NULL_POINTER        = 26,
+	ERR_EXTERN_NOT_SCALAR   = 27,
 };
 
 struct symstat {
@@ -92,15 +93,16 @@ struct classdef {
 
 /* external definition  */
 
-#define O_ARRAY    (1 << 0)
-#define O_MEMBER   (1 << 1)
-#define O_SIZEOFFS (1 << 2)
-#define O_READONLY (1 << 3)
+#define O_ARRAY     (1 << 0)
+#define O_MEMBER    (1 << 1)
+#define O_SIZEOFFS  (1 << 2)
+#define O_READONLY  (1 << 3)
+#define O_CONST     (1 << 3)
+#define O_SINGLETON (1 << 3)
 
 #define O_FUNCTION (0 << 6)
 #define O_INTEGER  (1 << 6)
 #define O_OBJECT   (2 << 6)
-#define O_CONST    (3 << 6)
 
 #define EXTDEF_TYPE(_XP) ((_XP)->opt & (3 << 6))
 #define EXTDEF_FLAG(_XP, _O) ((_XP)->opt & (_O))

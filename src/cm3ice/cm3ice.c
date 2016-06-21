@@ -35,12 +35,14 @@
 #include <stdbool.h>
 #include <thinkos.h>
 
+#define LOG_LEVEL LOG_MSG
+#include <sys/dcclog.h>
+
 #include "jtag_adi.h"
 #include "cm3ice.h"
 #include "arm_pn.h"
 #include "arm-fpb.h"
 #include "arm-dwt.h"
-#include "dbglog.h"
 
 #include "trace.h"
 
@@ -719,11 +721,12 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 				 (dfsr & DFSR_DWTTRAP) ? 1: 0, (dfsr & DFSR_BKPT) ? 1: 0,
 				 (dfsr & DFSR_HALTED) ? 1: 0);
 #endif
+//	ctrl->polling = true;
 
 	DCC_LOG(LOG_TRACE, "cm3ice_comm_sync()..."); 
 	if ((ret = cm3ice_comm_sync(ctrl, comm)) != 0) {
 		DCC_LOG(LOG_WARNING, "cm3ice_comm_sync() failed!"); 
-		ctrl->polling = false;
+//		ctrl->polling = false;
 		return ret;
 	}
 
@@ -731,14 +734,14 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 
 		if ((ret = cm3ice_comm_poll(ctrl, comm)) != 0) {
 			DCC_LOG(LOG_WARNING, "cm3ice_comm_poll() failed!"); 
-			ctrl->polling = false;
+//			ctrl->polling = false;
 			return ret;
 		}
 
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
 							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-			ctrl->polling = false;
+//			ctrl->polling = false;
 			return ICE_ST_FAULT;
 		}
 
@@ -747,7 +750,7 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			break;
 	}
 
-	ctrl->polling = false;
+//	ctrl->polling = false;
 
 	return (dhcsr & DHCSR_S_HALT) ? ICE_ST_HALT : 0;
 }
@@ -760,7 +763,6 @@ int cm3ice_signal(cm3ice_ctrl_t * ctrl, ice_sig_t sig)
 		break;
 	case ICE_SIG_POLL_START:
 		ctrl->poll_enabled = true;
-		ctrl->polling = true;
 		break;
 	case ICE_SIG_TARGET_RESET:
 		break;
@@ -775,10 +777,10 @@ int cm3ice_status(cm3ice_ctrl_t * ctrl)
 
 	DCC_LOG(LOG_MSG, "1.");
 
-	if (ctrl->polling) {
-		DCC_LOG(LOG_MSG, "2.");
-		dhcsr = ctrl->dhcsr;
-	} else {
+//	if (ctrl->polling) {
+//		DCC_LOG(LOG_MSG, "2.");
+//		dhcsr = ctrl->dhcsr;
+//	} else {
 		DCC_LOG(LOG_MSG, "3.");
 //		ctrl->jtag_lock = true;
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
@@ -788,7 +790,7 @@ int cm3ice_status(cm3ice_ctrl_t * ctrl)
 			return ICE_ST_FAULT;
 		}
 //		ctrl->jtag_lock = false;
-	}
+//	}
 
 	DCC_LOG5(LOG_INFO, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
 			 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
@@ -1073,7 +1075,7 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap,
 		opt->bp_defsz = 2;
 	}
 
-	/* check for Flash Patch and Breakpoint Unit */
+	/* check for DWT */
 	memset(&ctrl->dwt, 0, sizeof(armv7m_dwt_ctrl_t));
 	if (ctrl->dbg_map.dwt != 0x00000000) {
 		dwt_probe(tap, &ctrl->dwt, ctrl->dbg_map.dwt);

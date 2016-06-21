@@ -381,8 +381,8 @@ int symtab_data_size(struct symtab * tab)
    Externals (Library)
    -------------------------------------------------------------------------- */
 
-int sym_extern_lookup(const struct ext_libdef * libdef, 
-					  const char * s, unsigned int len)
+int lib_lookup(const struct ext_libdef * libdef, 
+			   const char * s, unsigned int len)
 {
 	int i;
 
@@ -398,9 +398,30 @@ int sym_extern_lookup(const struct ext_libdef * libdef,
 	}
 
 	DCC_LOG(LOG_WARNING, "external symbol not found!");
-	return -1;
+	return -ERR_EXTERN_UNKNOWN;
 }
 
+int lib_member_lookup(const struct ext_libdef * libdef, 
+					  unsigned int cid, const char * s, unsigned int len)
+{
+	struct classdef * cdef;
+	int i;
+
+	cdef = lib_classdef_get(libdef, cid);
+
+	/* look in the class members list */
+	for (i = cdef->first; i <= cdef->last; ++i) {
+		const struct extdef * fn = &libdef->xdef[i];
+		if ((strncmp(fn->nm, s, len) == 0) && (fn->nm[len] == '\0')) {
+			DCC_LOG2(LOG_INFO, "xid=%d nm=\"%s\"", i, fn->nm);
+			return i;
+		}
+	}
+
+	DCC_LOG(LOG_WARNING, "class memeber not found!");
+	return -ERR_EXTERN_NOT_MEMBER;
+
+}
 
 #if MICROJS_DEBUG_ENABLED
 #endif

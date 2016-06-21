@@ -383,9 +383,6 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_fpga, "fpga", "rbf", 
 		"[erase] [load] [cfg]", "update FPGA program." },
 
-	{ cmd_xflash, "xflash", "xf", 
-		"firmware", "update firmware." },
-
 #if (ENABLE_NETWORK)
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
