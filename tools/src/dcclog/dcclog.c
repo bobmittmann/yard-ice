@@ -55,7 +55,7 @@
 
 #include "arm_elf.h"
 
-#define VERSION_MAJOR 3
+#define VERSION_MAJOR 4
 #define VERSION_MINOR 0
 
 #define LVL_PANIC   1
@@ -65,6 +65,7 @@
 #define LVL_TRACE   5
 #define LVL_INFO    6
 #define LVL_MSG     7
+#define LVL_YAP     8
 
 const char * level_tab[] = {
 	"NONE",
@@ -74,7 +75,8 @@ const char * level_tab[] = {
 	"WARNING",
 	"TRACE",
 	"INFO",
-	"MSG"
+	"MSG",
+	"YAP",
 };
 
 struct dcclog_entry {
@@ -226,7 +228,7 @@ char * log_level(struct log_def * log)
 
 	level = log->level;
 
-	if ((level < LVL_PANIC) && (level > LVL_MSG)) {
+	if ((level < LVL_PANIC) && (level > LVL_YAP)) {
 		fprintf(stderr, "%s:%s invalid level: %d.\n", 
 				__FILE__, __func__, level);
 		return NULL;
@@ -237,13 +239,8 @@ char * log_level(struct log_def * log)
 
 int hexdump(FILE * f, unsigned int addr, void * ptr, unsigned int count);
 
-void dump_syms(int level)
+void print_mem_blocks(int level)
 {
-	int file_width = 0;
-	int function_width = 0;
-	struct log_def * log;
-	char * lvl;
-	int w;
 	int i;
 
 	if (level <= 0)
@@ -258,6 +255,19 @@ void dump_syms(int level)
 			hexdump(stdout, mem[i].addr, mem[i].image, mem[i].size);
 		}
 	}
+}
+
+void print_dcc_entries(int level)
+{
+	int file_width = 0;
+	int function_width = 0;
+	struct log_def * log;
+	char * lvl;
+	int w;
+	int i;
+
+	if (level <= 0)
+		return;
 
 	printf(" - dcc entries: (%d)\n", dcc_count);
 	for (i = 0; i < dcc_count; i++) {
@@ -304,10 +314,18 @@ void dump_syms(int level)
 				   function_width, log->function, log->fmt);
 		}
 	}
+}
+
+void print_symbols(int level)
+{
+	int i;
+
+	if (level <= 0)
+		return;
 
 	printf(" - symbols: (%d)\n", sym_count);
 	printf("        addr:    size:  name:\n");
-	for (i= 0; i < sym_count; i++) {
+	for (i = 0; i < sym_count; ++i) {
 		printf("   0x%08x  %7d  %s\n", sym[i].addr, sym[i].size, sym[i].name);
 	}
 }
@@ -1159,7 +1177,6 @@ int net_dcc_log_expand(int sock)
 	return 0;
 }
 
-
 void usage(char * prog)
 {
 	fprintf(stderr, "Usage: %s [OPTION...] [ELF APPS]\n", prog);
@@ -1169,7 +1186,9 @@ void usage(char * prog)
 	fprintf(stderr, "  -l FILE\tLog file\n");
 	fprintf(stderr, "  -h HOST\thost address (TCP connection)\n");
 	fprintf(stderr, "  -p PORT\thost port (TCP connection)\n");
-	fprintf(stderr, "  -d[d]  \tDump symbols\n");
+	fprintf(stderr, "  -d[d]  \tDump DCC entries\n");
+	fprintf(stderr, "  -m[m]  \tDump memory blocks\n");
+	fprintf(stderr, "  -s[s]  \tDump symbols\n");
 	fprintf(stderr, "  -v[v]  \tVerbosity level\n");
 	fprintf(stderr, "  -V     \tPrint version\n");
 	fprintf(stderr, "\n");
@@ -1414,7 +1433,7 @@ int load_elf(char * pathname)
 	}
 
 	for (i = 0; i < ehdr->e_phnum; i++) {
-		if (phdr[i].p_offset > 0) {
+		if (phdr[i].p_offset >= 0) {
 			mem[mem_count].image = arm_elf_load_program(f, ehdr, &phdr[i]);
 			if (mem[mem_count].image == NULL) {
 				printf(" #error: %s: arm_elf_load_program() failed!\n", 
@@ -1610,7 +1629,9 @@ int main(int argc, char *argv[])
 	char host[128];
 	int port = 1001;
 	char * logfname = "-";
-	int dump = 0;
+	int showsym = 0;
+	int showdcc = 0;
+	int showmem = 0;
 	int host_set = 0;
 	int log_set = 0;
 	int sock;
@@ -1625,7 +1646,7 @@ int main(int argc, char *argv[])
 		prog++;
 
 	/* parse the command line options */
-	while ((c = getopt(argc, argv, "V?dvh:l:")) > 0) {
+	while ((c = getopt(argc, argv, "V?dmsvh:l:")) > 0) {
 		switch (c) {
 			case 'V':
 				version(prog);
@@ -1636,7 +1657,15 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'd':
-				dump++;
+				showdcc++;
+				break;
+
+			case 's':
+				showsym++;
+				break;
+
+			case 'm':
+				showmem++;
 				break;
 
 			case 'v':
@@ -1690,13 +1719,14 @@ int main(int argc, char *argv[])
 #endif
 
 	if (fix_log() < 0) {
-		cleanup();
 		return 3;
 	}
 
-	if (dump) {
-		cleanup();
-		dump_syms(dump);
+	print_symbols(showsym);
+	print_mem_blocks(showmem);
+	print_dcc_entries(showdcc);
+
+	if (showsym || showmem || showdcc) {
 		return 0;
 	}
 

@@ -20,5 +20,5 @@ dcclog_CFLAGS = \
 	-O2 -Wall
 
 dcclog_LDADD =  \
-	-lpthread
+	-lpthread 
 
