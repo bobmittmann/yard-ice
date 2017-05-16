@@ -36,21 +36,19 @@
 #include "sys/file.h"
 #include "sys/tty.h"
 #include "xmodem.h"
+#include "board.h"
 
-int flash_xmodem_recv(FILE * f, uint32_t offs)
+int flash_ymodem_recv(FILE * f, uint32_t offs)
 {
-	union {
-		union {
-			struct xmodem_rcv rx;
-			struct xmodem_snd sx;
-		};
-	} xmodem;
+	struct ymodem_rcv ry;
 	struct comm_dev comm;
 	struct file * raw;
 	uint8_t buf[128];
 	int ret;
 	int cnt;
 
+	fprintf(f, "Ymodem (^X to cancel)... ");
+	fflush(f);
 	raw = ftty_lowlevel(f);
 
 	comm.arg = raw->data;
@@ -60,11 +58,11 @@ int flash_xmodem_recv(FILE * f, uint32_t offs)
 
 	DCC_LOG(LOG_TRACE, ".................................");
 
-	xmodem_rcv_init(&xmodem.rx, &comm, XMODEM_RCV_CRC);
+	ymodem_rcv_init(&ry, &comm, XMODEM_RCV_CRC);
 
 	cnt = 0;
 	do {
-		if ((ret = xmodem_rcv_loop(&xmodem.rx, buf, 128)) < 0) {
+		if ((ret = ymodem_rcv_loop(&ry, buf, 128)) < 0) {
 			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
 			return ret;
 		}
@@ -73,6 +71,8 @@ int flash_xmodem_recv(FILE * f, uint32_t offs)
 		offs += ret;
 	} while (ret > 0);
 
+	fprintf(f, "\n");
+
 	return cnt;
 }
 
@@ -80,8 +80,8 @@ int jtag3ctrl_init(const void * rbf, int size);
 
 int cmd_fpga(FILE * f, int argc, char ** argv)
 {
-	uint8_t * rbf = (uint8_t *)0x08060000;
-	uint32_t flash_offs = (uint8_t *)rbf - STM32_FLASH_MEM;
+	uint32_t flash_offs = FLASH_BLK_RBF_OFFS;
+	uint8_t * rbf = (uint8_t *)STM32_FLASH_MEM + FLASH_BLK_RBF_OFFS;
 	bool erase = false;
 	bool load = false;
 	bool cfg = false;
@@ -114,7 +114,7 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 
 	if (erase) {
 		fprintf(f, "Erasing sector: 0x%08x...\n", (uint32_t)rbf);
-		if (stm32_flash_erase(flash_offs, 0x20000) < 0) {
+		if (stm32_flash_erase(flash_offs, FLASH_BLK_RBF_SIZE) < 0) {
 			fprintf(f, "stm32f_flash_erase() failed!\n");
 			return -1;
 		}
@@ -122,7 +122,7 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 
 	if (load) {
 		fprintf(f, "Loading FPGA .rbf file at 0x%08x...\n", (uint32_t)rbf);
-		if (flash_xmodem_recv(f, flash_offs) < 0) {
+		if (flash_ymodem_recv(f, flash_offs) < 0) {
 			fprintf(f, "fpga_xmodem_recv() failed!\n");
 			return -1;
 		}

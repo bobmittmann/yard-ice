@@ -1,6 +1,6 @@
 #!/bin/sh
 
-JTAGTOOL_ADDR=192.168.10.50
+JTAGTOOL_ADDR=192.168.0.51
 BUILD_NAME=yard-ice
 TOOLS_DIR=../../tools
 

@@ -191,8 +191,7 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 		conf_wr(buf[n]);
 		n++;
 		if (n > max) {
-			for (i = 0; i < 5000000; ++i) {
-//				udelay(100);
+			for (i = 0; i < 1024; ++i) {
 				conf_wr(0xff);
 				if (gpio_status(conf_done)) {
 					return 0;

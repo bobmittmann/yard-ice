@@ -1,9 +1,9 @@
 #!/bin/sh
 
-JTAGTOOL_ADDR=192.168.10.50
-BUILD_NAME=yard-ice
+BUILD_NAME=yard-ice-0.32
+JTAGTOOL_ADDR=192.168.0.51
+TOOLS_DIR=../../thinkos/tools
+THINKAPP_ELF=debug/${BUILD_NAME}.elf
 
-if [ $? == 0 ] ; then
-	../../../tools/dcclog -h ${JTAGTOOL_ADDR} ../boot/debug/thinkos.elf debug/${BUILD_NAME}.elf
-fi
+${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${THINKAPP_ELF}
 

@@ -54,17 +54,20 @@ void board_init(void);
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
 
-struct magic {
-	struct {
-		uint16_t pos;
-		uint16_t cnt;
-	} hdr;
-	struct {
-		uint32_t mask;
-		uint32_t comp;
-	} rec[];
+struct magic_hdr {
+	uint16_t pos;
+	uint16_t cnt;
 };
 
+struct magic_rec {
+	uint32_t mask;
+	uint32_t comp;
+};
+
+struct magic {
+	struct magic_hdr hdr;
+	struct magic_rec rec[];
+};
 
 #ifndef MONITOR_UPGRADE_ENABLE
 #if DEBUG
@@ -102,8 +105,12 @@ struct magic {
 #define MONITOR_STACKUSAGE_ENABLE  0
 #endif
 
+#define RBF_BLOCK_OFFS 0x00010000
+#define RBF_BLOCK_SIZE (64 * 1024)
+#define RBF_START_ADDR (0x08000000 + RBF_BLOCK_OFFS)
+
 #define APPLICATION_BLOCK_OFFS 0x00020000
-#define APPLICATION_BLOCK_SIZE (256 * 1024)
+#define APPLICATION_BLOCK_SIZE (384 * 1024)
 #define APPLICATION_START_ADDR (0x08000000 + APPLICATION_BLOCK_OFFS)
 
 /* ASCII Keyboard codes */
@@ -152,6 +159,9 @@ static const char s_help[] =
 #if (MONITOR_PAUSE_ENABLE)
 " ^P - Pause app\r\n"
 #endif
+#if (MONITOR_UPGRADE_ENABLE)
+" ^R - Upload FPGA\r\n"
+#endif
 " ^V - Help\r\n"
 #if (MONITOR_APPWIPE_ENABLE)
 " ^W - Wipe App\r\n"
@@ -182,10 +192,10 @@ static const char s_confirm[] = "Confirm [y]?";
 
 #if (MONITOR_UPGRADE_ENABLE)
 static int yflash(uint32_t blk_offs, uint32_t blk_size,
-		   const struct magic * magic, uint32_t opt)
+		   const struct magic * magic)
 {
 	uint32_t * yflash_code = (uint32_t *)(0x20001000);
-	int (* yflash_ram)(uint32_t, uint32_t, const struct magic *, uint32_t) = 
+	int (* yflash_ram)(uint32_t, uint32_t, const struct magic *) = 
 		((void *)yflash_code) + 1;
 //	unsigned int pri;
 	int ret;
@@ -194,7 +204,7 @@ static int yflash(uint32_t blk_offs, uint32_t blk_size,
 	cm3_primask_set(1);
 
 	__thinkos_memcpy(yflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
-	ret = yflash_ram(blk_offs, blk_size, magic, opt);
+	ret = yflash_ram(blk_offs, blk_size, magic);
 
 //	cm3_primask_set(pri);
 
@@ -217,7 +227,7 @@ static void app_yflash(void)
 
 	dbgmon_soft_reset();
 
-	yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic, 1);
+	yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
 }
 
 static void bootloader_yflash(void)
@@ -235,10 +245,15 @@ static void bootloader_yflash(void)
 
 	dbgmon_soft_reset();
 
-	yflash(0, 65536, &bootloader_magic, 1);
+	yflash(0, 32768, &bootloader_magic);
+}
+
+static void rbf_yflash(void)
+{
+	dbgmon_soft_reset();
+	yflash(RBF_BLOCK_OFFS, RBF_BLOCK_SIZE, NULL);
 }
 #endif
-
 
 #if (MONITOR_APPWIPE_ENABLE)
 static void app_erase(struct dmon_comm * comm, 
@@ -459,6 +474,15 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 			app_yflash();
 		break;
 #endif
+
+#if (MONITOR_UPGRADE_ENABLE)
+	case CTRL_R:
+		PUTS(s_confirm);
+		if (dmgetc(comm) == 'y')
+			rbf_yflash();
+		break;
+#endif
+
 
 #if (MONITOR_APPWIPE_ENABLE)
 	case CTRL_W:

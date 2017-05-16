@@ -41,7 +41,7 @@ CDEFS = CONFIG_H CM3_RAM_VECTORS
 CFLAGS = -g -Os -Wall -fno-builtin -ffreestanding -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-JTAGTOOL_ADDR = 192.168.10.50
+#JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f207
 include ../../thinkos/mk/stm32f2xx.mk
 

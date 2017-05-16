@@ -53,8 +53,20 @@
 #define IO_DCLK           STM32_GPIOC, 10
 #define IO_DATA0          STM32_GPIOB, 5
 
-#define FLASH_BLK_FS_OFFS     0x00020000
-#define FLASH_BLK_FS_SIZE     (256 * 1024)
+/**************************************************************************
+ * FLASH memory partitions
+ **************************************************************************/
+#define FLASH_BLK_BOOT_OFFS     0x00000000
+#define FLASH_BLK_BOOT_SIZE     (16 * 1024)
+
+#define FLASH_BLK_FS_OFFS       0x00004000
+#define FLASH_BLK_FS_SIZE       (48 * 1024)
+
+#define FLASH_BLK_RBF_OFFS      0x00010000
+#define FLASH_BLK_RBF_SIZE      (64 * 1024)
+
+#define FLASH_BLK_APP_OFFS      0x00020000
+#define FLASH_BLK_APP_SIZE      (384 * 1024)
 
 #ifdef __cplusplus
 extern "C" {

@@ -39,9 +39,14 @@
 #include "dbglog.h"
 
 #include "armice.h"
+#include "board.h"
 
 #ifndef FPGA_RBF_ADDR 
-#define FPGA_RBF_ADDR 0x08060000
+#define FPGA_RBF_ADDR STM32_FLASH_MEM + FLASH_BLK_RBF_OFFS
+#endif
+
+#ifndef FPGA_RBF_SIZE
+#define FPGA_RBF_SIZE FLASH_BLK_RBF_SIZE
 #endif
 
 const uint8_t * jtag3ctrl_rbf = (uint8_t *)(FPGA_RBF_ADDR);
@@ -277,7 +282,7 @@ int jtag_drv_init(void)
 
 	DCC_LOG1(LOG_TRACE, "FPGA init: RBF=0x%08x", jtag3ctrl_rbf);
 
-	if (jtag3ctrl_init(jtag3ctrl_rbf, 64 * 1024) < 0) {
+	if (jtag3ctrl_init(jtag3ctrl_rbf, FPGA_RBF_SIZE) < 0) {
 		DCC_LOG(LOG_WARNING, "jtag3ctrl_init() failed!");
 		return JTAG_ERR_FPGA_PROGRAM;
 	}

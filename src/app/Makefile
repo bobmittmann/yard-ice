@@ -21,7 +21,11 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-PROG = yard-ice
+VERSION_DATE = "2016-06-02"
+VERSION_MAJOR = "0"
+VERSION_MINOR = "32"
+
+PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 CFILES = ../yard-ice.c ../io.c ../debugger.c ../ice_drv.c\
 		 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
@@ -41,10 +45,6 @@ LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil $(SDK)/libice-comm\
 LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
 	targets tftp shell console tty gdb vcom telnet crc xmodem comm 
-
-VERSION_DATE = "2016-06-02"
-VERSION_MAJOR = "0"
-VERSION_MINOR = "32"
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
