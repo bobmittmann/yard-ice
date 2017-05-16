@@ -252,10 +252,12 @@ fix_unary_exp	: fix_primary_exp
 				| '-' fix_primary_exp { op_minus_fix }
 				;
 
-fix_primary_exp	: FIX { op_push_fix }
+fix_primary_exp	: FIX_VAL { op_push_fix }
 				| FIX_VAR
-//				| FIX_FUN function_call { op_call_fix_ret } 
-//				| INT2FIX '(' int_exp ')'
-//				| '(' fix_exp ')'
+				| FIX_FUN function_call { op_call_fix_ret } 
+				| INT_VAL { op_push_int, op_int2fix }
+				| CHAR { op_push_int, op_int2fix }
+				| INT_VAR { op_int2fix }
+				| INT_FUN function_call { op_call_int_ret, op_int2fix }
+				| '(' fix_exp ')'
 				;
-

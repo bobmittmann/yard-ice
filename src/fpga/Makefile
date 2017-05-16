@@ -19,11 +19,11 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-include ../mk/config.mk
+include ../../thinkos/mk/config.mk
 
 FPGA_PROJ = yard_ice
 
-FPGA_RBF_ADDR = 0x08060000
+FPGA_RBF_ADDR = 0x08010000
 
 VHDL_FILES = cyc_pll.vhd \
 			jtag_clk_scaler.vhdl\
@@ -56,8 +56,13 @@ HDL_MESSAGE_LEVEL = LEVEL2
 STATE_MACHINE_PROCESSING = ONE-HOT
 SYNTH_MESSAGE_LEVEL = LOW
 
-include ../mk/altera.mk
-include ../mk/jtag.mk
+include altera.mk
+
+ifndef JTAGTOOL_ADDR
+  JTAGTOOL_ADDR := 192.168.0.51
+endif
+
+include ../../thinkos/mk/jtag.mk
 
 ifndef TFTPLOAD
   $(error TFTPLOAD undefined!)

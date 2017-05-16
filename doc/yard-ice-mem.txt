@@ -1,0 +1,21 @@
+YARD-ICE Memory Map
+
+YARD_ICE 0.2 
+
+This version has a STM32F207 microcontroller.
+- 512KiB of Flash
+- 128KiB of RAM
+
+RAM 
+
+| 0x00000000 |   3KiB | ThinkOS/Bootloader   |
+| 0x00000c00 | 125KiB | YARD-ICE Application |
+
+
+Flash 
+
+| 0x08000000 |  16KiB | ThinkOS/Bootloader image        |
+| 0x08004000 |  48KiB | Scripts and configuration files |
+| 0x08010000 |  64KiB | FPGA configuration file         |
+| 0x08020000 | 384KiB | YARD-ICE Application image      |
+
