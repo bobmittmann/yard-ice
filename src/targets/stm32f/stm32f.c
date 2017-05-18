@@ -249,6 +249,21 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[CCM].blk.count = 8;
 		break;
 
+	case 0x421:
+		ice_rd16(ice, 0x1ffff7cc, &memsz);
+		/* This bitfield indicates the size of the device Flash memory 
+		   expressed in Kbytes.As an example, 0x040 corresponds 
+		   to 64 Kbytes. */
+		fprintf(f, "STM32F466X\n"); 
+		target->on_init = (target_script_t)stm32f2xx_on_init,
+		mem[FLASH].op = &flash_stm32f2_oper;
+		mem[FLASH].blk.size = MEM_KiB(16);
+		mem[FLASH].blk.count = memsz / 16;
+		mem[EEPROM].blk.count = 0;
+		mem[SRAM].blk.count = 128;
+		mem[CCM].blk.count = 0;
+		break;
+
 	default:
 		fprintf(f, "Unknown device: 0x%03x!\n", dev_id); 
 		return -1;
@@ -343,7 +358,7 @@ struct target_info stm32f = {
 	/* auto probe scan path */
 	.jtag_probe = YES,
 	/* hardware reset before ICE configure */
-	.reset_on_config = YES,
+	.reset_on_config = NO,
 
 	/* The prefered reset method is system */
 	.reset_mode = RST_SYS,

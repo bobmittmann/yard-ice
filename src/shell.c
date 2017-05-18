@@ -281,7 +281,8 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"", "single step execution" },
 
 	{ cmd_target, "target", "tgt", 
-		"", "configure the target system" },
+		"<NAME|ID> <force|probe|scan|config>", 
+		"configure the target system" },
 
 #if (ENABLE_NAND)
 	{ cmd_bb_scan, "bbscan", "bbs", 

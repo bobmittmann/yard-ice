@@ -835,13 +835,13 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 		INF("ICE poll stop.");
 
 		if (ice_st & ICE_ST_HALT) {
-			INF("ICE break!");
+			INF("ICE break");
 			DCC_LOG(LOG_TRACE, "break!!!!");
 			thinkos_cond_broadcast(dbg->halt_cond);
 		}
 
 		if (ice_st & ICE_ST_FAULT) {
-			WARN("ICE fault!!!!");
+			WARN("ICE fault");
 			DCC_LOG(LOG_WARNING, "fault!!!!");
 		}
 	}
@@ -1014,7 +1014,7 @@ int target_connect(int force)
 
 	if (dbg->state < DBG_ST_UNCONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		WARN("invalid state"); 
+		WARN("Invalid state"); 
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_STATE;
 	}
@@ -1068,7 +1068,7 @@ int target_release(void)
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		WARN("invalid state!"); 
+		WARN("Invalid state"); 
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_STATE;
 	}
@@ -1109,7 +1109,7 @@ int target_halt(int method)
 	if (dbg->state != DBG_ST_RUNNING) {
 		if (dbg->state != DBG_ST_HALTED) {
 			DCC_LOG(LOG_WARNING, "invalid state"); 
-			WARN("invalid state!"); 
+			WARN("Invalid state"); 
 			ret = ERR_STATE;
 		}
 		thinkos_mutex_unlock(dbg->target_mutex);
@@ -1127,9 +1127,9 @@ int target_halt(int method)
 		DCC_LOG(LOG_WARNING, "drv->halt() fail!");
 		dbg->state = DBG_ST_OUTOFSYNC;
 		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
-		WARN("out of sync!"); 
+		WARN("Out of sync"); 
 	} else {
-		INF("target halted.");
+		INF("Target halted");
 		dbg_status(dbg);
 	}
 
@@ -1151,7 +1151,7 @@ int target_run(void)
 
 	if (dbg->state < DBG_ST_CONNECTED) {
 		DCC_LOG(LOG_WARNING, "invalid state"); 
-		WARN("invalid state!"); 
+		WARN("Invalid state"); 
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_STATE;
 	}
@@ -1204,7 +1204,7 @@ int target_step(void)
 	thinkos_mutex_lock(dbg->ice_mutex);
 	if ((ret = ice_step(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->step() fail!");
-		WARN("drv->step() fail!");
+		WARN("drv->step() fail");
 	}
 	thinkos_mutex_unlock(dbg->ice_mutex);
 
@@ -2866,11 +2866,13 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	}
 
 	if (dbg->state == DBG_ST_FAULT ) {
+		WARN("Invalid state");
 		DCC_LOG(LOG_ERROR, "Invalid state!");
 		return ERR_STATE;
 	}
 
 	if ((info = target->ice_drv) == NULL) {
+		WARN("ICE driver invalid");
 		DCC_LOG(LOG_ERROR, "NULL ice driver info!");
 		return ERR_PARM;
 	}
@@ -2886,11 +2888,13 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 	if ((target == dbg->target) && (!force)) {
 		DCC_LOG1(LOG_TRACE, "Keeping target: '%s'", target->name);
+		INF("Keeping target: '%s'", target->name);
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return 0;
 	}
 
 	DCC_LOG1(LOG_TRACE, "Changing target: '%s'", target->name);
+	INF("New target: '%s'", target->name);
 
 	if (dbg->mem_mod_id != -1) {
 		DCC_LOG(LOG_TRACE, "Memory module unregister...");
@@ -2922,7 +2926,8 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 		/* load the ICE controller driver */
 		if ((ret = ice_open(ice, info, &dbg_ice_ctrl_buf.ctrl)) < 0) {
-			DCC_LOG(LOG_ERROR, "ICE controller open fail!");
+			DCC_LOG(LOG_ERROR, "ICE open failed");
+			ERR("ICE open failed");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return ret;
@@ -3012,7 +3017,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	/* configure the scan path */
 	if (target->jtag_probe) {
 
-		fprintf(f, " - JTAG probe...\n");
+		fprintf(f, " - JTAG probe...");
 
 #if 0
 		DCC_LOG(LOG_MSG, "TAP reset...");
@@ -3029,6 +3034,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		/* dynamic configuration */
 		if (jtag_chain_probe(irlen, 32, &cnt) != JTAG_OK) {
 			if (target->arch->cpu->irlength == 0) {
+				fprintf(f, " failed!\n");
 				DCC_LOG(LOG_ERROR, "IR length !");
 				thinkos_mutex_unlock(dbg->ice_mutex);
 				thinkos_mutex_unlock(dbg->target_mutex);
@@ -3039,6 +3045,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		}
 		irpath = irlen;
 		(void)irpath;
+		fprintf(f, " %d TAPS.\n", cnt);
 		tap_pos = -1;
 	} else {
 		/* TODO: preconfigured scan chain */
@@ -3049,6 +3056,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	DCC_LOG1(LOG_TRACE, "TAPS: %d", cnt);
 
 	if (cnt == 0) {
+		fprintf(f, "No TAPs defined!\n");
 		DCC_LOG(LOG_WARNING, "No TAPs defined!");
 		thinkos_mutex_unlock(dbg->ice_mutex);
 		thinkos_mutex_unlock(dbg->target_mutex);
@@ -3199,12 +3207,14 @@ int target_config(FILE * f)
 
 	if ((target = dbg->target) == NULL) {
 		DCC_LOG(LOG_ERROR, "NULL target!");
+		ERR("NULL target");
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_NULL_TARGET;
 	}
 
 	if (dbg->state < DBG_ST_UNCONNECTED) {
 		DCC_LOG(LOG_ERROR, "Invalid state!");
+		WARN("Invalid state");
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_STATE;
 	}
@@ -3232,8 +3242,11 @@ int target_config(FILE * f)
 		DCC_LOG(LOG_TRACE, "Target pos config callback...");
 		if ((ret = target->pos_config(f, ice, target)) < 0) {
 			DCC_LOG(LOG_ERROR, "target->pos_config() fail!");
-		}
+			WARN("pos_config callback failed");
+		} else
+			INF("target pos_config ok");
 	} else {
+		INF("pos_config callback undefined");
 		DCC_LOG(LOG_TRACE, "target->pos_config callback undefined!");
 		ret = 0;
 	}
