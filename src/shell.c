@@ -272,7 +272,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"ADDR [SIZE]", "read a memory region" },
 
 	{ cmd_reset, "reset", "rst", 
-		"[auto|soft|hard|core|dbg]", "reset the target" },
+		"[auto|soft|hard|core|dbg|sys]", "reset the target" },
 
 	{ cmd_run, "run", "r", 
 		"", "resume target execution" },

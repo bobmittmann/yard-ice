@@ -43,7 +43,8 @@ typedef enum {
 	ERR_DRV_FAIL = -5,
 	ERR_TIMEOUT = -6,
 	ERR_NULL_TARGET = -7,
-	ERR_OUTOFSYNC = -8
+	ERR_OUTOFSYNC = -8,
+	ERR_TAP_INVALID = -9
 } dbg_errno_t;
 
 /* target state */

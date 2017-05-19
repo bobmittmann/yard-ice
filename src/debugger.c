@@ -3019,16 +3019,15 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 		fprintf(f, " - JTAG probe...");
 
-#if 0
 		DCC_LOG(LOG_MSG, "TAP reset...");
 		/* assert the JTAG TRST signal (low) */
 		jtag_trst(true);
 		jtag_run_test(1, JTAG_TAP_IDLE);
-		/* deasser the JTAG TRST signal (high) */
+		/* deassert the JTAG TRST signal (high) */
 		jtag_trst(false);
-
+		/* scan the TAP reset sequence */
 		jtag_tap_reset();
-#endif
+
 		DCC_LOG(LOG_TRACE, "Dynamic JTAC config ...");
 
 		/* dynamic configuration */
@@ -3060,7 +3059,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		DCC_LOG(LOG_WARNING, "No TAPs defined!");
 		thinkos_mutex_unlock(dbg->ice_mutex);
 		thinkos_mutex_unlock(dbg->target_mutex);
-		return 0;
+		return ERR_TAP_INVALID;
 	}
 
 	/* reset the TAPs to put the IDCODE in the DR scan */

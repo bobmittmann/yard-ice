@@ -250,7 +250,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		break;
 
 	case 0x421:
-		ice_rd16(ice, 0x1ffff7cc, &memsz);
+		ice_rd16(ice, 0x1fff7a22, &memsz);
 		/* This bitfield indicates the size of the device Flash memory 
 		   expressed in Kbytes.As an example, 0x040 corresponds 
 		   to 64 Kbytes. */

@@ -77,6 +77,12 @@ const char * level_tab[] = {
 	"INFO",
 	"MSG",
 	"YAP",
+	"LVL9",
+	"LVL10",
+	"LVL11",
+	"LVL12",
+	"LVL13",
+	"LVL14",
 };
 
 struct dcclog_entry {
