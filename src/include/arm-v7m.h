@@ -339,6 +339,50 @@
 #define ARMV7M_NVIC_IPR122 0xe000e5e8 
 #define ARMV7M_NVIC_IPR123 0xe000e5ec 
 
+/*************************************************************************/
+/* Memory Protection Unit, MPU                                           */
+/*************************************************************************/
+
+/* MPU Type Register */
+#define ARMV7M_MPU_TYPE 0xe000ed90
+/* Purpose The MPU Type Register indicates how many regions the MPU support. 
+   Software can use it to determine if the processor implements an MPU.
+   Bits[31:24] Reserved. */
+#define MPU_TYPE_IREGION(TYPE) (((TYPE) >> 16) & 0xff)
+/* IREGION, bits[23:16] Instruction region. RAZ. ARMv7-M only supports a 
+   unified MPU. */
+#define MPU_TYPE_DREGION(TYPE) (((TYPE) >> 8) & 0xff)
+/* DREGION, bits[15:8] Number of regions supported by the MPU. If this field 
+   reads-as-zero the processor does not implement an MPU.
+*/
+
+/* MPU Control Registera */
+#define ARMV7M_MPU_CTRL 0xe000ed94
+
+/* MPU Region Number Register */
+#define ARMV7M_MPU_RNR 0xe000ed98
+
+/* MPU Region Base Address Register */
+#define ARMV7M_MPU_RBAR 0xe000ed9c
+
+/*MPU Region Attribute and Size Register */
+#define ARMV7M_MMPU_RASR 0xe000eda0
+
+/*
+page B3-696
+0xE000EDA4 MPU_RBAR_A1 RW - Alias 1 of MPU_RBAR, see MPU alias register support on
+page B3-699
+0xE000EDA8 MPU_RASR_A1 RW - Alias 1 of MPU_RASR, see MPU alias register support on
+page B3-699
+0xE000EDAC MPU_RBAR_A2 RW - Alias 2 of MPU_RBAR, see MPU alias register support on
+page B3-699
+0xE000EDB0 MPU_RASR_A2 RW - Alias 2 of MPU_RASR, see MPU alias register support on
+page B3-699
+0xE000EDB4 MPU_RBAR_A3 RW - Alias 3 of MPU_RBAR, see MPU alias register support on
+page B3-699
+0xE000EDB8 MPU_RASR_A3 RW - Alias 3 of MPU_RASR, see MPU alias register support on
+page B3-699
+*/
 
 /* ----------------------------------------------------------------------- */
 /* CPUID Base Register */
@@ -844,6 +888,9 @@
 #define ICSR_VECTPENDING (0x1ff << 12)
 #define ICSR_RETTOBASE (1 << 11)
 #define ICSR_VECTACTIVE (0x1ff << 0)
+
+
+
 
 #ifdef __ASSEMBLER__
 

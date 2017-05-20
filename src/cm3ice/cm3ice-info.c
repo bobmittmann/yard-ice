@@ -785,7 +785,73 @@ void dwt_info(FILE * f, jtag_tap_t * tap)
 
 void mpu_info(FILE * f, jtag_tap_t * tap)
 {
+	uint32_t type;
+	uint32_t ctrl;
+	uint32_t rnr;
+	uint32_t rbar;
+	uint32_t rasr;
+	int i;
+
 	fprintf(f, "- MPU (Memory Protection Unit):\n");
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_MPU_TYPE, &type) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_MPU_CTRL, &ctrl) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+
+	/* TODO: decode type and control */
+	fprintf(f, " * TYPE = 0x%08x\n", type);
+	fprintf(f, " * CTRL = 0x%08x\n", ctrl);
+
+	fprintf(f, " *  Reg |       RBAR |       RASR |\n");
+	for (i = 0; i < MPU_TYPE_DREGION(type); ++i) {
+		rnr = i;
+		if (jtag_mem_ap_wr32(tap, ARMV7M_MPU_RNR, rnr) != 
+			JTAG_ADI_ACK_OK_FAULT)
+			return;
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_MPU_RBAR, &rbar) != 
+			JTAG_ADI_ACK_OK_FAULT)
+			return;
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_MMPU_RASR, &rasr) != 
+			JTAG_ADI_ACK_OK_FAULT)
+			return;
+
+		/* TODO: decode and memory regions */
+		fprintf(f, " *  %3d | ", i);
+		fprintf(f, "0x%08x | ", rbar);
+		fprintf(f, "0x%08x |\n", rasr);
+	}
+
+}
+
+#define DEV_SYNC 0x43
+#define DEV_CONNECTED 0x65
+
+#define DBG_CONNECTED 1
+#define DBG_SYNC 2
+
+void comm_info(FILE * f, cm3ice_ctrl_t * ctrl)
+{
+	fprintf(f, "- CM3ICE COMM --------\n");
+	/* FIXME: poll_enabled seems to be displayed wrong, removing 
+	   to aoid confusion  
+	fprintf(f, " ICE polling %s.\n", 
+			ctrl->poll_enabled ? "enabled" : "disabled"); */
+	fprintf(f, " ADDR=0x%08x\n", ctrl->comm_addr);
+	fprintf(f, " dev(0x%02x)=%s\n", ctrl->cc.ro.dev,
+			(ctrl->cc.ro.dev == DEV_CONNECTED) ? "CONNECTED" :
+			((ctrl->cc.ro.dev == DEV_SYNC) ? "SYNC" : "Undef"));
+	fprintf(f, " dbg(0x%02x)=%s\n", ctrl->cc.rw.dbg,
+			(ctrl->cc.rw.dbg == DBG_CONNECTED) ? "CONNECTED" :
+			((ctrl->cc.rw.dbg == DBG_SYNC) ? "SYNC" : "Undef"));
+	fprintf(f, " rw.tx_tail=%d ro.tx_head=%d\n", 
+			 ctrl->cc.rw.tx_tail, ctrl->cc.ro.tx_head);
+	fprintf(f, " ro.rx_tail=%d rw.rx_head=%d\n", 
+			 ctrl->cc.ro.rx_tail, ctrl->cc.rw.rx_head);
+	fprintf(f, "\n");
 }
 
 int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, unsigned int which)
@@ -822,6 +888,9 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, unsigned int which)
 	case 8:
 		mpu_info(f, tap);
 		break;
+	case 9:
+		comm_info(f, ctrl);
+		break;
 	case 10:
 		cm3_vc_disable(f, tap);
 		break;
@@ -838,7 +907,9 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, unsigned int which)
 		fprintf(f, "6 - FPB\n");
 		fprintf(f, "7 - DWT\n");
 		fprintf(f, "8 - MPU\n");
-		fprintf(f, "9 - VC enable/disable\n");
+		fprintf(f, "9 - COMM status\n");
+		fprintf(f, "10 - VC disable\n");
+		fprintf(f, "11 - VC enable\n");
 		break;
 	}
 

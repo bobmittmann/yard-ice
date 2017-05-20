@@ -190,7 +190,6 @@ struct cm3ice_ctrl {
 	/* this field must be on the head of the structure */
 	ice_drv_t * ice;
 
-
 	uint32_t flags;
 
 	jtag_tap_t * tap;

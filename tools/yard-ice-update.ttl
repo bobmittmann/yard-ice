@@ -1,4 +1,4 @@
-PATTERN = '..\src\app\release\yard-ice.bin'
+PATTERN = '..\src\app\release\yard-ice*.bin'
 
 findfirst dh PATTERN FNAME
 
