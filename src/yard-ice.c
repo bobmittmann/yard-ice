@@ -432,9 +432,6 @@ int sys_start(void);
 int main(int argc, char ** argv)
 {
 	int ret;
-#if ENABLE_MONITOR
-	FILE * f;
-#endif
 	io_init();
 
 #ifdef THINKAPP
@@ -555,8 +552,17 @@ int main(int argc, char ** argv)
 #if ENABLE_MONITOR
 	INF("* starting console shell ... ");
 	DCC_LOG(LOG_TRACE, "22. console_shell().");
-	f = console_shell();
-	trace_output_set(f, true);
+	{
+		FILE * f;
+		char * env;
+		f = console_shell();
+		if ((env = getenv("TRACE")) != NULL) {
+			INF("TRACE='%s'", env);
+			if (strcmp(env, "console") == 0)
+				trace_output_set(f, true);
+		} else
+			INFS("TRACE environment not set.");
+	}
 #endif
 
 #if ENABLE_TELNET
