@@ -216,6 +216,7 @@ int target_ifa_get(uint32_t * val);
 /* Instruction Fetch Address (IFA) set */
 int target_ifa_set(uint32_t val);
 
+int target_enable_debug(bool en);
 
 int target_reset(FILE * f, int mode);
 

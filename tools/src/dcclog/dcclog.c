@@ -54,195 +54,17 @@
 #endif
 
 #include "arm_elf.h"
+#include "dcc.h"
 
-#define VERSION_MAJOR 4
+#include "debug.h"
+
+#define VERSION_MAJOR 5
 #define VERSION_MINOR 0
-
-#define LVL_PANIC   1
-#define LVL_EXCEPT  2
-#define LVL_ERROR   3
-#define LVL_WARNING 4
-#define LVL_TRACE   5
-#define LVL_INFO    6
-#define LVL_MSG     7
-#define LVL_YAP     8
-
-const char * level_tab[] = {
-	"NONE",
-	"PANIC",
-	"EXCEPT",
-	"ERROR",
-	"WARNING",
-	"TRACE",
-	"INFO",
-	"MSG",
-	"YAP",
-	"LVL9",
-	"LVL10",
-	"LVL11",
-	"LVL12",
-	"LVL13",
-	"LVL14",
-};
-
-struct dcclog_entry {
-	uint32_t file;
-	uint16_t line;
-	uint8_t level;
-	uint8_t opt;
-	uint32_t function;
-	uint32_t msg;
-};
-
-enum {
-	LOG_OPT_NONE = 0,
-	LOG_OPT_STR  = 1
-};
-
-struct log_def {
-	uint32_t addr;
-	int level;
-	char * file;
-	unsigned int line;
-	unsigned int opt;
-	char * function;
-	char * fmt;
-};
-
-struct sym_def {
-	uint32_t addr;
-	int      size;
-	uint8_t  type;
-	uint8_t  binding;
-	uint8_t  options;
-	uint8_t  flags;
-	char name[128];
-};
-
-struct mem_def {
-	uint32_t addr;
-	uint32_t size;
-	uint32_t options;
-	uint8_t * image;
-};
 
 char * prog;
 int verbose = 0;
 
-/* log entries */ 
-struct log_def dcc[16384];
-int dcc_count = 0;
-
-/* symbol table */ 
-struct sym_def sym[16384];
-int sym_count = 0;
-
-/* memory block content */ 
-struct mem_def mem[64];
-int mem_count = 0;
-
-struct sym_def * sym_lookup(uint32_t addr) 
-{
-	int i;
-
-	for (i= 0; i < sym_count; i++) {
-		if ((addr >= sym[i].addr) && (addr < sym[i].addr + sym[i].size)) {
-			return &sym[i];
-		}
-	}
-
-	return NULL;
-}
-
-struct sym_def * get_sym_by_name(const char * name) 
-{
-	int i;
-
-	for (i= 0; i < sym_count; i++) {
-		if (strcmp(sym[i].name, name) == 0) {
-			return &sym[i];
-		}
-	}
-
-	return NULL;
-}
-
-struct sym_def * get_sym(int i) 
-{
-	if (!sym_count)
-		return NULL;
-
-	return &sym[i];
-}
-
-int add_sym(char * section, char * name, uint32_t addr, uint32_t size)
-{
-
-	if (section == NULL)
-		return -1;
-
-	if (name == NULL)
-		return -1;
-	
-	if ((strcmp(section, ".dcclog")  == 0) && 
-		(size == sizeof(struct dcclog_entry))) {
-		if (verbose) {
-			if (verbose > 1) {
-				printf("+log: ");
-			}
-			printf("%12s  %08x %6d %s\n", section, addr, size, name); 
-			fflush(stdout);
-		}
-		dcc[dcc_count++].addr = addr;
-		return 0;
-	}
-
-	if ((strcmp(section, ".text")  == 0) || 
-		(strcmp(section, ".init")  == 0)) {
-		if (verbose) {
-			if (verbose > 1) {
-				printf("+log: ");
-			}
-			printf("%12s  %08x %6d %s\n", section, addr, size, name); 
-			fflush(stdout);
-		}
-		sym[sym_count].addr = addr;
-		sym[sym_count].size = size;
-		strcpy(sym[sym_count].name, name);
-		sym_count++; 
-		return 0;
-	} 
-
-	if (verbose) {
-		if (verbose > 1) {
-			printf("-   : ");
-		}
-		printf("%12s  %08x %6d %s\n", section, addr, size, name); 
-		fflush(stdout);
-	}
-	return -1;
-}
-
-char * log_level(struct log_def * log)
-{
-	int level;
-
-	if (log == NULL) {
-		fprintf(stderr, "%s:%s log is NULL.\n", prog, __func__);
-		return NULL;
-	}
-
-	level = log->level;
-
-	if ((level < LVL_PANIC) && (level > LVL_YAP)) {
-		fprintf(stderr, "%s:%s invalid level: %d.\n", 
-				__FILE__, __func__, level);
-		return NULL;
-	}
-
-	return (char *)level_tab[level];
-}
-
+int hexdump_g1(FILE * f, uint32_t  addr, const void * buf, int size);
 int hexdump(FILE * f, unsigned int addr, void * ptr, unsigned int count);
 
 void print_mem_blocks(int level)
@@ -337,28 +159,6 @@ void print_symbols(int level)
 }
 
 /*
- * Get an local pointer from target memory image
- */
-void * image_ptr(uint32_t addr)
-{
-	int32_t offs;
-	int i;
-
-
-	for (i = 0; i < mem_count; i++) {
-//		printf("%08x %8d <- %08x\n", mem[i].addr, mem[i].size, addr);
-		offs = addr - mem[i].addr;
-		if ((offs >= 0) && (offs < mem[i].size)) {
-			return (void *) &mem[i].image[offs];
-		}
-	}
-
-	fprintf(stderr, "ERROR: %s(): can't translate pointer %08x\n",
-			__func__, addr);
-	return NULL;
-}
-
-/*
  * Adjust the address offset and possibly endianness of
  * log entries
  * TODO: endianness
@@ -390,66 +190,6 @@ int fix_log(void)
 	}
 
 	return 0;
-}
-
-int dcc_int(FILE *stream)
-{
-	int val;
-
-	if (fread(&val, 4, 1, stream) != 1)
-		return 0;
-
-	return val;
-}
-
-unsigned int dcc_uint(FILE *stream)
-{
-	uint32_t val;
-
-	if (fread(&val, 4, 1, stream) != 1)
-		return 0;
-
-	return val;
-}
-
-void * dcc_ptr(FILE *stream)
-{
-	uint32_t addr;
-
-	if (fread(&addr, 4, 1, stream) != 1)
-		return 0;
-
-	return image_ptr(addr);
-}
-
-char * dcc_str(FILE *stream)
-{
-	static char s[8192 + 1];
-	uint32_t val;
-	int i;
-	int c;
-
-	i = 0;
-	do {
-		if (fread(&val, 4, 1, stream) != 1)
-			return NULL;
-		c = val & 0xff;
-		if (c != '\0') {
-			s[i++] = c;
-			c = (val >> 8) & 0xff;
-			if (c != '\0') {
-				s[i++] = c;
-				c = (val >> 16) & 0xff;
-				if (c != '\0') {
-					s[i++] = c;
-					c = (val >> 24)  & 0xff;
-				}
-			}
-		}
-		s[i++] = c;
-	} while ((c != '\0') && (i < 8192)) ;
-
-	return s;
 }
 
 uint32_t ulrevbits(uint32_t v)
@@ -517,7 +257,7 @@ int ultobin_lsb_first(char * s, uint32_t val, int width)
 #define IP4_ADDR3(a)    ((((in_addr_t) (a)) >> 16) & 0xff)
 #define IP4_ADDR4(a)    ((((in_addr_t) (a)) >> 24) & 0xff)
 
-int logprintf(FILE *stream, unsigned int opt, const char *fmt)
+int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 {
 	char c;
 	char flags;
@@ -531,8 +271,6 @@ int logprintf(FILE *stream, unsigned int opt, const char *fmt)
 	} val;
 	int n = 0;
 	int m = 0;
-
-	printf("opt=%d. ", opt);
 
 	flags = 0;
 	for (;(c = *fmt++);) {
@@ -552,7 +290,7 @@ int logprintf(FILE *stream, unsigned int opt, const char *fmt)
 		switch (c) {
 
 		case 'c':
-			c = dcc_int(stream);
+			c = dcc_read_u32(lnk);
 			m++;
 		default:
 			putchar(c);
@@ -564,13 +302,13 @@ int logprintf(FILE *stream, unsigned int opt, const char *fmt)
 		case 's':
 			m++;
 			if (opt == LOG_OPT_STR) {
-				if ((val.cp = dcc_str(stream)) == NULL) {
+				if ((val.cp = dcc_read_str(lnk)) == NULL) {
 					printf("[INVALID STRING]");
 					flags = 0;
 					continue;
 				}
 			} else {
-				if ((val.cp = dcc_ptr(stream)) == NULL) {
+				if ((val.cp = dcc_read_ptr(lnk)) == NULL) {
 					printf("[INVALID POINTER]");
 					flags = 0;
 					continue;
@@ -625,374 +363,7 @@ int logprintf(FILE *stream, unsigned int opt, const char *fmt)
 
 		case 'd':
 		case 'i':
-			val.n = dcc_int(stream);
-			if (((int)val.n) < 0) {
-				val.n = - val.n;
-				sign = '-';
-			}
-			if (sign)
-				width--;
-			val.n = sprintf(buf, "%d", (int)val.n);
-			m++;
-			break;
-
-		case 'u':
-			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%u", val.n);
-			m++;
-			break;
-
-		case 'b':
-			val.n = dcc_uint(stream);
-			val.n = ultobin_msb_first(buf, val.n);
-			m++;
-			break;
-
-		case 'B':
-			val.n = dcc_uint(stream);
-			val.n = ultobin_lsb_first(buf, val.n, width);
-			m++;
-			break;
-
-		/* IPV4 address */			
-		case 'I':
-			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%d.%d.%d.%d", 
-				IP4_ADDR1(val.n), IP4_ADDR2(val.n), 
-				IP4_ADDR3(val.n), IP4_ADDR4(val.n));
-			m++;
-			break;
-
-		/* Network byte order short */			
-		case 'S':
-			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%d", ntohs(val.n)); 
-			m++;
-			break;
-
-		/* Network byte order long */			
-		case 'L':
-			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%lu", (long int)ntohl(val.n)); 
-			m++;
-			break;
-
-		/* Memory dump */			
-		case 'M':
-			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%02x %02x %02x %02x", val.b[0],
-							val.b[1], val.b[2], val.b[3]); 
-			m++;
-			break;
-
-		case 'p':
-			width = 8;
-			flags |= ZERO_FILL;
-			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%x", val.n);
-			m++;
-			break;
-
-		case 'x':
-		case 'X':
-			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%x", val.n);
-			m++;
-			break;
-		}
-
-		if (flags & ZERO_FILL) {
-			c = '0';
-			if (sign) {
-				putchar(sign);
-				n++;
-			}
-			sign = 0; 
-			flags &= ~JUST_LEFT;
-		} else
-			c = ' ';
-
-		width -= (int)val.n;
-		if (!(flags & JUST_LEFT)) {
-			for(; width > 0; width--) {
-				putchar(c);
-				n++;
-			}
-		}
-
-		if (sign) {
-			putchar(sign);
-			n++;
-		}
-
-		val.cp = buf;
-		while ((c = *(val.cp)++)) {
-			putchar(c);
-			n++;
-		}
-
-		if (flags & JUST_LEFT) {
-			for(; width > 0; width--) {
-				putchar(' ');
-				n++;				
-			}
-		}
-
-		flags = 0;
-
-		fflush(stdout);
-	}
-
-	return m;
-}
-
-/*
- * This is the main function of the application...
- *
- */
-
-int dcc_log_expand(FILE * f)
-{
-	struct log_def * log;
-	unsigned int n;
-	unsigned int m = 0;
-	uint32_t addr;
-	char * lvl;
-	char * fmt;
-	int sync;
-	int i;
-
-	n = 0;
-	sync = 0;
-	for (;;) {
-		if (fread(&addr, 4, 1, f) != 1)
-			break;
-	
-		fmt = NULL;
-		lvl = NULL;
-		for (i = 0; i < dcc_count; i++) {
-			log = &dcc[i];
-
-			if (log->addr == addr) {
-				lvl = log_level(log);
-				fmt = log->fmt;
-				break;
-			}
-		}
-
-		if (fmt == NULL) {
-			if (sync) {
-				printf("%d\n", m);
-				m = 0;
-				sync = 0;
-			}
-			printf(".");
-			continue;
-		}
-
-		if (!sync) {
-			sync = 1;
-			printf("\n");
-		}
-
-		m++;
-
-		if (verbose > 0) {
-			printf("%6d %7s: ", n, lvl);
-			if (verbose > 1) {
-				printf("%s:%4d ", log->file, log->line);
-			}
-			printf("%s: ", log->function);
-		} else {
-			printf("%7s: %s: ", lvl, log->function);
-		}
-
-//		fflush(stdout);
-		logprintf(f, log->opt, log->fmt);
-		putchar('\n');
-//		fflush(stdout);
-		n++;
-	}
-
-	if (f != stdin)
-		fclose(f);
-
-	return 0;
-}
-
-#ifdef _WIN32
-uint32_t net_dcc_u32(SOCKET sock)
-#else
-uint32_t net_dcc_u32(int sock)
-#endif
-{
-	uint32_t val;
-
-	if (recv(sock, (char *)&val, 4, 0) != 4)
-		return 0;
-
-	return val;
-}
-
-#ifdef _WIN32
-void * net_dcc_ptr(SOCKET sock)
-#else
-void * net_dcc_ptr(int sock)
-#endif
-{
-	uint32_t addr;
-
-	if (recv(sock, (char *)&addr, 4, 0) != 4)
-		return NULL;
-
-	return image_ptr(addr);
-}
-
-#ifdef _WIN32
-char * net_dcc_str(SOCKET sock)
-#else
-char * net_dcc_str(int sock)
-#endif
-{
-	static char s[8192 + 1];
-	uint32_t val;
-	int i;
-	int c;
-
-	i = 0;
-	do {
-		if (recv(sock, (char *)&val, 4, 0) != 4)
-			return NULL;
-		c = val & 0xff;
-		if (c != '\0') {
-			s[i++] = c;
-			c = (val >> 8) & 0xff;
-			if (c != '\0') {
-				s[i++] = c;
-				c = (val >> 16) & 0xff;
-				if (c != '\0') {
-					s[i++] = c;
-					c = (val >> 24)  & 0xff;
-				}
-			}
-		}
-		s[i++] = c;
-	} while ((c != '\0') && (i < 8192)) ;
-
-	return s;
-}
-
-#ifdef _WIN32
-int net_logprintf(SOCKET sock, unsigned int opt, const char *fmt)
-#else
-int net_logprintf(int sock, unsigned int opt, const char *fmt)
-#endif
-{
-	char c;
-	char flags;
-	char sign = 0;
-	int width = 0;
-	char buf[80];
-	union {
-		char * cp;
-		uint32_t n;
-		uint8_t b[4];
-	} val;
-	int n = 0;
-	int m = 0;
-
-	flags = 0;
-	for (;(c = *fmt++);) {
-
-		if (!flags) {
-			if (c == '%') {
-				flags = GOT_PERCENT;
-				width = 0;
-				sign = 0;
-				fflush(stdout);
-			} else {
-				putchar(c);
-				n++;
-			}
-			continue;
-		}
-		switch (c) {
-
-		case 'c':
-			c = net_dcc_u32(sock);
-			m++;
-		default:
-			putchar(c);
-			n++;
-			flags = 0;
-			width = 0;
-			continue;
-
-		case 's':
-			m++;
-			if (opt == LOG_OPT_STR) {
-				if ((val.cp = net_dcc_str(sock)) == NULL) {
-					printf("[INVALID STRING]");
-					flags = 0;
-					continue;
-				}
-			} else {
-				if ((val.cp = net_dcc_ptr(sock)) == NULL) {
-					printf("[INVALID POINTER]");
-					flags = 0;
-					continue;
-				}
-			}
-
-			width -= (int)strlen(val.cp);
-			if (!(flags & JUST_LEFT)) {
-				for(; width > 0; width--) {
-					putchar(' ');
-					n++;
-				}
-			}
-			while ((c = *(val.cp)++)) {
-				putchar(c);
-				n++;
-			}
-			if ((flags & JUST_LEFT)) {
-				for(; width > 0; width--) {
-					putchar(' ');
-					n++;
-				}
-			}
-			flags = 0;
-			continue;
-
-		case 'l':
-			continue;
-
-		case '0':
-			if (width == 0)
-				flags |= ZERO_FILL;
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			width = (width * 10) + (c - '0');
-			continue;
-
-		case '-':
-			flags |= JUST_LEFT;
-			continue;
-
-		case '+':
-			sign = '+';
-			continue;
-
-		case 'd':
-		case 'i':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			if (((int32_t)val.n) < 0) {
 				val.n = - val.n;
 				sign = '-';
@@ -1004,26 +375,26 @@ int net_logprintf(int sock, unsigned int opt, const char *fmt)
 			break;
 
 		case 'u':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%u", val.n);
 			m++;
 			break;
 
 		case 'b':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = ultobin_msb_first(buf, val.n);
 			m++;
 			break;
 
 		case 'B':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = ultobin_lsb_first(buf, val.n, width);
 			m++;
 			break;
 
 		/* IPV4 address */			
 		case 'I':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%d.%d.%d.%d", 
 				IP4_ADDR1(val.n), IP4_ADDR2(val.n), 
 				IP4_ADDR3(val.n), IP4_ADDR4(val.n));
@@ -1032,21 +403,21 @@ int net_logprintf(int sock, unsigned int opt, const char *fmt)
 
 		/* Network byte order short */			
 		case 'S':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%d", ntohs(val.n)); 
 			m++;
 			break;
 
 		/* Network byte order long */			
 		case 'L':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%lu", (long int)ntohl(val.n)); 
 			m++;
 			break;
 
 		/* Memory dump */			
 		case 'M':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%02x %02x %02x %02x", val.b[0],
 							val.b[1], val.b[2], val.b[3]); 
 			m++;
@@ -1055,14 +426,14 @@ int net_logprintf(int sock, unsigned int opt, const char *fmt)
 		case 'p':
 			width = 8;
 			flags |= ZERO_FILL;
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%x", val.n);
 			m++;
 			break;
 
 		case 'x':
 		case 'X':
-			val.n = net_dcc_u32(sock);
+			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%x", val.n);
 			m++;
 			break;
@@ -1113,11 +484,7 @@ int net_logprintf(int sock, unsigned int opt, const char *fmt)
 	return m;
 }
 
-#ifdef _WIN32
-int net_dcc_log_expand(SOCKET sock)
-#else
-int net_dcc_log_expand(int sock)
-#endif
+int dcc_log_expand(struct dcc_lnk * lnk)
 {
 	struct log_def * log;
 	unsigned int n;
@@ -1131,8 +498,12 @@ int net_dcc_log_expand(int sock)
 	n = 0;
 	sync = 0;
 	for (;;) {
-		if (recv(sock, (char *)&addr, 4, 0) != 4)
+
+		if (dcc_read_addr(lnk, &addr) < 0) {
+			fprintf(stderr, "Can't read DCC entry address\n");
+			fflush(stderr);
 			break;
+		}
 	
 		fmt = NULL;
 		lvl = NULL;
@@ -1169,14 +540,28 @@ int net_dcc_log_expand(int sock)
 				printf("%s:%4d ", log->file, log->line);
 			}
 			printf("%s: ", log->function);
+			fflush(stdout);
 		} else {
 			printf("%7s: %s: ", lvl, log->function);
+			fflush(stdout);
 		}
 
-//		fflush(stdout);
-		net_logprintf(sock, log->opt, log->fmt);
-		putchar('\n');
-		fflush(stdout);
+		if (log->opt == LOG_OPT_XXD) {
+			uint32_t len;
+			uint8_t * buf;
+			printf("%s:\n", log->fmt);
+			fflush(stdout);
+
+			DBG(DBG_TRACE, "XXD");
+			len = dcc_read_u32(lnk);
+			if ((buf = dcc_read_bin(lnk, len)) != NULL) {
+				hexdump_g1(stdout, 0, buf, len);
+			}
+		} else if (log->opt <= LOG_OPT_STR) {
+			dcc_logprintf(lnk, log->opt, log->fmt);
+			putchar('\n');
+			fflush(stdout);
+		}
 		n++;
 	}
 
@@ -1311,8 +696,6 @@ int pipe_start(FILE * stream)
 	return ret;
 }
 
-int dcc_sock = -1;
-
 void cleanup(void)
 {
 //	printf("cleanup...\n");
@@ -1322,12 +705,6 @@ void cleanup(void)
 		__thread_destroy(pipe_thread);
 		pipe_thread = NULL;
 	}
-
-#ifdef _WIN32
-	closesocket(dcc_sock);
-#else
-	close(dcc_sock);
-#endif
 }
 
 void sig_quit(int signo)
@@ -1336,75 +713,6 @@ void sig_quit(int signo)
 	fflush(stdout);
 	cleanup();
 	exit(3);
-}
-
-int net_connect(char * host, int port)
-{
-	struct hostent * hp;
-	struct sockaddr_in sa;
-	in_addr_t addr;
-#if defined(WIN32)
-	SOCKET sock;
-#else
-	int sock;
-#endif
-	int opt;
-
-#if defined(WIN32)
-	WSADATA wsaData;
-
-	/* initialize windows sockets */
-	if (WSAStartup(MAKEWORD(2,1), &wsaData) != 0) {
-		MessageBox(NULL, 
-			"Fatal ERROR!\nUnable to initialize windows socket!",
-			"DCC Client", MB_ICONERROR);
-		return -1;
-	}
-#endif
-
-	/* Configuracao do Socket como TCP */
-	sock = socket(AF_INET, SOCK_STREAM, 0); 
-	if (sock < 0) {
-		fprintf(stderr, "%s: socket(): %s\n", prog, strerror(errno));
-		return -1;
-	}
-
-	memset(&sa, 0, sizeof(struct sockaddr_in));
-
-	if ((hp = gethostbyname(host)) != NULL) {
-		memcpy(&(sa.sin_addr), hp->h_addr, hp->h_length);
-		sa.sin_family = hp->h_addrtype;
-	} else {
-		if ((addr = inet_addr(host)) == INADDR_NONE) {
-			fprintf(stderr, "%s: Unknown host %s.\n", prog, host);
-			return -1;
-		}
-		sa.sin_addr.s_addr = addr;
-		sa.sin_family = AF_INET;
-	}
-
-	sa.sin_port = htons(port);
-
-	if (connect(sock, (struct sockaddr *)&sa, sizeof(sa))) { 
-		fprintf(stderr, "%s: connect(): %s\n", prog, strerror(errno));
-		return -1;
-	}
-
-	opt = 1;
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *)&opt, sizeof(int));
-#if 0
-	setsockopt(sock, IPPROTO_TCP, TCP_QUICKACK, (void *)&opt, sizeof(int));
-	send(, "\r", 1, 0);
-#endif
-#if defined(WIN32)
-//	if ((fd = _open_osfhandle(sock, O_RDWR | O_BINARY)) < 0) {
-//		fprintf(stderr, "%s: _open_osfhandle(): %s\n", prog, strerror(errno));
-//		return -1;
-//	}
-#endif
-
-
-	return sock;
 }
 
 int load_elf(char * pathname)
@@ -1640,7 +948,7 @@ int main(int argc, char *argv[])
 	int showmem = 0;
 	int host_set = 0;
 	int log_set = 0;
-	int sock;
+	struct dcc_lnk lnk;
 	int c;
 	time_t t;
 	FILE * f;
@@ -1702,7 +1010,7 @@ int main(int argc, char *argv[])
 		usage(prog);
 	}
 	
-	printf("\n== ARM DCC log viewer ==\n");
+	printf("\n== ARM DCC log viewer %d.%d ==\n", VERSION_MAJOR, VERSION_MINOR);
 	fflush(stdout);
 	 
 	while (optind < argc) {
@@ -1747,45 +1055,29 @@ int main(int argc, char *argv[])
 				return 4;
 			};
 		}
+
+		dcc_file_link(&lnk, f);
 	} else {
 		if (host_set) {
-
-			printf(" - host: %s:%d\n", host, port);
-			fflush(stdout);
-			if ((sock = net_connect(host, port)) < 0) {
-				fprintf(stderr, "%s: can't connect to '%s'\n", prog, host);
+			if ((net_connect(&lnk, host, port)) < 0) {
+				fprintf(stderr, "%s: can't connect to '%s:%d'\n", prog, 
+						host, port);
 				return 5;
 			}
-
-			dcc_sock = sock;
-
-			t = time(NULL);
-			printf(" - log date: %s\n", asctime(localtime(&t)));
+			printf(" - host: %s:%d (connected).\n", host, port);
 			fflush(stdout);
-
-			if (net_dcc_log_expand(sock) < 0) {
-				cleanup();
-				return 3;
-			}
-
-			cleanup();
-			return 0;
-
-			if ((f = fdopen(sock, "r")) == NULL) { 
-				fprintf(stderr, "%s: fdopen() failed!\n", prog);
-				return 5;
-//			pipe_start(fdopen(fd, "w"));
-			}
-
 		} else {
 			f = stdin;
+			dcc_file_link(&lnk, f);
 		}
 	}
 
+	t = time(NULL);
+	printf(" - log date: %s\n", asctime(localtime(&t)));
 	printf("\n");
 	fflush(stdout);
 
-	if (dcc_log_expand(f) < 0) {
+	if (dcc_log_expand(&lnk) < 0) {
 		cleanup();
 		return 3;
 	}

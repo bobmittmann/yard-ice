@@ -1771,6 +1771,11 @@ int armice_close(armice_ctrl_t * ctrl)
 	return ICE_OK;
 }
 
+int armice_dbgen(armice_ctrl_t * ctrl, bool en)
+{
+	return ICE_OK;
+}
+
 int armice_test(armice_ctrl_t * ctrl, FILE * f, uint32_t val);
 
 int armice_info(armice_ctrl_t * ctrl, FILE * f, uint32_t which);
@@ -1826,6 +1831,7 @@ const struct ice_oper armice_oper = {
 
 	.test = (ice_test_t)armice_test,
 	.info = (ice_info_t)armice_info,
+	.dbgen = (ice_dbgen_t)armice_dbgen,
 
 	.core_reset = (ice_core_reset_t)armice_core_reset,
 	.system_reset = (ice_system_reset_t)NULL,

@@ -43,6 +43,7 @@
 #include <thinkos/dbgmon.h>
 #endif
 
+#include <tcpip/net.h>
 #include <tcpip/ethif.h>
 #include <tcpip/route.h>
 #include <tcpip/loopif.h>
@@ -276,6 +277,26 @@ int stm32f_get_esn(void * arg)
 	return 0;
 }
 
+void on_dhcpc_event(struct dhcp * dhcp, enum dhcp_event event)
+{
+	in_addr_t ip_addr;
+	in_addr_t netmask;
+//	in_addr_t gw_addr;
+	struct ifnet * ifn;
+	char s[16];
+	char s1[16];
+	char s2[16];
+
+	dhcp_ipv4_bind(dhcp);
+	ifn = dhcp_ifget(dhcp);
+
+	ifn_getname(ifn, s);
+	ifn_ipv4_get(ifn, &ip_addr, &netmask);
+	INF("* netif %s: %s, %s", s,
+		   inet_ntop(AF_INET, (void *)&ip_addr, s1, 16),
+		   inet_ntop(AF_INET, (void *)&netmask, s2, 16));
+}
+
 int network_config(void)
 {
 	struct ifnet * ifn;
@@ -285,10 +306,12 @@ int network_config(void)
 	char s[64];
 	char s1[16];
 	char s2[16];
+	char s3[16];
 	char * env;
 	uint8_t * ethaddr;
 	uint64_t esn;
-	int dhcp;
+	int use_dhcp = 0;
+	struct dhcp * dhcp;
 
 	/* Initialize MAC address with the MCU's UID */
 	ethaddr = (uint8_t *)&esn;
@@ -332,7 +355,7 @@ int network_config(void)
 
 	if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&netmask)) {
 		if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&gw_addr)) {
-			dhcp = strtoul(strtok(NULL, ""), NULL, 0);
+			use_dhcp = strtoul(strtok(NULL, ""), NULL, 0);
 		}
 	}
 
@@ -355,15 +378,29 @@ int network_config(void)
 			   inet_ntop(AF_INET, (void *)&gw_addr, s1, 16));
 	}
 
-	if (dhcp) {
-#if 0
-		/* configure the initial ip address */
-		dhcp_start();
-		/* schedule the interface to be configured through dhcp */
-		dhcp_ifconfig(ethif, dhcp_callback);
-		INF("DHCP started.\n");
-#endif
+	if ((env = getenv("ROUTE")) != NULL) {
+		strcpy(s, env);
+		if (inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
+			if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&netmask)) {
+				if (inet_aton(strtok(NULL, " ;"), (struct in_addr *)&gw_addr)) {
+					ipv4_route_add(ip_addr, netmask, gw_addr, ifn);
+					INF("* route: %s %s %s", s, 
+						inet_ntop(AF_INET, (void *)&ip_addr, s1, 16),
+						inet_ntop(AF_INET, (void *)&netmask, s2, 16),
+						inet_ntop(AF_INET, (void *)&gw_addr, s3, 16));
+				}
+			}
+		}
 	}
+
+	/* enable the interface to be configured through DHCP */
+	dhcp = dhcpc_ifattach(ifn, on_dhcpc_event);
+	if (use_dhcp) {
+		/* schedule the interface to be configured through DHCP */
+		dhcp_resume(dhcp);
+		INF("DHCP started.");
+	}
+
 
 //	loopif_init();
 

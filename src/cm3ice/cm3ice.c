@@ -1624,6 +1624,34 @@ int cm3ice_core_reset(cm3ice_ctrl_t * ctrl)
 
 }
 
+int cm3ice_dbgen(cm3ice_ctrl_t * ctrl, bool en)
+{
+	jtag_tap_t * tap = ctrl->tap;
+	uint32_t dhcsr;
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
+						 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	dhcsr &= 0xffff;
+
+	if (en)
+		dhcsr |= DHCSR_C_DEBUGEN;
+	else
+		dhcsr &= ~DHCSR_C_DEBUGEN;
+
+	INF("DHCSR=0x%08x", dhcsr);
+
+	if (jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | dhcsr) != 
+		JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	return ICE_OK;
+}
 
 
 /*****************************************************************************
@@ -1744,6 +1772,8 @@ const struct ice_oper cm3ice_oper = {
 
 	.test = (ice_test_t)cm3ice_test,
 	.info = (ice_info_t)cm3ice_info,
+
+	.dbgen = (ice_dbgen_t)cm3ice_dbgen,
 
 	.core_reset = (ice_core_reset_t)cm3ice_core_reset,
 

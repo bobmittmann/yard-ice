@@ -15,6 +15,64 @@
 #include <string.h>
 #include <stdint.h>
 
+void show_line_char(FILE * f, uint32_t  addr, const uint8_t * data, int count)
+{
+	uint32_t base;
+	uint8_t * cp;
+	int i;
+	int j;
+	int n;
+	int c;
+
+	/* 16 bytes base alignment */
+	base = addr & ~(16 - 1);
+	j = (base < addr) ? (addr - base) : 0;
+	n = count + j;
+
+	cp = (uint8_t *)data; 
+	for (i = 0; i < n; i++) {
+		if (i == 8)
+			fprintf(f, " ");
+
+		if (i < j) {
+			fprintf(f, ".");
+		} else {
+			c = *cp++;
+			fprintf(f, "%c", ((c < ' ') || (c > 126)) ? '.' : c);
+		}
+	}
+}
+
+void show_line_hex8(FILE * f, uint32_t  addr, const uint8_t * data, int count)
+{
+	uint32_t base;
+	uint32_t val;
+	uint8_t * cp;
+	int i;
+	int j;
+	int n;
+
+	/* 16 bytes base alignment */
+	base = addr & ~(16 - 1);
+	j = (base < addr) ? (addr - base) : 0;
+	n = count + j;
+
+	cp = (uint8_t *)data; 
+	for (i = 0; i < n; i += 1) {
+		if (i < j) {
+			fprintf(f, "__ ");
+		} else {
+
+			val = cp[0];
+			fprintf(f, "%02x ", val);
+			cp += 1;
+		}
+	}
+
+	for (; i < 16; i += 1)
+		fprintf(f, "   ");
+}
+
 static void show_hex32(FILE * f, uint32_t  addr, const void * buf, int count)
 {
 	uint32_t base;
@@ -103,3 +161,32 @@ int hexdump(FILE * f, unsigned int addr, void * ptr, unsigned int count)
 
 	return 0;
 }
+
+int hexdump_g1(FILE * f, uint32_t  addr, const void * buf, int size)
+{
+	uint8_t * cp = (uint8_t *)buf;
+	uint32_t base;
+	int rem = size;
+	int n;
+
+	/* the base address is allways a 16 bytes multiple */
+	base = addr & ~(16 - 1);
+	n = (base < addr) ? (base + 16) - addr : 16;
+	n = (n < rem) ? n : rem;
+
+	while (n > 0) {
+		fprintf(f, "%08x: ", base);
+		show_line_hex8(f, addr, cp, n);
+		fprintf(f, ": ");
+		show_line_char(f, addr, cp, n);
+		fprintf(f, "\n");
+		cp += n;
+		addr += n;
+		rem -= n;
+		base += 16;
+		n = (rem < 16) ? rem : 16;
+	} 
+
+	return size;
+}
+

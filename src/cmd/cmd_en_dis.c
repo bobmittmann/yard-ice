@@ -43,6 +43,9 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 	if ((strcmp(*argv, "comm") == 0) || (strcmp(*argv, "c") == 0))
 		return target_enable_comm(true);
 
+	if ((strcmp(*argv, "debug") == 0) || (strcmp(*argv, "d") == 0))
+		return target_enable_debug(true);
+
 	return -1;
 }
 
@@ -58,6 +61,9 @@ int cmd_disable(FILE * f, int argc, char ** argv)
 
 	if ((strcmp(*argv, "comm") == 0) || (strcmp(*argv, "c") == 0))
 		return target_enable_comm(false);
+
+	if ((strcmp(*argv, "debug") == 0) || (strcmp(*argv, "d") == 0))
+		return target_enable_debug(false);
 
 	return -1;
 }

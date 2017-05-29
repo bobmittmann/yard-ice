@@ -334,10 +334,10 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"[reset | info | probe | select N]", "I2C operations." },
 
 	{ cmd_enable, "enable", "en", 
-		"[poll | comm ]", "enable feature." },
+		"[poll | comm | debug | irq]", "enable feature." },
 
 	{ cmd_disable, "disable", "dis", 
-		"[poll | comm ]", "disable feature." },
+		"[poll | comm | debug | irq]", "disable feature." },
 
 	{ cmd_trst, "trst", "tr", 
 		"[set | clr | [pulse TIME(ms)]]", "assert the TRST signal ..." },

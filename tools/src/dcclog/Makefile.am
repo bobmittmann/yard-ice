@@ -14,7 +14,10 @@ bin_PROGRAMS = dcclog
 dcclog_SOURCES = \
 	arm_elf.c\
 	hexdump.c\
-	dcclog.c
+	dcclog.c\
+	net.c\
+	file.c\
+	dcc.c
 
 dcclog_CFLAGS = \
 	-O2 -Wall
