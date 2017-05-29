@@ -1,6 +1,6 @@
 #!/bin/sh
 
-JTAGTOOL_ADDR=192.168.0.51
+JTAGTOOL_ADDR=192.168.10.51
 TOOLS_DIR=../thinkos/tools
 THINKOS=boot/debug/thinkos-0.22
 THINKAPP=app/debug/yard-ice-0.32

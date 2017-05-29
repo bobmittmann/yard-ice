@@ -35,6 +35,7 @@
 #include <netinet/in.h>
 #include <tcpip/tcp.h>
 
+#define TRACE_LEVEL TRACE_LVL_DBG
 #include <trace.h>
 
 #include "gdb_rspd.h"

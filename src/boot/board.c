@@ -84,6 +84,8 @@ void board_init(void)
 	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
 	/* Enable USB OTG FS interrupts */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+
+	DCC_LOG(LOG_TRACE, "Enabling OTG_FS IRQ ...");
 }
 
 bool board_autoboot(void)
