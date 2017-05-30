@@ -1,18 +1,26 @@
 #!/bin/sh
 
-JTAGTOOL_ADDR=192.168.0.51
-BUILD_NAME=thinkos-0.23
-TOOLS_DIR=../../thinkos/tools
+TOOLS_DIR=../../tools
+PYTHON=python
+if [ -z "$JTAGTOOL_ADDR" ]; then
+	JTAGTOOL_ADDR=192.168.0.51
+fi
+# Collect ".bin" files in the positional parameters
+set -- `ls debug/*.bin`
+# Get the last one
+for PROG_BIN; do true; done
+# The corresponding .elf
+PROG_ELF=${PROG_BIN%%.bin}.elf
 
-${TOOLS_DIR}/tftp_load.py -q -i -e -r  -a 0x08000000 -h ${JTAGTOOL_ADDR} \
-		debug/${BUILD_NAME}.bin 
+${PYTHON} ${TOOLS_DIR}/tftp_load.py -q -i -e -r  -a 0x08000000 \
+	-h ${JTAGTOOL_ADDR} ${PROG_BIN} 
 
 if [ $? = 0 ] ; then
 	# Disable the halt debug mode by clearing C_DEBUGEN on DHCSR
-	${TOOLS_DIR}/tftp_cmd.py -h ${JTAGTOOL_ADDR} 'disable debug'
-fi
-
-if [ $? = 0 ] ; then
-	${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf 
+	${PYTHON} ${TOOLS_DIR}/tftp_cmd.py -h ${JTAGTOOL_ADDR} 'disable debug'
+	if [ $? = 0 ] ; then
+		# Trace
+		${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF}
+	fi
 fi
 
