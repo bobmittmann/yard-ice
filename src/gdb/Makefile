@@ -25,7 +25,7 @@ include ../../thinkos/mk/config.mk
 
 LIB_STATIC = gdb
 
-CFILES = gdb-rsp.c
+CFILES = gdb-core.c gdb-util.c gdb-tcp.c 
 
 include ../../thinkos/mk/lib.mk
 

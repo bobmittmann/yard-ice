@@ -715,16 +715,16 @@ static int rsp_memory_read(struct tcp_pcb * tp, char * pkt, int len)
 	cp++;
 	size = strtoul(cp, NULL, 16);
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 5) >> 1;
 
 	if (size > max)
 		size = max;
 
-	if ((ret = target_mem_read(addr, buf, size)) < 0) {
-		DCC_LOG3(LOG_INFO, "ERR: %d addr=%08x size=%d", ret, addr, size);
-
+	if ((ret = target_mem_read(addr, buf, size)) <= 0) {
+		DCC_LOG3(LOG_WARNING, "ERR: %d addr=%08x size=%d", ret, addr, size);
+#if 1
 		pkt[0] = '$';
 		pkt[1] = sum = 'E';
 		n = 2;
@@ -733,9 +733,20 @@ static int rsp_memory_read(struct tcp_pcb * tp, char * pkt, int len)
 		pkt[n++] = '#';
 		pkt[n++] = hextab[((sum >> 4) & 0xf)];
 		pkt[n++] = hextab[sum & 0xf];
+#endif
+#if 0
+		pkt[0] = '$';
+		n = 1;
+		for (i = 0; i < size; i++) {
+			sum += pkt[n++] = hextab[0];
+			sum += pkt[n++] = hextab[0];
+		}
+		pkt[n++] = '#';
+		pkt[n++] = hextab[((sum >> 4) & 0xf)];
+		pkt[n++] = hextab[sum & 0xf];
+#endif
 	} else {
-
-		DCC_LOG2(LOG_INFO, "addr=%08x size=%d", addr, size);
+		DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 
 		pkt[0] = '$';
 		n = 1;
