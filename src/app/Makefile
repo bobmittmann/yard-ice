@@ -21,9 +21,9 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-VERSION_DATE = "2017-05-28"
+VERSION_DATE = "2017-05-29"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "35"
+VERSION_MINOR = "36"
 
 PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
