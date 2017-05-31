@@ -35,7 +35,7 @@
 #include <stdbool.h>
 #include <thinkos.h>
 
-#define LOG_LEVEL LOG_MSG
+#define LOG_LEVEL LOG_TRACE
 #include <sys/dcclog.h>
 
 #include "jtag_adi.h"
@@ -531,18 +531,18 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		return 0;
 	}
 
-	DCC_LOG1(LOG_TRACE, "COMM=0x%08x", ctrl->comm_addr);
+	DCC_LOG1(LOG_INFO, "COMM=0x%08x", ctrl->comm_addr);
 
 	/* get the state of the device's COMM buffer */
 	jtag_mem_ap_read(tap, ctrl->comm_addr, &ctrl->cc, 8);
 
-	DCC_LOG4(LOG_TRACE, "COMM: dbg=%d dev=%d tx_tail=%d tx_head=%d", 
+	DCC_LOG4(LOG_INFO, "COMM: dbg=%d dev=%d tx_tail=%d tx_head=%d", 
 			 ctrl->cc.rw.dbg, ctrl->cc.ro.dev, 
 			 ctrl->cc.rw.tx_tail, ctrl->cc.ro.tx_head);
 
 	if (ctrl->cc.ro.dev == DEV_CONNECTED) {
 		if (ctrl->cc.rw.dbg == DBG_CONNECTED) {
-			DCC_LOG(LOG_TRACE, "COMM already connected...");
+			DCC_LOG(LOG_INFO, "COMM already connected...");
 			return 0;
 		}
 		if (ctrl->cc.rw.dbg != DBG_SYNC) {
@@ -608,8 +608,8 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		return 0;
 
 	while (ctrl->poll_enabled) {
-
 		/* get the remote COMM channel data */
+#if 0
 		if (jtag_mem_ap_rd32(tap, ctrl->comm_addr, 
 							 &ctrl->cc.ro.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
@@ -625,6 +625,12 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			ctrl->comm_addr = 0x00000000;
 			return 0;
 		}
+#endif
+		if (jtag_mem_ap_rd32(tap, ARMV7M_DCRDR, 
+							 &ctrl->cc.ro.u32) != JTAG_ADI_ACK_OK_FAULT) {
+			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
+			return ICE_ST_FAULT;
+		}
 
 		if ((ctrl->cc.ro.dev != DEV_CONNECTED) ||
 			(ctrl->cc.rw.dbg != DBG_CONNECTED)) {
@@ -639,7 +645,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			break;
 		}
 
-		/* get the number of words in the buffer */
+		/* get the number of words in the target's buffer */
 		cnt = (ctrl->cc.ro.tx_head - ctrl->cc.rw.tx_tail) & 0xffff;
 
 		if (cnt == 0)
