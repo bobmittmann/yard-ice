@@ -49,7 +49,9 @@ int main(int argc, char ** argv)
 	struct dmon_comm * comm;
 
 	DCC_LOG_INIT();
+#if DEBUG > 2
 	DCC_LOG_CONNECT();
+#endif
 
 #ifndef UDELAY_FACTOR 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
@@ -76,6 +78,8 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "7. usb_comm_init()");
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
+
+	thinkos_sleep(256);
 
 	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon_init()");
 	thinkos_dbgmon_init(comm, monitor_task);

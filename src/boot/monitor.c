@@ -41,6 +41,7 @@
 #include <thinkos/dbgmon.h>
 #include <thinkos.h>
 #include <sys/dcclog.h>
+#include <sys/delay.h>
 #include "version.h"
 
 extern int __heap_end;
@@ -103,6 +104,10 @@ struct magic {
 
 #ifndef MONITOR_STACKUSAGE_ENABLE
 #define MONITOR_STACKUSAGE_ENABLE  0
+#endif
+
+#ifndef MONITOR_FAULT_ENABLE
+#define MONITOR_FAULT_ENABLE       THINKOS_ENABLE_EXCEPTIONS
 #endif
 
 #define RBF_BLOCK_OFFS 0x00010000
@@ -410,6 +415,27 @@ static bool app_exec(void)
 	return true;
 }
 
+#if (MONITOR_FAULT_ENABLE)
+static void monitor_on_fault(struct dmon_comm * comm)
+{
+	struct thinkos_except * xcpt = &thinkos_except_buf;
+
+	DCC_LOG(LOG_TRACE, "dmon_wait_idle()...");
+
+	if (dbgmon_wait_idle() < 0) {
+		DCC_LOG(LOG_WARNING, "dmon_wait_idle() failed!");
+	}
+
+	DCC_LOG(LOG_TRACE, "<<IDLE>>");
+
+	if (dmon_comm_isconnected(comm)) {
+		dmprintf(comm, s_hr);
+		dmon_print_exception(comm, xcpt);
+		dmprintf(comm, s_hr);
+	}
+}
+#endif
+
 #if (MONITOR_PAUSE_ENABLE)
 static void pause_all(void)
 {
@@ -609,4 +635,3 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #endif
 	}
 }
-

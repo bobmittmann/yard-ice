@@ -37,11 +37,21 @@
 #include "board.h"
 #include "version.h"
 
+void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+{
+	udelay(1000000);
+	cm3_sysrst();
+}
+
 void board_init(void)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
+	struct cm3_scb * scb = CM3_SCB;
 
 	DCC_LOG(LOG_TRACE, "...");
+
+	/* Disable exceptions */
+	scb->shcsr = 0;
 
 	/* Reset all peripherals except USB_OTG and GPIOA */
 	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
