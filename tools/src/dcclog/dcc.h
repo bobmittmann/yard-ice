@@ -85,6 +85,7 @@ struct dcc_lnk_op {
 	uint32_t (* read_u32)(void * drv);
 	void * (* read_ptr)(void * drv);
 	char * (* read_str)(void * drv);
+	float (* read_float)(void * drv);
 	uint8_t * (* read_bin)(void * drv, unsigned int len);
 	int (* close)(void * drv);
 };
@@ -126,6 +127,10 @@ static inline int dcc_read_addr(struct dcc_lnk * lnk, uint32_t * addr) {
 
 static inline uint32_t dcc_read_u32(struct dcc_lnk * lnk) {
 	return lnk->op->read_u32(lnk->drv);
+};
+
+static inline float dcc_read_float(struct dcc_lnk * lnk) {
+	return lnk->op->read_float(lnk->drv);
 };
 
 static inline void * dcc_read_ptr(struct dcc_lnk * lnk) {

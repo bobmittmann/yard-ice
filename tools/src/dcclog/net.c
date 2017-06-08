@@ -84,6 +84,17 @@ uint32_t tcp_read_u32(struct tcp_drv * tcp)
 	return val;
 }
 
+float tcp_read_float(struct tcp_drv * tcp)
+{
+	float val;
+
+	if (recv(tcp->sock, (char *)&val, 4, 0) != 4)
+		return 0;
+
+	return val;
+}
+
+
 void * tcp_read_ptr(struct tcp_drv * tcp)
 {
 	uint32_t addr;
@@ -165,6 +176,7 @@ const struct dcc_lnk_op net_lnk_op = {
 	.read_u32 = (void *)tcp_read_u32,
 	.read_ptr = (void *)tcp_read_ptr,
 	.read_str = (void *)tcp_read_str,
+	.read_float = (void *)tcp_read_float,
 	.read_bin = (void *)tcp_read_bin,
 	.close = (void *)tcp_close
 };

@@ -268,6 +268,7 @@ int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 		char * cp;
 		uint32_t n;
 		uint8_t b[4];
+		float f;
 	} val;
 	int n = 0;
 	int m = 0;
@@ -420,6 +421,12 @@ int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 			val.n = dcc_read_u32(lnk);
 			val.n = sprintf(buf, "%02x %02x %02x %02x", val.b[0],
 							val.b[1], val.b[2], val.b[3]); 
+			m++;
+			break;
+
+		case 'f':
+			val.f = dcc_read_float(lnk);
+			val.n = sprintf(buf, "%f", val.f); 
 			m++;
 			break;
 

@@ -54,6 +54,17 @@ uint32_t file_read_u32(FILE * f)
 	return val;
 }
 
+float file_read_float(FILE * f)
+{
+	float val;
+
+	if (fread(&val, 4, 1, f) != 1)
+		return 0;
+
+	return val;
+}
+
+
 void * file_read_ptr(FILE * f)
 {
 	uint32_t addr;
@@ -124,6 +135,7 @@ const struct dcc_lnk_op file_lnk_op = {
 	.read_u32 = (void *)file_read_u32,
 	.read_ptr = (void *)file_read_ptr,
 	.read_str = (void *)file_read_str,
+	.read_float = (void *)file_read_float,
 	.read_bin = (void *)file_read_bin,
 	.close = (void *)file_close
 };
