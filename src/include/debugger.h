@@ -240,7 +240,7 @@ int target_breakpoint_all_enable(void);
 
 
 
-int target_watchpoint_get(struct dbg_wp * wp, struct dbg_wp ** next);
+int target_watchpoint_next(struct dbg_wp * wp, struct dbg_wp ** next);
 
 int target_watchpoint_set(uint32_t addr, uint32_t mask);
 

@@ -46,6 +46,11 @@ struct gdb_tcpd {
 	volatile struct tcp_pcb * tp;
 };
 
+int gdb_tcp_init(struct tcp_pcb * tp)
+{
+	return 0;
+}
+
 int gdb_tcp_send(struct tcp_pcb * tp, const void * buf, unsigned int len)
 {
 	return tcp_send(tp, buf, len, TCP_SEND_NOWAIT);
@@ -72,175 +77,12 @@ int gdb_tcp_settmo(struct tcp_pcb * tp, unsigned int ms)
 }
 
 const struct gdb_comm_op gdb_tcp_op = {
+	.init = (void *)gdb_tcp_init,
 	.send = (void *)gdb_tcp_send,
 	.recv = (void *)gdb_tcp_recv,
 	.flush = (void *)gdb_tcp_flush,
 	.drain = (void *)gdb_tcp_drain,
 	.settmo = (void *)gdb_tcp_settmo
-};
-
-int arm_jtag_mem_write(void * arg, uint32_t addr, 
-					   const void * ptr, unsigned int len)
-{
-	return 0;
-}
-
-
-int arm_jtag_mem_read(void * arg, uint32_t addr, void * ptr, unsigned int len)
-{
-	return 0;
-}
-
-int arm_jtag_file_read(void * arg, const char * name, char * dst, 
-					  unsigned int offs, unsigned int size)
-{
-	return 0;
-}
-
-int arm_jtag_cpu_halt(void * arg)
-{
-	return 0;
-}
-
-int arm_jtag_cpu_continue(void * arg)
-{
-	return 0;
-}
-
-int arm_jtag_cpu_goto(void * arg, uint32_t addr, int opt)
-{
-	return 0;
-}
-
-int arm_jtag_cpu_run(void * arg, uint32_t addr, int opt)
-{
-	return 0;
-}
-
-int arm_jtag_cpu_reset(void * arg)
-{
-	return 0;
-}
-
-int arm_jtag_app_exec(void * arg)
-{
-	return 0;
-}
-
-int arm_jatg_thread_getnext(void * arg, int thread_id)
-{
-	return 0;
-}
-
-int arm_jatg_thread_active(void * arg)
-{
-	return 0;
-}
-
-int arm_jatg_thread_break_id(void * arg)
-{
-	return 0;
-}
-
-int arm_jatg_thread_any(void * arg)
-{
-	return 0;
-}
-
-bool arm_jatg_thread_isalive(void * arg, int thread_id)
-{
-	return 0;
-}
-
-int arm_jatg_thread_register_get(void * arg, int thread_id, 
-								 int reg, uint32_t * val)
-{
-	return 0;
-}
-
-int arm_jatg_thread_register_set(void * arg, unsigned int thread_id, 
-								 int reg, uint32_t val)
-{
-	return 0;
-}
-
-int arm_jatg_thread_goto(void * arg, unsigned int thread_id, uint32_t addr)
-{
-	return 0;
-}
-
-int arm_jatg_thread_step_req(void * arg, unsigned int thread_id)
-{
-	return 0;
-}
-
-int arm_jatg_thread_continue(void * arg, unsigned int thread_id)
-{
-	return 0;
-}
-
-int arm_jatg_thread_info(void * arg, unsigned int gdb_thread_id, char * buf)
-{
-	return 0;
-}
-
-int arm_jatg_breakpoint_clear_all(void * arg)
-{
-	return 0;
-}
-
-int arm_jatg_watchpoint_clear_all(void * arg)
-{
-	return 0;
-}
-
-int arm_jatg_breakpoint_set(void * arg, uint32_t addr, unsigned int size)
-{
-	return 0;
-}
-
-int arm_jatg_breakpoint_clear(void * arg, uint32_t addr, unsigned int size)
-{
-	return 0;
-}
-
-int arm_jatg_watchpoint_set(void * arg, uint32_t addr, unsigned int size, unsigned int opt)
-{
-	return 0;
-}
-
-int arm_jatg_watchpoint_clear(void * arg, uint32_t addr, unsigned int size)
-{
-	return 0;
-}
-
-const struct gdb_target_op gdb_target_arm_jtag_op = {
-	.mem_write = arm_jtag_mem_write,
-	.mem_read = arm_jtag_mem_read,
-	.file_read = arm_jtag_file_read,
-	.cpu_halt = arm_jtag_cpu_halt,
-	.cpu_continue = arm_jtag_cpu_continue,
-	.cpu_goto = arm_jtag_cpu_goto,
-	.cpu_run = arm_jtag_cpu_run,
-	.cpu_reset = arm_jtag_cpu_reset,
-	.app_exec = arm_jtag_app_exec,
-	.thread_getnext = arm_jatg_thread_getnext,
-	.thread_active = arm_jatg_thread_active,
-	.thread_break_id = arm_jatg_thread_break_id,
-	.thread_any = arm_jatg_thread_any,
-	.thread_isalive = arm_jatg_thread_isalive,
-	.thread_register_get = arm_jatg_thread_register_get,
-	.thread_register_set = arm_jatg_thread_register_set,
-	.thread_goto = arm_jatg_thread_goto,
-	.thread_step_req = arm_jatg_thread_step_req,
-	.thread_continue = arm_jatg_thread_continue,
-	.thread_info = arm_jatg_thread_info,
-	.breakpoint_clear_all = arm_jatg_breakpoint_clear_all,
-	.watchpoint_clear_all = arm_jatg_watchpoint_clear_all,
-	.breakpoint_set = arm_jatg_breakpoint_set,
-	.breakpoint_clear = arm_jatg_breakpoint_clear,
-	.watchpoint_set = arm_jatg_watchpoint_set,
-	.watchpoint_clear = arm_jatg_watchpoint_clear
 };
 
 /*
@@ -445,6 +287,8 @@ const struct thinkos_thread_inf gdb_brk_inf = {
 };
 
 struct gdb_tcpd gdb_tcp_singleton;
+
+extern const struct gdb_target_op gdb_target_arm_jtag_op;
 
 int gdb_rspd_start(void)
 {  

@@ -264,7 +264,7 @@ struct nand_dev {
 
 /*****************************************************************************/
 
-extern inline void nand_row_addr(const void * arg, nand_chip_t * chip, 
+static inline void nand_row_addr(const void * arg, nand_chip_t * chip, 
 								const nand_io_op_t * io, uint32_t page) {
 	switch (chip->row_addr_cnt) {
 	case 4:
@@ -281,7 +281,7 @@ extern inline void nand_row_addr(const void * arg, nand_chip_t * chip,
 	}
 }
 
-extern inline void nand_col_addr(const void * arg, nand_chip_t * chip, 
+static inline void nand_col_addr(const void * arg, nand_chip_t * chip, 
 								const nand_io_op_t * io, int offs) {
 	if (chip->bus_width == NAND_BUS_16_BITS)
 		offs >>= 1;
@@ -292,7 +292,7 @@ extern inline void nand_col_addr(const void * arg, nand_chip_t * chip,
 	}
 }
 
-extern inline int nand_status(const void * arg, nand_chip_t * chip, 
+static inline int nand_status(const void * arg, nand_chip_t * chip, 
 							  const nand_io_op_t * io) {
 	uint8_t buf[1];
 	io->cmd(arg, chip, NAND_STATUS);
@@ -301,7 +301,7 @@ extern inline int nand_status(const void * arg, nand_chip_t * chip,
 }
 
 /* Reset the NAND device */
-extern inline int nand_reset(const void * arg, nand_chip_t * chip, 
+static inline int nand_reset(const void * arg, nand_chip_t * chip, 
 							 const nand_io_op_t * io) {
 	io->cmd(arg, chip, NAND_RESET);
 	return io->ready_wait(arg, chip);

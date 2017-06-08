@@ -411,228 +411,228 @@ extern const struct ice_mem_oper mem_op_null;
 
 const struct ice_drv_info ice_drv_null;
 
-extern inline int ice_close(const ice_drv_t * ice) {
+static inline int ice_close(const ice_drv_t * ice) {
 	return ice->op.close(ice->ctrl);
 }
 
-extern inline int ice_configure(const ice_drv_t * ice, jtag_tap_t * tap, 
+static inline int ice_configure(const ice_drv_t * ice, jtag_tap_t * tap, 
 								ice_opt_t * opt, void * cfg) {
 	return ice->op.configure(ice->ctrl, tap, opt, cfg);
 }
 
-extern inline int ice_status(const ice_drv_t * ice) {
+static inline int ice_status(const ice_drv_t * ice) {
 	return ice->op.status(ice->ctrl);
 }
 
-extern inline int ice_poll(const ice_drv_t * ice, ice_comm_t * comm) {
+static inline int ice_poll(const ice_drv_t * ice, ice_comm_t * comm) {
 	return ice->op.poll(ice->ctrl, comm);
 }
 
-extern inline void ice_signal(const ice_drv_t * ice, ice_sig_t sig) {
+static inline void ice_signal(const ice_drv_t * ice, ice_sig_t sig) {
 	ice->op.signal(ice->ctrl, sig);
 }
 
-extern inline int ice_halt_wait(const ice_drv_t * ice, int mutex, int tmo) {
+static inline int ice_halt_wait(const ice_drv_t * ice, int mutex, int tmo) {
 	return ice->op.halt_wait(ice->ctrl, mutex, tmo);
 }
 
-extern inline int ice_connect(const ice_drv_t * ice, uint32_t idmask, 
+static inline int ice_connect(const ice_drv_t * ice, uint32_t idmask, 
 							  uint32_t idcomp) {
 	return ice->op.connect(ice->ctrl, idmask, idcomp);
 }
 
-extern inline int ice_release(const ice_drv_t * ice) {
+static inline int ice_release(const ice_drv_t * ice) {
 	return ice->op.release(ice->ctrl);
 }
 
-extern inline int ice_rd32(const ice_drv_t * ice, 
+static inline int ice_rd32(const ice_drv_t * ice, 
 						   uint32_t addr, uint32_t * val) {
 	return ice->op.rd32(ice->ctrl, addr, val);
 }
 
-extern inline int ice_wr32(const ice_drv_t * ice, 
+static inline int ice_wr32(const ice_drv_t * ice, 
 						   uint32_t addr, uint32_t val) {
 	return ice->op.wr32(ice->ctrl, addr, val);
 }
 
-extern inline int ice_rd16(const ice_drv_t * ice, 
+static inline int ice_rd16(const ice_drv_t * ice, 
 						   uint32_t addr, uint16_t * val) {
 	return ice->op.rd16(ice->ctrl, addr, val);
 }
 
-extern inline int ice_wr16(const ice_drv_t * ice, 
+static inline int ice_wr16(const ice_drv_t * ice, 
 						   uint32_t addr, uint16_t val) {
 	return ice->op.wr16(ice->ctrl, addr, val);
 }
 
-extern inline int ice_rd8(const ice_drv_t * ice, 
+static inline int ice_rd8(const ice_drv_t * ice, 
 						  uint32_t addr, uint8_t * val) {
 	return ice->op.rd8(ice->ctrl, addr, val);
 }
 
-extern inline int ice_wr8(const ice_drv_t * ice, 
+static inline int ice_wr8(const ice_drv_t * ice, 
 						  uint32_t addr, uint8_t val) {
 	return ice->op.wr8(ice->ctrl, addr, val);
 }
 
-extern inline int ice_fifo_rd8(const ice_drv_t * ice,
+static inline int ice_fifo_rd8(const ice_drv_t * ice,
 							   uint32_t addr, void * buf, int len) {
 	return ice->op.fifo_rd8(ice->ctrl, addr, buf, len);
 }
 
-extern inline int ice_fifo_wr8(const ice_drv_t * ice,
+static inline int ice_fifo_wr8(const ice_drv_t * ice,
 							   uint32_t addr, const void * buf, int len) {
 	return ice->op.fifo_wr8(ice->ctrl, addr, buf, len);
 }
 
-extern inline int ice_mem_lock(const ice_drv_t * ice) {
+static inline int ice_mem_lock(const ice_drv_t * ice) {
 	return ice->op.mem_lock(ice->ctrl);
 }
 
-extern inline int ice_mem_unlock(const ice_drv_t * ice) {
+static inline int ice_mem_unlock(const ice_drv_t * ice) {
 	return ice->op.mem_unlock(ice->ctrl);
 }
 
-extern inline int ice_halt_req(const ice_drv_t * ice) {
+static inline int ice_halt_req(const ice_drv_t * ice) {
 	return ice->op.halt(ice->ctrl);
 }
 
-extern inline int ice_run(const ice_drv_t * ice) {
+static inline int ice_run(const ice_drv_t * ice) {
 	return ice->op.run(ice->ctrl);
 }
 
-extern inline int ice_step(const ice_drv_t * ice) {
+static inline int ice_step(const ice_drv_t * ice) {
 	return ice->op.step(ice->ctrl);
 }
 
-extern inline int ice_exec(const ice_drv_t * ice, uint32_t addr, 
+static inline int ice_exec(const ice_drv_t * ice, uint32_t addr, 
 						   uint32_t * regv, int regc) {
 	return ice->op.exec(ice->ctrl, addr, regv, regc);
 }
 
-extern inline int ice_context_show(const ice_drv_t * ice, FILE * f) {
+static inline int ice_context_show(const ice_drv_t * ice, FILE * f) {
 	return ice->op.context_show(ice->ctrl, f);
 }
 
-extern inline int ice_reg_get(const ice_drv_t * ice, int reg, uint32_t * val) {
+static inline int ice_reg_get(const ice_drv_t * ice, int reg, uint32_t * val) {
 	return ice->op.reg_get(ice->ctrl, reg, val);
 }
 
-extern inline int ice_reg_set(const ice_drv_t * ice, int reg, uint32_t val) {
+static inline int ice_reg_set(const ice_drv_t * ice, int reg, uint32_t val) {
 	return ice->op.reg_set(ice->ctrl, reg, val);
 }
 
 /*
-extern inline int ice_pc_get(const ice_drv_t * ice, uint32_t * val) {
+static inline int ice_pc_get(const ice_drv_t * ice, uint32_t * val) {
 	return ice->op.pc_get(ice->ctrl, val);
 }
 
-extern inline int ice_pc_set(const ice_drv_t * ice, uint32_t val) {
+static inline int ice_pc_set(const ice_drv_t * ice, uint32_t val) {
 	return ice->op.pc_set(ice->ctrl, val);
 }
 
-extern inline int ice_sp_get(const ice_drv_t * ice, uint32_t * val) {
+static inline int ice_sp_get(const ice_drv_t * ice, uint32_t * val) {
 	return ice->op.sp_get(ice->ctrl, val);
 }
 
-extern inline int ice_sp_set(const ice_drv_t * ice, uint32_t val) {
+static inline int ice_sp_set(const ice_drv_t * ice, uint32_t val) {
 	return ice->op.sp_set(ice->ctrl, val);
 }
 */
 
-extern inline int ice_ifa_get(const ice_drv_t * ice, uint32_t * val) {
+static inline int ice_ifa_get(const ice_drv_t * ice, uint32_t * val) {
 	return ice->op.ifa_get(ice->ctrl, val);
 }
 
-extern inline int ice_ifa_set(const ice_drv_t * ice, uint32_t val) {
+static inline int ice_ifa_set(const ice_drv_t * ice, uint32_t val) {
 	return ice->op.ifa_set(ice->ctrl, val);
 }
 
-extern inline int ice_goto(const ice_drv_t * ice, uint32_t addr) {
+static inline int ice_goto(const ice_drv_t * ice, uint32_t addr) {
 	return ice->op.go_to(ice->ctrl, addr);
 }
 
 #if 0
-extern inline int ice_int_enable(const ice_drv_t * ice) {
+static inline int ice_int_enable(const ice_drv_t * ice) {
 	return ice->op.int_enable(ice->ctrl);
 }
 
-extern inline int ice_int_disable(const ice_drv_t * ice) {
+static inline int ice_int_disable(const ice_drv_t * ice) {
 	return ice->op.int_disable(ice->ctrl);
 }
 #endif
 
-extern inline int ice_core_reset(const ice_drv_t * ice) {
+static inline int ice_core_reset(const ice_drv_t * ice) {
 	return ice->op.core_reset(ice->ctrl);
 }
 
-extern inline int ice_system_reset(const ice_drv_t * ice) {
+static inline int ice_system_reset(const ice_drv_t * ice) {
 	return ice->op.system_reset(ice->ctrl);
 }
 
-extern inline int ice_bp_set(const ice_drv_t * ice, uint32_t addr, 
+static inline int ice_bp_set(const ice_drv_t * ice, uint32_t addr, 
 							 uint32_t len, uint32_t * id)
 {
 	return ice->op.bp_set(ice->ctrl, addr, len, id);
 }
 
-extern inline int ice_bp_clr(const ice_drv_t * ice, uint32_t id)
+static inline int ice_bp_clr(const ice_drv_t * ice, uint32_t id)
 {
 	return ice->op.bp_clr(ice->ctrl, id);
 }
 
-extern inline int ice_wp_set(const ice_drv_t * ice, uint32_t addr, 
+static inline int ice_wp_set(const ice_drv_t * ice, uint32_t addr, 
 							 uint32_t len, uint32_t * id)
 {
 	return ice->op.wp_set(ice->ctrl, addr, len, id);
 }
 
-extern inline int ice_wp_clr(const ice_drv_t * ice, uint32_t id)
+static inline int ice_wp_clr(const ice_drv_t * ice, uint32_t id)
 {
 	return ice->op.wp_clr(ice->ctrl, id);
 }
 
 
-extern inline int ice_info(const ice_drv_t * ice, FILE * f, uint32_t which)
+static inline int ice_info(const ice_drv_t * ice, FILE * f, uint32_t which)
 {
 	return ice->op.info(ice->ctrl, f, which);
 }
 
-extern inline int ice_test(const ice_drv_t * ice, FILE * f, 
+static inline int ice_test(const ice_drv_t * ice, FILE * f, 
 						   uint32_t req, uint32_t argc, uint32_t argv[])
 {
 	return ice->op.test(ice->ctrl, f, req, argc, argv);
 }
 
-extern inline int ice_dbgen(const ice_drv_t * ice, bool en)
+static inline int ice_dbgen(const ice_drv_t * ice, bool en)
 {
 	return ice->op.dbgen(ice->ctrl, en);
 }
 
 typedef int (* ice_dbgen_t)(ice_ctrl_t * ctrl, bool en);
-extern inline int ice_print_insn(const ice_drv_t * ice, uint32_t addr, 
+static inline int ice_print_insn(const ice_drv_t * ice, uint32_t addr, 
 								 struct disassemble_info * info)
 {
 	return ice->op.print_insn(ice->ctrl, addr, info);
 }
 
 #if 0
-extern inline int ice_comm_open(const ice_drv_t * ice)
+static inline int ice_comm_open(const ice_drv_t * ice)
 {
 	return ice->comm_open(ice->ctrl);
 }
 	
-extern inline int ice_comm_close(const ice_drv_t * ice)
+static inline int ice_comm_close(const ice_drv_t * ice)
 {
 	return ice->comm_close(ice->ctrl);
 }
 
-extern inline int ice_comm_read(const ice_drv_t * ice, void * buf, int len) 
+static inline int ice_comm_read(const ice_drv_t * ice, void * buf, int len) 
 {
 	return ice->comm_read(ice->ctrl, buf, len);
 }
 
-extern inline int ice_comm_write(const ice_drv_t * ice, 
+static inline int ice_comm_write(const ice_drv_t * ice, 
 								 const void * buf, int len) 
 {
 	return ice->comm_write(ice->ctrl, buf, len);

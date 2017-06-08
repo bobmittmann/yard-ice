@@ -58,7 +58,7 @@ int cmd_watchpoint(FILE * f, int argc, char ** argv)
 	if (argc == 0) {
 		n = 1;
 		fprintf(f, "  # | E | A | HW |       Addr |     Size |\n");
-		while (target_watchpoint_get(wp, &wp) == 0) {
+		while (target_watchpoint_next(wp, &wp) == 0) {
 			fprintf(f, " %2d | %c | %c | %2d | 0x%08x | %8d |\n", 
 					n++, 
 					wp->enabled ? '*' : ' ', 
@@ -95,7 +95,7 @@ int cmd_watchpoint(FILE * f, int argc, char ** argv)
 		if (argc > 0)
 			return wp_usage(f, "too many arguments", cmd);
 
-		while (target_watchpoint_get(wp, &wp) == 0)
+		while (target_watchpoint_next(wp, &wp) == 0)
 			action(wp->addr, wp->size);
 
 		return 0;

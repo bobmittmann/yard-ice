@@ -82,7 +82,7 @@ struct gdb_comm {
 
 struct gdb_target {
 	void * arg;
-	struct gdb_target_op  * op;
+	const struct gdb_target_op  * op;
 };
 
 struct gdb_rsp {

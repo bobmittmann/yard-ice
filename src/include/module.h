@@ -66,12 +66,12 @@ struct module_rec {
 typedef struct module_rec module_rec_t;
 
 
-extern inline int mod_var_get(module_rec_t * mod, int var_id, 
+static inline int mod_var_get(module_rec_t * mod, int var_id, 
 							  value_t * val) {
 	return mod->def->var_get(mod->ptr, var_id, val);
 }
 
-extern inline int mod_var_set(module_rec_t * mod, int var_id, 
+static inline int mod_var_set(module_rec_t * mod, int var_id, 
 							  const value_t * val) {
 	return mod->def->var_set(mod->ptr, var_id, val);
 }

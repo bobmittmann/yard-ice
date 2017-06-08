@@ -515,6 +515,7 @@ int jtag_arm7_sys_sync(jtag_tap_t * tap)
  * ARM9 JTAG operations
  *
  ***************************************************************************/
+#if DEBUG
 static const char entry_mode[][12] = {
 	"NODBG",
 	"BP0",
@@ -529,6 +530,7 @@ static const char entry_mode[][12] = {
 	"EXTDBGRQ",
 	"DBGREENTRY"
 };
+#endif
 
 int jtag_arm9_dbg_status(jtag_tap_t * tap)
 {
@@ -544,6 +546,7 @@ int jtag_arm9_dbg_status(jtag_tap_t * tap)
 	insn_drscan(PTR_DBG_STATUS_RET, JTAG_TAP_DRUPDATE);
 	status = vec_rd16(0);
 
+#if DEBUG
 	DCC_LOG7(LOG_INFO, "%s IJBIT:%d ITBIT:%d SYSCOMP:%d "
 			 "IFEN:%d DBGRQ:%d DBGACK:%d", 
 			 entry_mode[ARMICE_ST_MOE(status)],
@@ -553,6 +556,7 @@ int jtag_arm9_dbg_status(jtag_tap_t * tap)
 			 (status & ARMICE_ST_IFEN) ? 1 : 0,
 			 (status & ARMICE_ST_DBGRQ) ? 1 : 0,
 			 (status & ARMICE_ST_DBGACK) ? 1 : 0);
+#endif
 
 	return status;
 }
@@ -580,6 +584,7 @@ int jtag_arm9_dbgack_wait(jtag_tap_t * tap, unsigned int tmo)
 		insn_drscan(PTR_DBG_STATUS_RET, JTAG_TAP_DRUPDATE);
 		status = vec_rd16(0);
 
+#if DEBUG
 		DCC_LOG7(LOG_MSG, "%s IJBIT:%d ITBIT:%d SYSCOMP:%d "
 				 "IFEN:%d DBGRQ:%d DBGACK:%d", 
 				 entry_mode[ARMICE_ST_MOE(status)],
@@ -589,6 +594,7 @@ int jtag_arm9_dbgack_wait(jtag_tap_t * tap, unsigned int tmo)
 				 (status & ARMICE_ST_IFEN) ? 1 : 0,
 				 (status & ARMICE_ST_DBGRQ) ? 1 : 0,
 				 (status & ARMICE_ST_DBGACK) ? 1 : 0);
+#endif
 
 		if (((status & (ARMICE_ST_DBGACK | ARMICE_ST_NMREQ)) ^ 
 			 (ARMICE_ST_DBGACK | ARMICE_ST_NMREQ)) == 0) {

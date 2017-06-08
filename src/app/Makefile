@@ -21,9 +21,9 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-VERSION_DATE = "2017-05-29"
+VERSION_DATE = "2017-06-05"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "36"
+VERSION_MINOR = "37"
 
 PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
@@ -47,7 +47,7 @@ LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
 	targets tftp shell console tty gdb vcom telnet crc xmodem comm 
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+CFLAGS = -g -O3 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
 INCPATH = ../../thinkos/sdk/include ../include

@@ -118,8 +118,10 @@ typedef struct ir_vec_info ir_vec_info_t;
 
 #define DR_VECTORS_BASE (IR_VECTORS_BASE + 0x08)
 
+#if 0
 static const uint16_t dr_vectors[] = {
 };
+#endif
 
 /* IR vector alocation */
 static uint32_t ir_vec_addr = IR_VECTORS_BASE_ADDR;
@@ -806,8 +808,8 @@ int jtag_mem_ap_csw_clr(jtag_tap_t * tap, uint32_t mask, uint32_t bitmap)
 
 int jtag_mem_ap_rd8(jtag_tap_t * tap, uint32_t addr, uint8_t * dout)
 {
+	uint32_t data = 0;
 	uint32_t diff;
-	uint32_t data;
 	int ack;
 
 	DCC_LOG1(LOG_INFO, "addr=0x%08x", addr);
@@ -902,8 +904,8 @@ int jtag_mem_ap_wr8(jtag_tap_t * tap, uint32_t addr, uint8_t din)
 
 int jtag_mem_ap_rd16(jtag_tap_t * tap, uint32_t addr, uint16_t * dout)
 {
+	uint32_t data = 0;
 	uint32_t diff;
-	uint32_t data;
 	int ack;
 
 	DCC_LOG1(LOG_INFO, "addr=0x%08x", addr);

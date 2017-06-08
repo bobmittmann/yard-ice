@@ -13,3 +13,8 @@ for PROG_BIN; do true; done
 ${PYTHON} ${TOOLS_DIR}/tftp_load.py -q -i -e -r  -a 0x08000000 \
 	-h ${JTAGTOOL_ADDR} ${PROG_BIN} 
 
+if [ $? = 0 ] ; then
+	# Disable the halt debug mode by clearing C_DEBUGEN on DHCSR
+	${PYTHON} ${TOOLS_DIR}/tftp_cmd.py -h ${JTAGTOOL_ADDR} 'disable debug'
+fi
+

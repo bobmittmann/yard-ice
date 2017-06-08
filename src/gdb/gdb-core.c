@@ -1492,6 +1492,22 @@ static int rsp_pkt_recv(struct gdb_comm * comm, char * pkt, int max)
 
 struct gdb_rsp gdb_rsp_singleton;
 
+int gdb_rsp_comm_init(struct gdb_rsp * gdb, const struct gdb_comm_op * op, 
+					  void * arg)
+{
+	gdb->comm.op = op;
+	gdb->comm.arg = arg;
+	return gdb->comm.op->init(gdb->comm.arg);
+}
+
+int gdb_rsp_target_init(struct gdb_rsp * gdb, const struct gdb_target_op * op, 
+					  void * arg)
+{
+	gdb->target.op = op;
+	gdb->target.arg = arg;
+	return gdb->target.op->init(gdb->target.arg);
+}
+
 void gdb_rsp_comm_loop(struct gdb_rsp * gdb)
 {
 	struct gdb_comm * comm = &gdb->comm;

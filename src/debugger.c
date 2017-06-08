@@ -2096,7 +2096,7 @@ int target_breakpoint_all_enable(void)
  * Watchpoins
  *****************************************************************************/
 
-int target_watchpoint_get(struct dbg_wp * wp, struct dbg_wp ** next)
+int target_watchpoint_next(struct dbg_wp * wp, struct dbg_wp ** next)
 {
 	struct debugger * dbg = &debugger;
 

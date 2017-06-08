@@ -34,10 +34,12 @@
 
 #include "dis-asm.h"
 
+#if DEBUG
 static const char * const except_tab[8] = {
 	"UNKNOWN EXCEPTION", "UNDEFINED INSTRUCTION", "UNHANDLED SWI", 
 	"PREFETCH ABORT", "DATA ABORT", "INVALID EXCEPTION",
 	"UNHANDLED IRQ", "UNHANDLED FIQ" };
+#endif
 
 static const char * const arm_mode[16] = { 
 	"USR", "FIQ", "IRQ", "SVC",
