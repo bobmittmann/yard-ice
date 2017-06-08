@@ -343,7 +343,40 @@ static const uint8_t cm3_dcrsr_lut[] = {
 	DCRSR_REGSEL_MSP,
 	DCRSR_REGSEL_PSP,
 	DCRSR_REGSEL_CTRL,
-	DCRSR_REGSEL_FPSCR };
+	DCRSR_REGSEL_FPSCR, 
+	DCRSR_REGSEL_S0,
+	DCRSR_REGSEL_S1,
+	DCRSR_REGSEL_S2,
+	DCRSR_REGSEL_S3,
+	DCRSR_REGSEL_S4,
+	DCRSR_REGSEL_S5,
+	DCRSR_REGSEL_S6,
+	DCRSR_REGSEL_S7,
+	DCRSR_REGSEL_S8,
+	DCRSR_REGSEL_S9,
+	DCRSR_REGSEL_S10,
+	DCRSR_REGSEL_S11,
+	DCRSR_REGSEL_S12,
+	DCRSR_REGSEL_S13,
+	DCRSR_REGSEL_S14,
+	DCRSR_REGSEL_S15,
+	DCRSR_REGSEL_S16,
+	DCRSR_REGSEL_S17,
+	DCRSR_REGSEL_S18,
+	DCRSR_REGSEL_S19,
+	DCRSR_REGSEL_S20,
+	DCRSR_REGSEL_S21,
+	DCRSR_REGSEL_S22,
+	DCRSR_REGSEL_S23,
+	DCRSR_REGSEL_S24,
+	DCRSR_REGSEL_S25,
+	DCRSR_REGSEL_S26,
+	DCRSR_REGSEL_S27,
+	DCRSR_REGSEL_S28,
+	DCRSR_REGSEL_S29,
+	DCRSR_REGSEL_S30,
+	DCRSR_REGSEL_S31
+};
 
 static int core_reg_get(jtag_tap_t * tap, struct cm3_core_ctrl * core, 
 						unsigned int id, uint32_t * ptr)
@@ -552,7 +585,7 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 					 ctrl->cc.rw.dbg);
 			return 0;
 		}
-		DCC_LOG(LOG_TRACE, "COMM: [CONNECTED]"); 
+		DCC_LOG(LOG_INFO, "COMM: [CONNECTED]"); 
 		INFS("CM3ICE comm sync: [DBG_CONNECTED]");
 		ctrl->cc.rw.dbg = DBG_CONNECTED;
 		/* update the state of the buffer */
@@ -566,14 +599,14 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 
 	if (ctrl->cc.ro.dev == DEV_SYNC) {
 		if (ctrl->cc.rw.dbg == DBG_SYNC) {
-			DCC_LOG(LOG_TRACE, "DEV=SYNC, DBG=SYNC, wating ....");
+			DCC_LOG(LOG_INFO, "DEV=SYNC, DBG=SYNC, wating ....");
 			return 0;
 		}	
 		if (ctrl->cc.rw.dbg == DBG_CONNECTED) {
 			DCC_LOG(LOG_WARNING, "DEV=SYNC, DBG=CONNECTED ???");
 			WARNS("DEV=SYNC DBG=CONNECTED ???");
 		}
-		DCC_LOG(LOG_TRACE, "COMM: [SYNC]"); 
+		DCC_LOG(LOG_INFO, "COMM: [SYNC]"); 
 		INFS("CM3ICE comm sync: [DBG_SYNC]");
 		ctrl->cc.rw.dbg = DBG_SYNC;
 		/* ensure the buffer is flushed */
@@ -594,6 +627,11 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	return 0;
 }
 
+#ifndef CM3ICE_COMM_DCRDR_ENABLE
+#define CM3ICE_COMM_DCRDR_ENABLE 0
+#endif
+
+
 static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 {
 	jtag_tap_t * tap = ctrl->tap;
@@ -609,7 +647,13 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 
 	while (ctrl->poll_enabled) {
 		/* get the remote COMM channel data */
-#if 0
+#if CM3ICE_COMM_DCRDR_ENABLE 
+		if (jtag_mem_ap_rd32(tap, ARMV7M_DCRDR, 
+							 &ctrl->cc.ro.u32) != JTAG_ADI_ACK_OK_FAULT) {
+			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
+			return ICE_ST_FAULT;
+		}
+#else
 		if (jtag_mem_ap_rd32(tap, ctrl->comm_addr, 
 							 &ctrl->cc.ro.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
@@ -626,11 +670,6 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			return 0;
 		}
 #endif
-		if (jtag_mem_ap_rd32(tap, ARMV7M_DCRDR, 
-							 &ctrl->cc.ro.u32) != JTAG_ADI_ACK_OK_FAULT) {
-			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-			return ICE_ST_FAULT;
-		}
 
 		if ((ctrl->cc.ro.dev != DEV_CONNECTED) ||
 			(ctrl->cc.rw.dbg != DBG_CONNECTED)) {
@@ -662,7 +701,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			/* resynchronize */
 			ctrl->cc.rw.dbg = DBG_SYNC;
 			INF("CM3ICE COMM [SYNC]");
-			DCC_LOG(LOG_TRACE, "COMM: [SYNC]"); 
+			DCC_LOG(LOG_INFO, "COMM: [SYNC]"); 
 			/* update the state of the buffer */
 			if (jtag_mem_ap_wr32(tap, ctrl->comm_addr + 4, 
 								 ctrl->cc.rw.u32) != JTAG_ADI_ACK_OK_FAULT) {
@@ -672,7 +711,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			break;
 		}
 
-		DCC_LOG3(LOG_TRACE, "head=%d tail=%d cnt=%d",
+		DCC_LOG3(LOG_INFO, "head=%d tail=%d cnt=%d",
 				 ctrl->cc.ro.tx_head, ctrl->cc.rw.tx_tail, cnt);
 
 		for (i = 0; i < cnt; i++) {
@@ -728,13 +767,13 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		return ICE_ST_FAULT;
 	}
 
-	DCC_LOG5(LOG_TRACE, " EXTERNAL=%d VCATCH=%d DWTTRAP=%d BKPT=%d HALTED=%d",
+	DCC_LOG5(LOG_INFO, " EXTERNAL=%d VCATCH=%d DWTTRAP=%d BKPT=%d HALTED=%d",
 			 (dfsr & DFSR_EXTERNAL) ? 1: 0, (dfsr & DFSR_VCATCH) ? 1: 0,
 			 (dfsr & DFSR_DWTTRAP) ? 1: 0, (dfsr & DFSR_BKPT) ? 1: 0,
 			 (dfsr & DFSR_HALTED) ? 1: 0);
 #endif
 
-	DCC_LOG(LOG_TRACE, "cm3ice_comm_sync()..."); 
+	DCC_LOG(LOG_INFO, "cm3ice_comm_sync()..."); 
 	if ((ret = cm3ice_comm_sync(ctrl, comm)) != 0) {
 		DCC_LOG(LOG_WARNING, "cm3ice_comm_sync() failed!"); 
 		return ret;
@@ -820,14 +859,14 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 		dp_stickyerr_clr(tap);
 	}
 
-	DCC_LOG2(LOG_TRACE, "idmask=%08x idcomp=%08x", idmask, idcomp);
+	DCC_LOG2(LOG_INFO, "idmask=%08x idcomp=%08x", idmask, idcomp);
 
 	if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
 		return ICE_ERR_JTAG;
 	}
 
-	DCC_LOG1(LOG_TRACE, "DHCSR: 0x%08x", dhcsr); 
+	DCC_LOG1(LOG_INFO, "DHCSR: 0x%08x", dhcsr); 
 
 	if (!(dhcsr & DHCSR_C_DEBUGEN)) { 
 		/* enable debug */
@@ -863,14 +902,14 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 		return ICE_ERR_JTAG;
 	}
 
-	DCC_LOG5(LOG_TRACE, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+	DCC_LOG5(LOG_INFO, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
 			 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
 			 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
 			 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
 			 (dhcsr & DHCSR_S_SLEEP) ? 1 : 0,
 			 (dhcsr & DHCSR_S_HALT) ? 1 : 0);
 
-	DCC_LOG5(LOG_TRACE, "S_REGRDY=%d C_MASKINTS=%d C_STEP=%d "\
+	DCC_LOG5(LOG_INFO, "S_REGRDY=%d C_MASKINTS=%d C_STEP=%d "\
 			 "C_HALT=%d C_DEBUGEN=%d", (dhcsr & DHCSR_S_REGRDY) ? 1 : 0,
 			 (dhcsr & DHCSR_C_MASKINTS) ? 1 : 0,
 			 (dhcsr & DHCSR_C_STEP) ? 1 : 0,
@@ -919,7 +958,7 @@ int cm3ice_release(cm3ice_ctrl_t * ctrl)
 	if (ctrl->comm_addr != 0x00000000) {
 		/* return the DBG to sync state  */
 		ctrl->cc.rw.dbg = DBG_SYNC;
-		DCC_LOG(LOG_TRACE, "COMM: [SYNC]"); 
+		DCC_LOG(LOG_INFO, "COMM: [SYNC]"); 
 		if (jtag_mem_ap_wr32(tap, ctrl->comm_addr + 4, 
 							 ctrl->cc.rw.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
@@ -1012,7 +1051,7 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap,
 		return -1;
 	}
 
-	DCC_LOG1(LOG_TRACE, "idcode:%08x", idcode); 
+	DCC_LOG1(LOG_INFO, "idcode:%08x", idcode); 
 
 	/* select the working TAP */
 	jtag_tap_select(tap);
@@ -1067,7 +1106,7 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap,
 
 	/* initialize the ICE control structure */
 	ctrl->tap = tap;
-	DCC_LOG(LOG_TRACE, "[UNCONNECTED]");
+	DCC_LOG(LOG_INFO, "[UNCONNECTED]");
 
 	/* Configure ICE options */
 
@@ -1100,6 +1139,46 @@ int cm3_show_shcsr(FILE * f, uint32_t shcsr);
 int cm3_show_icsr(FILE * f, uint32_t icsr);
 
 int cm3ice_context_show(cm3ice_ctrl_t * ctrl, FILE * f)
+{
+	uint32_t reg[CM3_CTRL + 1];
+	jtag_tap_t * tap = ctrl->tap;
+	unsigned int id;
+	uint32_t dhcsr;
+	int ipsr;
+
+	jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr);
+	if (dhcsr & DHCSR_S_LOCKUP) {
+		fprintf(f, " Core Locked up!!\n");
+	}
+
+	for (id = CM3_R0; id <= CM3_CTRL; id++)
+		core_reg_get(tap, &ctrl->core, id, &reg[id]);
+
+	fprintf(f, " xpsr= ");
+	cm3_show_xpsr(f, reg[CM3_XPSR]);
+	fprintf(f, "\n ctrl= ");
+	cm3_show_ctrl(f, reg[CM3_CTRL]);
+
+	ipsr = reg[CM3_XPSR] & 0x1ff;
+	if (ipsr) {
+		uint32_t icsr;
+		uint32_t shcsr;
+		fprintf(f, "\n icsr= ");
+		jtag_mem_ap_rd32(tap, ARMV7M_ICSR, &icsr);
+		cm3_show_icsr(f, icsr);
+		fprintf(f, "\nshcsr= ");
+		jtag_mem_ap_rd32(tap, ARMV7M_SHCSR, &shcsr);
+		cm3_show_shcsr(f, shcsr);
+	}
+
+	fprintf(f, "\n\n");
+
+	cm3_show_regs(f, reg);
+
+	return ICE_OK;
+}
+
+int cm3ice_fpu_show(cm3ice_ctrl_t * ctrl, FILE * f)
 {
 	uint32_t reg[CM3_CTRL + 1];
 	jtag_tap_t * tap = ctrl->tap;
@@ -1357,7 +1436,7 @@ int cm3ice_bp_clr(cm3ice_ctrl_t * ctrl, uint32_t id)
 {
 	jtag_tap_t * tap = ctrl->tap;
 
-	DCC_LOG1(LOG_TRACE, "clearing bp %d...", id); 
+	DCC_LOG1(LOG_INFO, "clearing bp %d...", id); 
 
 	return fpb_code_comp_clr(tap, &ctrl->fpb, id);
 }
@@ -1408,7 +1487,7 @@ int cm3ice_wp_clr(cm3ice_ctrl_t * ctrl, uint32_t id)
 {
 	jtag_tap_t * tap = ctrl->tap;
 
-	DCC_LOG1(LOG_TRACE, "clearing bp %d...", id); 
+	DCC_LOG1(LOG_INFO, "clearing bp %d...", id); 
 
 	return dwt_comp_clr(tap, &ctrl->dwt, id);
 }
@@ -1423,7 +1502,7 @@ int cm3ice_system_reset(cm3ice_ctrl_t * ctrl)
 	uint32_t dhcsr;
 	bool halt = false;
 
-	DCC_LOG(LOG_TRACE, ".");
+	DCC_LOG(LOG_INFO, ".");
 
 	if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
@@ -1431,7 +1510,7 @@ int cm3ice_system_reset(cm3ice_ctrl_t * ctrl)
 	}
 
 	if (dhcsr & DHCSR_S_HALT) { 
-		DCC_LOG(LOG_TRACE, "core halted");
+		DCC_LOG(LOG_INFO, "core halted");
 		halt = true;
 	}
 
@@ -1445,7 +1524,7 @@ int cm3ice_system_reset(cm3ice_ctrl_t * ctrl)
 		return ICE_OK;
 
 	do {
-		DCC_LOG(LOG_TRACE, "halt 2. ...");
+		DCC_LOG(LOG_INFO, "halt 2. ...");
 
 		/* halt the core */
 		if (jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | DHCSR_C_HALT | 
@@ -1460,7 +1539,7 @@ int cm3ice_system_reset(cm3ice_ctrl_t * ctrl)
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
 			return ICE_ERR_JTAG;
 		}
-		DCC_LOG5(LOG_TRACE, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+		DCC_LOG5(LOG_INFO, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
 				 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
 				 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
 				 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
@@ -1479,7 +1558,7 @@ int cm3ice_core_reset(cm3ice_ctrl_t * ctrl)
 	bool s_halt;
 	bool c_dbugen;
 
-	DCC_LOG(LOG_TRACE, ".");
+	DCC_LOG(LOG_INFO, ".");
 
 	if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
@@ -1503,7 +1582,7 @@ int cm3ice_core_reset(cm3ice_ctrl_t * ctrl)
 	}
 
 	if (dhcsr & DHCSR_S_HALT) { 
-		DCC_LOG(LOG_TRACE, "core halted");
+		DCC_LOG(LOG_INFO, "core halted");
 		INF("core halted");
 		s_halt = true;
 
@@ -1535,7 +1614,7 @@ int cm3ice_core_reset(cm3ice_ctrl_t * ctrl)
 		s_halt = false;
 
 		INF("CM3ICE halting core...");
-		DCC_LOG(LOG_TRACE, "halting core...");
+		DCC_LOG(LOG_INFO, "halting core...");
 		if (jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | DHCSR_C_HALT | 
 							 DHCSR_C_DEBUGEN) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
@@ -1601,7 +1680,7 @@ int cm3ice_core_reset(cm3ice_ctrl_t * ctrl)
 		return ICE_OK;
 	}
 	
-	DCC_LOG(LOG_TRACE, "halt 2. ...");
+	DCC_LOG(LOG_INFO, "halt 2. ...");
 	INF("halting core 2...");
 
 	/* halt the core */
@@ -1618,7 +1697,7 @@ int cm3ice_core_reset(cm3ice_ctrl_t * ctrl)
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
 			return ICE_ERR_JTAG;
 		}
-		DCC_LOG5(LOG_TRACE, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+		DCC_LOG5(LOG_INFO, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
 				 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
 				 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
 				 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
@@ -1703,7 +1782,7 @@ int cm3ice_open(cm3ice_ctrl_t * ctrl)
 
 	ctrl->mod_id = module_register(&cm3ice_module, ctrl);
 
-	DCC_LOG(LOG_TRACE, "[OPEN]");
+	DCC_LOG(LOG_INFO, "[OPEN]");
 
 	return ICE_OK;
 }
@@ -1715,7 +1794,7 @@ int cm3ice_close(cm3ice_ctrl_t * ctrl)
 		return ICE_ERROR;
 	}
 
-	DCC_LOG(LOG_TRACE, "[CLOSE]");
+	DCC_LOG(LOG_INFO, "[CLOSE]");
 	module_unregister(ctrl->mod_id); 
 	ctrl->mod_id = -1;
 	ctrl->flags = 0;

@@ -61,10 +61,47 @@ enum {
 	OID_CM3_MSP,
 	OID_CM3_PSP,
 	OID_CM3_CTRL,
+	OID_CM4_FPSCR,
+	OID_CM4_S0,
+	OID_CM4_S1,
+	OID_CM4_S2,
+	OID_CM4_S3,
+	OID_CM4_S4,
+	OID_CM4_S5,
+	OID_CM4_S6,
+	OID_CM4_S7,
+	OID_CM4_S8,
+	OID_CM4_S9,
+	OID_CM4_S10,
+	OID_CM4_S11,
+	OID_CM4_S12,
+	OID_CM4_S13,
+	OID_CM4_S14,
+	OID_CM4_S15,
+	OID_CM4_S16,
+	OID_CM4_S17,
+	OID_CM4_S18,
+	OID_CM4_S19,
+	OID_CM4_S20,
+	OID_CM4_S21,
+	OID_CM4_S22,
+	OID_CM4_S23,
+	OID_CM4_S24,
+	OID_CM4_S25,
+	OID_CM4_S26,
+	OID_CM4_S27,
+	OID_CM4_S28,
+	OID_CM4_S29,
+	OID_CM4_S30,
+	OID_CM4_S31,
 	OID_CM3_DFSR,
 	OID_CM3_DHCSR,
 	OID_CM3_DEMCR,
-	OID_CM3_CFSR
+	OID_CM3_CFSR,
+	OID_CM3_CONTROL,
+	OID_CM3_FAULTMASK,
+	OID_CM3_BASEPRI,
+	OID_CM3_PRIMASK
 };
 
 const var_entry_t cm3ice_var_tab[] = {
@@ -94,10 +131,47 @@ const var_entry_t cm3ice_var_tab[] = {
 	{ "msp", TYPE_UINT32, OID_CM3_MSP },
 	{ "psp", TYPE_UINT32, OID_CM3_PSP },
 	{ "ctrl", TYPE_UINT32, OID_CM3_CTRL },
+	{ "fpscr", TYPE_UINT32, OID_CM4_FPSCR },
+	{ "s0", TYPE_FLOAT, OID_CM4_S0 },
+	{ "s1", TYPE_FLOAT, OID_CM4_S1 },
+	{ "s2", TYPE_FLOAT, OID_CM4_S2 },
+	{ "s3", TYPE_FLOAT, OID_CM4_S3 },
+	{ "s4", TYPE_FLOAT, OID_CM4_S4 },
+	{ "s5", TYPE_FLOAT, OID_CM4_S5 },
+	{ "s6", TYPE_FLOAT, OID_CM4_S6 },
+	{ "s7", TYPE_FLOAT, OID_CM4_S7 },
+	{ "s8", TYPE_FLOAT, OID_CM4_S8 },
+	{ "s9", TYPE_FLOAT, OID_CM4_S9 },
+	{ "s10", TYPE_FLOAT, OID_CM4_S10 },
+	{ "s11", TYPE_FLOAT, OID_CM4_S11 },
+	{ "s12", TYPE_FLOAT, OID_CM4_S12 },
+	{ "s13", TYPE_FLOAT, OID_CM4_S13 },
+	{ "s14", TYPE_FLOAT, OID_CM4_S14 },
+	{ "s15", TYPE_FLOAT, OID_CM4_S15 },
+	{ "s16", TYPE_FLOAT, OID_CM4_S16 },
+	{ "s17", TYPE_FLOAT, OID_CM4_S17 },
+	{ "s18", TYPE_FLOAT, OID_CM4_S18 },
+	{ "s19", TYPE_FLOAT, OID_CM4_S19 },
+	{ "s0", TYPE_FLOAT, OID_CM4_S20 },
+	{ "s1", TYPE_FLOAT, OID_CM4_S21 },
+	{ "s2", TYPE_FLOAT, OID_CM4_S22 },
+	{ "s3", TYPE_FLOAT, OID_CM4_S23 },
+	{ "s4", TYPE_FLOAT, OID_CM4_S24 },
+	{ "s5", TYPE_FLOAT, OID_CM4_S25 },
+	{ "s6", TYPE_FLOAT, OID_CM4_S26 },
+	{ "s7", TYPE_FLOAT, OID_CM4_S27 },
+	{ "s8", TYPE_FLOAT, OID_CM4_S28 },
+	{ "s9", TYPE_FLOAT, OID_CM4_S29 },
+	{ "s30", TYPE_FLOAT, OID_CM4_S30 },
+	{ "s31", TYPE_FLOAT, OID_CM4_S31 },
 	{ "dfsr", TYPE_UINT32, OID_CM3_DFSR },
 	{ "dhcsr", TYPE_UINT32, OID_CM3_DHCSR },
 	{ "demcr", TYPE_UINT32, OID_CM3_DEMCR },
-	{ "cfsr", TYPE_UINT32, OID_CM3_CFSR }
+	{ "cfsr", TYPE_UINT32, OID_CM3_CFSR },
+	{ "control", TYPE_UINT32, OID_CM3_CONTROL },
+	{ "faultmask", TYPE_UINT32, OID_CM3_FAULTMASK },
+	{ "basepri", TYPE_UINT32, OID_CM3_BASEPRI },
+	{ "primask", TYPE_UINT32, OID_CM3_PRIMASK }
 };
 
 int cm3ice_var_get(cm3ice_ctrl_t * ctrl, int var_id, value_t * val)
@@ -111,6 +185,10 @@ int cm3ice_var_get(cm3ice_ctrl_t * ctrl, int var_id, value_t * val)
 
 	case OID_CM3_R0 ... OID_CM3_CTRL:
 		reg = var_id - OID_CM3_R0;
+		return cm3ice_reg_get(ctrl, reg, &val->uint32);
+
+	case OID_CM4_FPSCR ... OID_CM4_S31:
+		reg = var_id - OID_CM4_FPSCR;
 		return cm3ice_reg_get(ctrl, reg, &val->uint32);
 
 	case OID_CM3_DFSR:
@@ -147,6 +225,10 @@ int cm3ice_var_set(cm3ice_ctrl_t * ctrl, int var_id, const value_t * val)
 
 	case OID_CM3_R0 ... OID_CM3_CTRL:
 		reg = var_id - OID_CM3_R0;
+		return cm3ice_reg_set(ctrl, reg, val->uint32);
+
+	case OID_CM4_FPSCR ... OID_CM4_S31:
+		reg = var_id - OID_CM4_FPSCR;
 		return cm3ice_reg_set(ctrl, reg, val->uint32);
 
 	case OID_CM3_DFSR:

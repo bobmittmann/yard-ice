@@ -827,6 +827,148 @@ void mpu_info(FILE * f, jtag_tap_t * tap)
 
 }
 
+#define NVIC_INT_MAX 496
+
+void nvic_info(FILE * f, jtag_tap_t * tap)
+{
+	uint16_t lst[512];
+	unsigned int cnt;
+	uint32_t ictr;
+	uint32_t votr;
+	uint32_t n;
+	int dump = 0;
+	int i;
+	int j;
+
+	fprintf(f, "- NVIC (Nested Vectored Interrupt Controller):\n");
+
+	/* Interrupt Controller Type Register */
+	if (jtag_mem_ap_rd32(tap, ARMV7M_ICTR, &ictr) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+
+	/* Vector Table Offset Register */
+	if (jtag_mem_ap_rd32(tap, ARMV7M_VTOR, &votr) != JTAG_ADI_ACK_OK_FAULT)
+		return;
+
+	n = 32 * ((ictr & 0xf) + 1);
+	if (n > NVIC_INT_MAX)
+		n = NVIC_INT_MAX;
+	fprintf(f, " * ICTR = 0x%08x (%d IRQ lines)\n", ictr, n);
+	fprintf(f, " * VOTR = 0x%08x\n", votr);
+
+	cnt = 0;
+	for (j = 0; j < n/32; ++j) {
+		uint32_t iser;
+		if (jtag_mem_ap_rd32(tap, ARMV7M_NVIC_ISER0 + j * 4, &iser) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+		for (i = 0; i < 32; ++i) {
+			if (iser & (1 << i))
+				lst[cnt++] = 32 * j + i;
+		}
+	}
+	if (cnt == 0) {
+		fprintf(f, " * No enabled IRQs.\n");
+	} else {
+		dump++;
+		fprintf(f, " * Enabled IRQs:");
+		for (i = 0; i < cnt; ++i) {
+			fprintf(f, " %d", lst[i]);
+		}
+		fprintf(f, "\n");
+	}
+
+	cnt = 0;
+	for (j = 0; j < n/32; ++j) {
+		uint32_t ispr;
+		if (jtag_mem_ap_rd32(tap, ARMV7M_NVIC_ISPR0 + j * 4, &ispr) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+		for (i = 0; i < 32; ++i) {
+			if (ispr & (1 << i))
+				lst[cnt++] = 32 * j + i;
+		}
+	}
+	if (cnt == 0) {
+		fprintf(f, " * No pending IRQs.\n");
+	} else {
+		dump++;
+		fprintf(f, " * Pending IRQs:");
+		for (i = 0; i < cnt; ++i) {
+			fprintf(f, " %d", lst[i]);
+		}
+		fprintf(f, "\n");
+	}
+
+	cnt = 0;
+	for (j = 0; j < n/32; ++j) {
+		uint32_t iabr;
+		if (jtag_mem_ap_rd32(tap, ARMV7M_NVIC_IABR0 + j * 4, &iabr) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+		for (i = 0; i < 32; ++i) {
+			if (iabr & (1 << i))
+				lst[cnt++] =  32 * j + i;
+		}
+	}
+	if (cnt == 0) {
+		fprintf(f, " * No active IRQs.\n");
+	} else {
+		dump++;
+		fprintf(f, " * Active IRQs:");
+		for (i = 0; i < cnt; ++i) {
+			fprintf(f, " %d", lst[i]);
+		}
+		fprintf(f, "\n");
+	}
+
+	if (dump)
+		fprintf(f, "    IRQ |       Addr | Pri |  En | Act | Pend |\n");
+
+	/* Skip exception handlers */
+	votr += 4 * 16;
+
+	for (j = 0; j < n; ++j) {
+		uint32_t ivec;
+		uint32_t iesr;
+		uint32_t ipr;
+		uint32_t ispr;
+		uint32_t iabr;
+		int pri;
+		int en;
+		int pend;
+		int act;
+
+		if (jtag_mem_ap_rd32(tap, votr + j * 4, &ivec) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+
+		if (jtag_mem_ap_rd32(tap, (ARMV7M_NVIC_IPR0 + j) & ~3, &ipr) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+
+		pri = (ipr >> ((j & 3) * 4)) & 0xff;
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_NVIC_ISER0 + (j >> 3), &iesr) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+
+		en = (iesr >> (j & 0x1f)) & 1;
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_NVIC_ISPR0 + (j >> 3), &ispr) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+
+		pend = (ispr >> (j & 0x1f)) & 1;
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_NVIC_IABR0 + (j >> 3), &iabr) != 
+			JTAG_ADI_ACK_OK_FAULT) return;
+
+		act = (iabr >> (j & 0x1f)) & 1;
+
+		if (en || pend || act) {
+			fprintf(f, "    %3d | 0x%08x | %3d | %3s | %3s | %4s |\n", 
+					j, ivec, pri, en ? "yes" : "no", 
+					pend ? "yes" : "no", act ? "yes" : "no");
+		}
+	}
+
+	fprintf(f, "\n");
+}
+
 #define DEV_SYNC 0x43
 #define DEV_CONNECTED 0x65
 
@@ -889,12 +1031,15 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, unsigned int which)
 		mpu_info(f, tap);
 		break;
 	case 9:
-		comm_info(f, ctrl);
+		nvic_info(f, tap);
 		break;
 	case 10:
-		cm3_vc_disable(f, tap);
+		comm_info(f, ctrl);
 		break;
 	case 11:
+		cm3_vc_disable(f, tap);
+		break;
+	case 12:
 		cm3_vc_enable(f, tap);
 		break;
 	default:
@@ -907,9 +1052,10 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, unsigned int which)
 		fprintf(f, "6 - FPB\n");
 		fprintf(f, "7 - DWT\n");
 		fprintf(f, "8 - MPU\n");
-		fprintf(f, "9 - COMM status\n");
-		fprintf(f, "10 - VC disable\n");
-		fprintf(f, "11 - VC enable\n");
+		fprintf(f, "9 - NIVC\n");
+		fprintf(f, "10 - COMM status\n");
+		fprintf(f, "11 - VC disable\n");
+		fprintf(f, "12 - VC enable\n");
 		break;
 	}
 

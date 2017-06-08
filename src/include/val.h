@@ -41,7 +41,9 @@ enum {
 	TYPE_INT64,
 	TYPE_UINT64,
 	TYPE_DBLOCK32,
-	TYPE_FREQ
+	TYPE_FREQ,
+	TYPE_FLOAT,
+	TYPE_DOUBLE
 };
 
 
@@ -79,6 +81,8 @@ struct value {
 		char * string;
 		char tag[8];
 		struct dblock32 dblock32;
+		float fp32;
+		double fp64;
 	};
 };
 
@@ -119,7 +123,7 @@ extern const struct type_def type_def_tag;
  */
 extern const struct type_def * const type_def_tab[];
 
-extern inline type_def_t * def_of(int type) {
+static inline type_def_t * def_of(int type) {
 	return (type_def_t *)type_def_tab[type];
 }
 

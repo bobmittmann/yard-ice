@@ -75,6 +75,43 @@
 #define CM3_PSP   18
 #define CM3_CTRL  19
 #define CM3_FPSCR 20
+#define CM4_S0    21
+#define CM4_S1    22
+#define CM4_S2    23
+#define CM4_S3    24
+#define CM4_S4    25
+#define CM4_S5    26
+#define CM4_S6    27
+#define CM4_S7    28
+#define CM4_S8    29
+#define CM4_S9    30
+#define CM4_S10   31
+#define CM4_S11   32
+#define CM4_S12   33
+#define CM4_S13   34
+#define CM4_S14   35
+#define CM4_S15   36
+#define CM4_S16   37
+#define CM4_S17   38
+#define CM4_S18   39
+#define CM4_S19   41
+#define CM4_S20   42
+#define CM4_S21   43
+#define CM4_S22   44
+#define CM4_S23   45
+#define CM4_S24   46
+#define CM4_S25   47
+#define CM4_S26   48
+#define CM4_S27   49
+#define CM4_S28   50
+#define CM4_S29   51
+#define CM4_S30   52
+#define CM4_S31   53
+
+#define CM3_CONTROL   54
+#define CM3_FAULTMASK 56
+#define CM3_BASEPRI   57
+#define CM3_PRIMASK   58
 
 #ifdef __ASSEMBLER__
 

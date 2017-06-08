@@ -43,6 +43,10 @@ _Pragma ("GCC optimize (\"Os\")")
 #include "elf/arm.h"
  */
 
+#ifndef ENABLE_ARM_COPROCESSOR
+#define ENABLE_ARM_COPROCESSOR 1
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -2335,6 +2339,7 @@ static const arm_regname regnames[] = {
 	  "FP", "IP", "SP", "LR", "PC"}},
 };
 
+#if ENABLE_ARM_COPROCESSOR
 static const char *const iwmmxt_wwnames[] = { "b", "h", "w", "d" };
 
 static const char *const iwmmxt_wwssnames[] = { "b", "bus", "bc", "bss",
@@ -2354,6 +2359,7 @@ static const char *const iwmmxt_cregnames[] =
 	"wcgr0", "wcgr1", "wcgr2", "wcgr3", "reserved", "reserved", "reserved",
 	"reserved"
 };
+#endif
 
 /* Default to GCC register name set.  */
 static unsigned int regname_selected = 1;
