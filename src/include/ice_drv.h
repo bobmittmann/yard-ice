@@ -92,6 +92,15 @@ typedef enum {
 #define ICE_ST_FAULT (1 << 7)
 
 typedef enum {
+	ICE_BRK_NONE = 0,
+	ICE_BRK_DBGERROR = 1,
+	ICE_BRK_UNKNOWN = 2,
+	ICE_BRK_BREAKPOINT = 3,
+	ICE_BRK_WATCHPOINT = 4,
+	ICE_BRK_EXCEPTION = 5
+} ice_reason_t;
+
+typedef enum {
 	ICE_OK = 0,
 	ICE_ERR_UNDEF = -101,
 	ICE_ERR_ARG = -102,

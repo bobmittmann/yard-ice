@@ -425,8 +425,8 @@ static void dbg_wp_init(struct dbg_wp_ctrl * wpctl)
 	struct dbg_wp * wp;
 	int i;
 
-	/* initialize the watchpoint poll.
-	 The watchpoint poll consist of a linked list of free
+	/* initialize the watchpoint pool.
+	 The watchpoint pool consist of a linked list of free
 	 watchpoint structures */
 	wpctl->free = dbg_wp_pool;
 	wpctl->lst = dbg_wp_list;
@@ -813,7 +813,7 @@ static int dbg_reset(const ice_drv_t * ice, const target_info_t * target)
 static int dbg_poll_task(struct debugger * dbg, int id)
 {
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
-	int ice_st;
+	int brk;
 
 	DCC_LOG1(LOG_INFO, "thread start: <%d>...", id);
 
@@ -827,22 +827,34 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 
 		INF("ICE poll start...");
 
-		ice_st = ice_poll(ice, &dbg->comm);
+		brk = ice_poll(ice, &dbg->comm);
 
 		if (dbg->poll_enabled)
 			dbg->poll_enabled = false;
 
 		INF("ICE poll stop.");
 
-		if (ice_st & ICE_ST_HALT) {
-			INF("ICE break");
+		if (brk != ICE_BRK_NONE) {
 			DCC_LOG(LOG_TRACE, "break!!!!");
 			thinkos_cond_broadcast(dbg->halt_cond);
-		}
 
-		if (ice_st & ICE_ST_FAULT) {
-			WARN("ICE fault");
-			DCC_LOG(LOG_WARNING, "fault!!!!");
+			switch (brk) {
+			case ICE_BRK_UNKNOWN: 
+				WARNS("ICE stopped due to unknown reason.");
+				break;
+			case ICE_BRK_DBGERROR: 
+				WARNS("ICE stopped due to an internal error.");
+				break;
+			case ICE_BRK_EXCEPTION: 
+				WARNS("ICE stopped due to an exception catch.");
+				break;
+			case ICE_BRK_WATCHPOINT: 
+				WARNS("ICE stopped due to watchpoint.");
+				break;
+			case ICE_BRK_BREAKPOINT: 
+				WARNS("ICE stopped due to breakpoint.");
+				break;
+			}
 		}
 	}
 	thinkos_mutex_unlock(dbg->ice_mutex);

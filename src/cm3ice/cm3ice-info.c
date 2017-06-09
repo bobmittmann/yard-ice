@@ -390,13 +390,30 @@ static void debug_info(FILE * f, jtag_tap_t * tap)
 		fprintf(f, " MON_PEND");
 	if (demcr & DEMCR_MON_EN)
 		fprintf(f, " MON_EN");
+	if (demcr & DEMCR_VC_HARDERR)
+		fprintf(f, " VC_HARDERR");
+	if (demcr & DEMCR_VC_INTERR)
+		fprintf(f, " VC_INTERR");
+	if (demcr & DEMCR_VC_BUSERR)
+		fprintf(f, " VC_BUSERR");
+	if (demcr & DEMCR_VC_STATERR)
+		fprintf(f, " VC_STATERR");
+	if (demcr & DEMCR_VC_CHKERR)
+		fprintf(f, " VC_CHKERR");
+	if (demcr & DEMCR_VC_NOCPERR)
+		fprintf(f, " VC_NOCPERR");
+	if (demcr & DEMCR_VC_MMERR)
+		fprintf(f, " VC_MMERR");
+	if (demcr & DEMCR_VC_CORERESET)
+		fprintf(f, " VC_CORERESET");
 
+/*
 	if (demcr & (DEMCR_VC_HARDERR | DEMCR_VC_INTERR | DEMCR_VC_BUSERR |
 				 DEMCR_VC_STATERR  | DEMCR_VC_CHKERR  | DEMCR_VC_NOCPERR |
 				 DEMCR_VC_MMERR  | DEMCR_VC_CORERESET)) {
 		fprintf(f, " VC_EN");
 	}
-
+*/
 	fprintf(f, "\n");
 }
 

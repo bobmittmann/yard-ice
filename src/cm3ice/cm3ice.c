@@ -555,13 +555,13 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	if (jtag_mem_ap_rd32(tap, 8 * 4, 
 						 &ctrl->comm_addr) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-		return ICE_ST_FAULT;
+		return ICE_BRK_DBGERROR;
 	}
 
 	if ((ctrl->comm_addr == 0x00000000) || (ctrl->comm_addr == 0xffffffff)) {
 		DCC_LOG1(LOG_INFO, "comm block not found! comm_addr=0x%08x", 
 				 ctrl->comm_addr);
-		return 0;
+		return ICE_BRK_NONE;
 	}
 
 	DCC_LOG1(LOG_INFO, "COMM=0x%08x", ctrl->comm_addr);
@@ -576,14 +576,14 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	if (ctrl->cc.ro.dev == DEV_CONNECTED) {
 		if (ctrl->cc.rw.dbg == DBG_CONNECTED) {
 			DCC_LOG(LOG_INFO, "COMM already connected...");
-			return 0;
+			return ICE_BRK_NONE;
 		}
 		if (ctrl->cc.rw.dbg != DBG_SYNC) {
 			WARN("DEV=CONNECTED DBG=%02x!=(SYNC|CONNECTED)", ctrl->cc.rw.dbg);
 			DCC_LOG1(LOG_WARNING, 
 					 "DEV=CONNECTED, DBG!=(SYNC|CONNECTED) %02x??", 
 					 ctrl->cc.rw.dbg);
-			return 0;
+			return ICE_BRK_NONE;
 		}
 		DCC_LOG(LOG_INFO, "COMM: [CONNECTED]"); 
 		INFS("CM3ICE comm sync: [DBG_CONNECTED]");
@@ -592,15 +592,15 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if (jtag_mem_ap_wr32(tap, ctrl->comm_addr + 4, 
 							 ctrl->cc.rw.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
-			return ICE_ST_FAULT;
+			return ICE_BRK_DBGERROR;
 		}
-		return 0;
+		return ICE_BRK_NONE;
 	}
 
 	if (ctrl->cc.ro.dev == DEV_SYNC) {
 		if (ctrl->cc.rw.dbg == DBG_SYNC) {
 			DCC_LOG(LOG_INFO, "DEV=SYNC, DBG=SYNC, wating ....");
-			return 0;
+			return ICE_BRK_NONE;
 		}	
 		if (ctrl->cc.rw.dbg == DBG_CONNECTED) {
 			DCC_LOG(LOG_WARNING, "DEV=SYNC, DBG=CONNECTED ???");
@@ -616,21 +616,20 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if (jtag_mem_ap_wr32(tap, ctrl->comm_addr + 4, 
 							 ctrl->cc.rw.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
-			return ICE_ST_FAULT;
+			return ICE_BRK_DBGERROR;
 		}
 
-		return 0;
+		return ICE_BRK_NONE;
 	}
 
 	DCC_LOG(LOG_INFO, "COMM: [IDLE]");
 
-	return 0;
+	return ICE_BRK_NONE;
 }
 
 #ifndef CM3ICE_COMM_DCRDR_ENABLE
 #define CM3ICE_COMM_DCRDR_ENABLE 0
 #endif
-
 
 static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 {
@@ -643,7 +642,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	int cnt;
 
 	if (ctrl->comm_addr == 0x00000000)
-		return 0;
+		return ICE_BRK_NONE;
 
 	while (ctrl->poll_enabled) {
 		/* get the remote COMM channel data */
@@ -651,13 +650,13 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DCRDR, 
 							 &ctrl->cc.ro.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-			return ICE_ST_FAULT;
+			return ICE_BRK_DBGERROR;
 		}
 #else
 		if (jtag_mem_ap_rd32(tap, ctrl->comm_addr, 
 							 &ctrl->cc.ro.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-			return ICE_ST_FAULT;
+			return ICE_BRK_DBGERROR;
 		}
 
 		if (dp_stickyerr_get(tap)) {
@@ -667,7 +666,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			dp_stickyerr_clr(tap);
 			/* Set the COMM address as invalid */
 			ctrl->comm_addr = 0x00000000;
-			return 0;
+			return ICE_BRK_NONE;
 		}
 #endif
 
@@ -706,7 +705,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			if (jtag_mem_ap_wr32(tap, ctrl->comm_addr + 4, 
 								 ctrl->cc.rw.u32) != JTAG_ADI_ACK_OK_FAULT) {
 				DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
-				return ICE_ST_FAULT;
+				return ICE_BRK_DBGERROR;
 			}
 			break;
 		}
@@ -725,7 +724,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			if (jtag_mem_ap_rd32(tap, addr, 
 								 &data) != JTAG_ADI_ACK_OK_FAULT) {
 				DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-				return ICE_ST_FAULT;
+				return ICE_BRK_DBGERROR;
 			}
 		
 			ctrl->cc.rw.tx_tail++;
@@ -746,7 +745,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if (jtag_mem_ap_wr32(tap, ctrl->comm_addr + 4, 
 							 ctrl->cc.rw.u32) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
-			return ICE_ST_FAULT;
+			return ICE_BRK_DBGERROR;
 		}
 	}
 
@@ -758,20 +757,6 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	jtag_tap_t * tap = ctrl->tap;
 	uint32_t dhcsr;
 	int ret;
-#if 0	
-	uint32_t dfsr;
-
-	if (jtag_mem_ap_rd32(tap, ARMV7M_DFSR, &dfsr) != JTAG_ADI_ACK_OK_FAULT) {
-		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-		ctrl->polling = false;
-		return ICE_ST_FAULT;
-	}
-
-	DCC_LOG5(LOG_INFO, " EXTERNAL=%d VCATCH=%d DWTTRAP=%d BKPT=%d HALTED=%d",
-			 (dfsr & DFSR_EXTERNAL) ? 1: 0, (dfsr & DFSR_VCATCH) ? 1: 0,
-			 (dfsr & DFSR_DWTTRAP) ? 1: 0, (dfsr & DFSR_BKPT) ? 1: 0,
-			 (dfsr & DFSR_HALTED) ? 1: 0);
-#endif
 
 	DCC_LOG(LOG_INFO, "cm3ice_comm_sync()..."); 
 	if ((ret = cm3ice_comm_sync(ctrl, comm)) != 0) {
@@ -780,7 +765,6 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	}
 
 	while (ctrl->poll_enabled) {
-
 		if ((ret = cm3ice_comm_poll(ctrl, comm)) != 0) {
 			DCC_LOG(LOG_WARNING, "cm3ice_comm_poll() failed!"); 
 			return ret;
@@ -789,12 +773,40 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
 							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
-			return ICE_ST_FAULT;
+			return ICE_BRK_DBGERROR;
 		}
 
 		ctrl->dhcsr = dhcsr;
-		if (dhcsr & DHCSR_S_HALT)
-			return ICE_ST_HALT;
+		if (dhcsr & DHCSR_S_HALT) {
+			uint32_t dfsr;
+			if (jtag_mem_ap_rd32(tap, ARMV7M_DFSR, 
+								 &dfsr) != JTAG_ADI_ACK_OK_FAULT) {
+				DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
+				return ICE_BRK_DBGERROR;
+			}
+
+			if (dfsr & (DFSR_VCATCH)) {
+				WARNS("Vector catch");
+				return ICE_BRK_EXCEPTION;
+			}
+
+			if (dfsr & (DFSR_DWTTRAP)) {
+				WARNS("Watchpoint trap");
+				return ICE_BRK_WATCHPOINT;
+			}
+
+			if (dfsr & (DFSR_BKPT)) {
+				WARNS("Breakpoint");
+				return ICE_BRK_BREAKPOINT;
+			}
+
+			if (dfsr & (DFSR_EXTERNAL)) {
+				WARNS("External");
+				return ICE_BRK_EXCEPTION;
+			}
+
+			return ICE_BRK_UNKNOWN;
+		}
 	}
 
 	return 0;
@@ -851,6 +863,7 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 {
 	jtag_tap_t * tap = ctrl->tap;
 	uint32_t dhcsr;
+	uint32_t demcr;
 //	uint32_t dfsr;
 	int ret;
 
@@ -897,7 +910,20 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 */
 
 	/* clear DFSR */
+	/* /!\ Writing 1 to a register 	clears the bit to 0 */
 	if (jtag_mem_ap_wr32(tap, ARMV7M_DFSR, 0x1f) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	/* Enable Vector Catch on faults */
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DEMCR, &demcr) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+	demcr |= DEMCR_VC_HARDERR | DEMCR_VC_INTERR | DEMCR_VC_BUSERR |
+		DEMCR_VC_STATERR | DEMCR_VC_CHKERR | DEMCR_VC_NOCPERR | DEMCR_VC_MMERR;
+	if (jtag_mem_ap_wr32(tap, ARMV7M_DEMCR, demcr) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
 		return ICE_ERR_JTAG;
 	}
@@ -927,6 +953,7 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask, uint32_t idcomp)
 int cm3ice_release(cm3ice_ctrl_t * ctrl)
 {
 	jtag_tap_t * tap = ctrl->tap;
+	uint32_t demcr;
 
 	/* disable all comparators int the FPB unit */
 	if (fpb_clear(tap, &ctrl->fpb) != ICE_OK) {
@@ -951,6 +978,20 @@ int cm3ice_release(cm3ice_ctrl_t * ctrl)
 
 	/* clear the DFSR */
 	if (jtag_mem_ap_wr32(tap, ARMV7M_DFSR, 0x1f) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	/* FIXME: cache DEMCR register */
+	/* Disable Vector Catch on faults */
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DEMCR, &demcr) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+	demcr &= ~(DEMCR_VC_HARDERR | DEMCR_VC_INTERR | DEMCR_VC_BUSERR |
+		DEMCR_VC_STATERR | DEMCR_VC_CHKERR | DEMCR_VC_NOCPERR | 
+		DEMCR_VC_MMERR | DEMCR_VC_CORERESET);
+	if (jtag_mem_ap_wr32(tap, ARMV7M_DEMCR, demcr) != JTAG_ADI_ACK_OK_FAULT) {
 		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
 		return ICE_ERR_JTAG;
 	}

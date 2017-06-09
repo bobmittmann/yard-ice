@@ -49,6 +49,7 @@ LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
 CDEFS = CONFIG_H
 CFLAGS = -g -O3 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
+OPTIONS = -mno-unaligned-access 
 
 INCPATH = ../../thinkos/sdk/include ../include
 

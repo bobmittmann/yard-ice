@@ -34,7 +34,7 @@
 
 #include "dis-asm.h"
 
-#if DEBUG
+#if 0
 static const char * const except_tab[8] = {
 	"UNKNOWN EXCEPTION", "UNDEFINED INSTRUCTION", "UNHANDLED SWI", 
 	"PREFETCH ABORT", "DATA ABORT", "INVALID EXCEPTION",
