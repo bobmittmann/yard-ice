@@ -26,7 +26,7 @@ include ../../thinkos/mk/config.mk
 LIB_STATIC = script
 
 CFILES = eval.c mod_sys.c var.c module.c type_def.c null.c \
-		 int32.c uint32.c bool.c string.c range32.c tag.c val.c 
+		 int32.c uint32.c bool.c string.c range32.c tag.c fp32.c val.c 
 
 include ../../thinkos/mk/lib.mk
 

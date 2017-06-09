@@ -35,11 +35,23 @@
 const char * const cm3_regnames[20] = {
 	"r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", 
 	"r8", "r9", "sl", "fp", "ip", "sp", "lr", "pc", 
-	"xpsr", " msp", " psp", "ctrl" };
+	"xpsr", " msp", " psp", "ctrl"};
+
+const char * const v7m_fpu_regnames[33] = {
+	" s0", " s1", " s2", " s3", " s4", " s5", " s6", " s7", 
+	" s8", " s9", "s10", "s11", "s12", "s13", "s14", "s15", 
+	"s16", "s17", "s18", "s19", "s20", "s21", "s22", "s23", 
+	"s24", "s25", "s26", "s27", "s28", "s29", "s30", "s31",
+	"fpcsr"};
 
 const char * cm3_reg_name(int r)
 {
 	return cm3_regnames[r];
+}
+
+const char * v7m_fpu_reg_name(int r)
+{
+	return v7m_fpu_regnames[r];
 }
 
 static const char xcpt_name_lut[16][12] = {
@@ -152,6 +164,24 @@ int cm3_show_regs(FILE * f, uint32_t * reg)
 					  cm3_reg_name(r + 12), reg[r + 12]);
 		fprintf(f, "%s= %08x\n", 
 					  cm3_reg_name(r + 16), reg[r + 16]);
+	}
+
+	return 0;
+}
+
+int cm3_show_fpu_regs(FILE * f, uint32_t * reg)
+{
+	int r; 
+
+	for (r = 0; r < 8; r++) {
+		fprintf(f, "%s= %08x  ", 
+					  v7m_fpu_reg_name(r), reg[r]);
+		fprintf(f, "%s= %08x  ", 
+					  v7m_fpu_reg_name(r + 8), reg[r + 8]);
+		fprintf(f, "%s= %08x  ", 
+					  v7m_fpu_reg_name(r + 16), reg[r + 16]);
+		fprintf(f, "%s= %08x\n", 
+					  v7m_fpu_reg_name(r + 24), reg[r + 24]);
 	}
 
 	return 0;

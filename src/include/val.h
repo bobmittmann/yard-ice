@@ -38,11 +38,11 @@ enum {
 	TYPE_STRING,
 	TYPE_TAG,
 	TYPE_RANGE32,
+	TYPE_FLOAT,
 	TYPE_INT64,
 	TYPE_UINT64,
 	TYPE_DBLOCK32,
 	TYPE_FREQ,
-	TYPE_FLOAT,
 	TYPE_DOUBLE
 };
 
@@ -117,6 +117,7 @@ extern const struct type_def type_def_string;
 extern const struct type_def type_def_range32;
 extern const struct type_def type_def_freq;
 extern const struct type_def type_def_tag;
+extern const struct type_def type_def_fp32;
 
 /*
  * standard type definitions 

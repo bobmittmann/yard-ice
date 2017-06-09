@@ -187,9 +187,9 @@ typedef struct armv7m_dwt_ctrl armv7m_dwt_ctrl_t;
 
 
 struct cm3_core_ctrl {
-	uint32_t reg[CM3_FPSCR + 1]; 
-	uint32_t cache_bmp; /* cache bitmap */
-	uint32_t wback_bmp; /* write back bitmap */
+	uint32_t reg[CM4_S31 + 1]; 
+	uint64_t cache_bmp; /* cache bitmap */
+	uint64_t wback_bmp; /* write back bitmap */
 };
 
 typedef struct cm3_core_ctrl cm3_core_ctrl_t;
@@ -259,6 +259,8 @@ extern "C" {
 #endif
 
 int cm3_show_regs(FILE * f, uint32_t * reg);
+
+int cm3_show_fpu_regs(FILE * f, uint32_t * reg);
 
 int cm3ice_mem_read(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * addr, 
 					 void * p, ice_size_t len);

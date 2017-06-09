@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file type_def.c
+ * @file fp32.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -29,18 +29,26 @@
 #include <string.h>
 #include "val.h"
 
-const struct type_def * const type_def_tab[] = {
-	&type_def_void,
-	&type_def_int32,
-	&type_def_uint32,
-	&type_def_bool,
-	&type_def_string,
-	&type_def_tag,
-	&type_def_range32,
-	&type_def_fp32
+int val_fp32_encode(value_t * val, const char * s)
+{
+	char * endptr;
+
+	val->fp32 = strtod(s, &endptr);
+	
+	if (endptr == s)
+		return -1;
+
+	return 0;
+}
+
+int val_fp32_decode(const value_t * val, char * s)
+{
+	return sprintf(s, "%f", val->fp32);
+}
+
+const struct type_def type_def_fp32 = {
+	.name = "float",
+	.encode = (val_encode_t)val_fp32_encode,
+	.decode = (val_decode_t)val_fp32_decode
 };
 
-char * type_name(int type) 
-{
-	return (char *)type_def_tab[type]->name;
-}

@@ -59,6 +59,8 @@ int cmd_goto(FILE * f, int argc, char ** argv);
 
 int cmd_show_context(FILE * f, int argc, char ** argv);
 
+int cmd_show_fpu_context(FILE * f, int argc, char ** argv);
+
 int cmd_show_status(FILE * f, int argc, char ** argv);
 
 int cmd_init(FILE * f, int argc, char ** argv);

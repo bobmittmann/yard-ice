@@ -222,6 +222,8 @@ typedef int (* ice_fifo_wr8_t)(ice_ctrl_t * ctrl, uint32_t addr,
 
 typedef int (* ice_context_show_t)(ice_ctrl_t * ctrl, FILE * f);
 
+typedef int (* ice_fpu_context_show_t)(ice_ctrl_t * ctrl, FILE * f);
+
 typedef int (* ice_print_insn_t)(ice_ctrl_t * ctrl, uint32_t addr, 
 								 struct disassemble_info * info);
 
@@ -335,6 +337,8 @@ struct ice_oper {
 
 	/* stack access */	
 	ice_context_show_t context_show;
+	ice_fpu_context_show_t fpu_context_show;
+
 	/* instruction fetching / decoding */	
 	ice_print_insn_t print_insn;
 
@@ -513,6 +517,11 @@ static inline int ice_exec(const ice_drv_t * ice, uint32_t addr,
 static inline int ice_context_show(const ice_drv_t * ice, FILE * f) {
 	return ice->op.context_show(ice->ctrl, f);
 }
+
+static inline int ice_fpu_context_show(const ice_drv_t * ice, FILE * f) {
+	return ice->op.fpu_context_show(ice->ctrl, f);
+}
+
 
 static inline int ice_reg_get(const ice_drv_t * ice, int reg, uint32_t * val) {
 	return ice->op.reg_get(ice->ctrl, reg, val);

@@ -223,7 +223,10 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"", "connect to target" },
 
 	{ cmd_show_context, "context", "cpu", 
-		"", "show target context" },
+		"", "show target CPU context" },
+
+	{ cmd_show_fpu_context, "float", "fpu", 
+		"", "show target FPU context" },
 
 #if 0
 	{ cmd_dint, "dint", "di", 

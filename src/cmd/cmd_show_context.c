@@ -61,3 +61,26 @@ int cmd_show_context(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_show_fpu_context(FILE * f, int argc, char ** argv)
+{
+	int err;
+
+	if (argc > 2) {
+//		fprintf(f, msg_show_context_usage);
+		return -1;
+	}
+
+	if (argc > 1) {
+		return -1;
+	}
+
+	if ((err = target_fpu_context_show(f)) < 0) {
+		fprintf(f, "#ICE error: %s\n", target_strerror(err));
+		return -1;
+	}
+
+	fprintf(f, "\n");
+
+	return 0;
+}
+

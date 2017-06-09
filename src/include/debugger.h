@@ -299,6 +299,8 @@ int target_int_disable(void);
 
 int target_context_show(FILE * f);
 
+int target_fpu_context_show(FILE * f);
+
 /*
 int target_insn_fetch(uint32_t addr, void * insn);
 

@@ -1180,40 +1180,24 @@ int cm3ice_context_show(cm3ice_ctrl_t * ctrl, FILE * f)
 
 int cm3ice_fpu_show(cm3ice_ctrl_t * ctrl, FILE * f)
 {
-	uint32_t reg[CM3_CTRL + 1];
+	uint32_t reg[CM4_S31 - CM4_S0 + 1];
 	jtag_tap_t * tap = ctrl->tap;
-	unsigned int id;
+	uint32_t fpscr = 0;
 	uint32_t dhcsr;
-	int ipsr;
+	unsigned int id;
 
 	jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr);
 	if (dhcsr & DHCSR_S_LOCKUP) {
 		fprintf(f, " Core Locked up!!\n");
 	}
 
-	for (id = CM3_R0; id <= CM3_CTRL; id++)
-		core_reg_get(tap, &ctrl->core, id, &reg[id]);
+	core_reg_get(tap, &ctrl->core, CM3_FPSCR, &fpscr);
+	fprintf(f, " fpscr= %08x\n", fpscr);
 
-	fprintf(f, " xpsr= ");
-	cm3_show_xpsr(f, reg[CM3_XPSR]);
-	fprintf(f, "\n ctrl= ");
-	cm3_show_ctrl(f, reg[CM3_CTRL]);
+	for (id = CM4_S0; id <= CM4_S31; id++)
+		core_reg_get(tap, &ctrl->core, id, &reg[id - CM4_S0]);
 
-	ipsr = reg[CM3_XPSR] & 0x1ff;
-	if (ipsr) {
-		uint32_t icsr;
-		uint32_t shcsr;
-		fprintf(f, "\n icsr= ");
-		jtag_mem_ap_rd32(tap, ARMV7M_ICSR, &icsr);
-		cm3_show_icsr(f, icsr);
-		fprintf(f, "\nshcsr= ");
-		jtag_mem_ap_rd32(tap, ARMV7M_SHCSR, &shcsr);
-		cm3_show_shcsr(f, shcsr);
-	}
-
-	fprintf(f, "\n\n");
-
-	cm3_show_regs(f, reg);
+	cm3_show_fpu_regs(f, reg);
 
 	return ICE_OK;
 }
@@ -1296,7 +1280,7 @@ int cm3ice_reg_get(cm3ice_ctrl_t * ctrl, int reg, uint32_t * val)
 {
 	int ret;
 
-	if (reg > CM3_CTRL)
+	if (reg > CM4_S31)
 		return ICE_ERR_ARG;
 
 	if ((ret = core_reg_get(ctrl->tap, &ctrl->core, reg, val)) != ICE_OK) {
@@ -1310,7 +1294,7 @@ int cm3ice_reg_set(cm3ice_ctrl_t * ctrl, int reg, uint32_t val)
 {
 	int ret;
 
-	if (reg > CM3_CTRL)
+	if (reg > CM4_S31)
 		return ICE_ERR_ARG;
 
 	if ((ret = core_reg_set(ctrl->tap, &ctrl->core, reg, val)) != ICE_OK) {
@@ -1865,6 +1849,9 @@ const struct ice_oper cm3ice_oper = {
 	.system_reset = (ice_system_reset_t)cm3ice_system_reset,
 
 	.context_show = (ice_context_show_t)cm3ice_context_show,
+
+	.fpu_context_show = (ice_fpu_context_show_t)cm3ice_fpu_show,
+
 	.print_insn = (ice_print_insn_t)cm3_print_insn
 };
 

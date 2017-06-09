@@ -1241,6 +1241,34 @@ int target_context_show(FILE * f)
 	return ret;
 }
 
+int target_fpu_context_show(FILE * f)
+{
+	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	int ret;
+
+	DCC_LOG(LOG_TRACE, "-----------------------------------------"); 
+
+	thinkos_mutex_lock(dbg->target_mutex);
+
+	if (dbg->state != DBG_ST_HALTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		thinkos_mutex_unlock(dbg->target_mutex);
+		return ERR_STATE;
+	}
+
+	thinkos_mutex_lock(dbg->ice_mutex);
+	/* FIXME: read the context and then decode */
+	if ((ret = ice_fpu_context_show(ice, f)) < 0) {
+		DCC_LOG(LOG_WARNING, "ice_fpu_context_show() fail!");
+	}
+	thinkos_mutex_unlock(dbg->ice_mutex);
+
+	thinkos_mutex_unlock(dbg->target_mutex);
+
+	return ret;
+}
+
 /*-----------------------------------------------------------------------------
   Disassemble
   ---------------------------------------------------------------------------*/
