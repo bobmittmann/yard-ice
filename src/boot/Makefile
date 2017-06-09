@@ -19,9 +19,9 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-VERSION_DATE = "2017-05-29"
+VERSION_DATE = "2017-06-09"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "24"
+VERSION_MINOR = "25"
 
 PROG = thinkos-$(VERSION_MAJOR).$(VERSION_MINOR)
 
