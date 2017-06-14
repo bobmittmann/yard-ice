@@ -56,7 +56,7 @@ INCPATH = ../../thinkos/sdk/include ../include
 MACH = stm32f207
 THINKAPP = 1
 LDSCRIPT = yard-ice.ld
-LOAD_ADDR = 0x08020000
+APPADDR = 0x08020000
 include ../../thinkos/mk/stm32f2xx.mk
 
 help:

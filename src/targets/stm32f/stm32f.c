@@ -76,11 +76,44 @@ uint16_t stm32f10xxx_config(const ice_drv_t * ice,
 	return memsz;
 }
 
+struct pkg {
+	uint8_t id;
+	char name[11];
+};
+
+const struct pkg stm32lpkg_tab[] = {
+	{ 0, "LQFP64" },
+	{ 1, "WLCSP64" },
+	{ 2, "LQFP100" },
+	{ 10, "UFQFPN48" },
+	{ 11, "LQFP48" },
+	{ 12, "WLCSP49" },
+	{ 13, "UFBGA64" },
+	{ 14, "UFBGA100" },
+	{ 255, "" }
+};
+
+const char * stm32lpkg_name(unsigned int id) 
+{
+	const char * s = "Unknown";
+	int i;
+
+	for (i = 0; i < sizeof(stm32lpkg_tab) /  sizeof(struct pkg); ++i) {
+		if (stm32lpkg_tab[i].id == id) {
+			s = stm32lpkg_tab[i].name;
+			break;
+		}
+	}
+
+	return s;
+}
+
 int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 					  target_info_t * target)
 {
 	ice_mem_entry_t * mem = (ice_mem_entry_t *)target->mem;
 	uint16_t memsz;
+	uint16_t pkg;
 	uint32_t id;
 	uint32_t dev_id;
 
@@ -235,10 +268,10 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 
 	case 0x422:
 		ice_rd16(ice, 0x1ffff7cc, &memsz);
+		fprintf(f, "STM32F3XX\n"); 
 		/* This bitfield indicates the size of the device Flash memory 
 		   expressed in Kbytes.As an example, 0x040 corresponds 
 		   to 64 Kbytes. */
-		fprintf(f, "STM32F3XX\n"); 
 		target->on_init = (target_script_t)stm32f3xx_on_init,
 		mem[FLASH].op = &flash_stm32f3_oper;
 		mem[FLASH].blk.size = MEM_KiB(2);
@@ -251,14 +284,42 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 
 	case 0x421:
 		ice_rd16(ice, 0x1fff7a22, &memsz);
+		ice_rd16(ice, 0x1fff7500, &pkg);
+		fprintf(f, "STM32F466X\n"); 
+		fprintf(f, "   - Package: %s\n", stm32lpkg_name(pkg));
 		/* This bitfield indicates the size of the device Flash memory 
 		   expressed in Kbytes.As an example, 0x040 corresponds 
 		   to 64 Kbytes. */
-		fprintf(f, "STM32F466X\n"); 
 		target->on_init = (target_script_t)stm32f2xx_on_init,
 		mem[FLASH].op = &flash_stm32f2_oper;
 		mem[FLASH].blk.size = MEM_KiB(16);
 		mem[FLASH].blk.count = memsz / 16;
+		mem[EEPROM].blk.count = 0;
+		mem[SRAM].blk.count = 128;
+		mem[CCM].blk.count = 0;
+		break;
+
+	case 0x435:
+		ice_rd16(ice, 0x1fff75e0, &memsz);
+		ice_rd16(ice, 0x1fff7500, &pkg);
+		fprintf(f, "STM32L43XXX or STM32L44XXX\n"); 
+		fprintf(f, "   - Package: %s\n", stm32lpkg_name(pkg));
+		target->on_init = (target_script_t)stm32l1xx_on_init,
+		mem[FLASH].op = &flash_stm32l1_oper;
+		mem[FLASH].blk.size = MEM_KiB(2);
+		mem[FLASH].blk.count = memsz / 2;
+		mem[EEPROM].blk.count = 0;
+		mem[SRAM].blk.count = 64;
+		mem[CCM].blk.count = 0;
+		break;
+
+	case 0x462:
+		fprintf(f, "STM32L45XXX or STM32L46XXX\n"); 
+		ice_rd16(ice, 0x1fff75e0, &memsz);
+		target->on_init = (target_script_t)stm32l1xx_on_init,
+		mem[FLASH].op = &flash_stm32l1_oper;
+		mem[FLASH].blk.size = MEM_KiB(2);
+		mem[FLASH].blk.count = memsz / 2;
 		mem[EEPROM].blk.count = 0;
 		mem[SRAM].blk.count = 128;
 		mem[CCM].blk.count = 0;
