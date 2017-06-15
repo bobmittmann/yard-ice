@@ -32,8 +32,11 @@
 #include "dbglog.h"
 
 #ifndef VAR_GLOBAL_MAX
-#define VAR_GLOBAL_MAX 64
+#define VAR_GLOBAL_MAX 128
 #endif
+
+#define TRACE_LEVEL TRACE_LVL_DBG
+#include <trace.h>
 
 struct var_def var_tab[VAR_GLOBAL_MAX];
 
@@ -45,6 +48,7 @@ int var_global_add(int mod_id, const char * name, int type, int var_id)
 
 	if (var_cnt == VAR_GLOBAL_MAX) {
 		DCC_LOG(LOG_WARNING, "no more room for global variables!");
+		WARN("can't add \"%s\" cnt=%d", name, var_cnt);
 		return -1;
 	}
 

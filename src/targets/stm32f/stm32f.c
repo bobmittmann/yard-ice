@@ -304,8 +304,8 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		ice_rd16(ice, 0x1fff7500, &pkg);
 		fprintf(f, "STM32L43XXX or STM32L44XXX\n"); 
 		fprintf(f, "   - Package: %s\n", stm32lpkg_name(pkg));
-		target->on_init = (target_script_t)stm32l1xx_on_init,
-		mem[FLASH].op = &flash_stm32l1_oper;
+		target->on_init = (target_script_t)stm32l4xx_on_init,
+		mem[FLASH].op = &flash_stm32l4_oper;
 		mem[FLASH].blk.size = MEM_KiB(2);
 		mem[FLASH].blk.count = memsz / 2;
 		mem[EEPROM].blk.count = 0;
@@ -316,8 +316,8 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 	case 0x462:
 		fprintf(f, "STM32L45XXX or STM32L46XXX\n"); 
 		ice_rd16(ice, 0x1fff75e0, &memsz);
-		target->on_init = (target_script_t)stm32l1xx_on_init,
-		mem[FLASH].op = &flash_stm32l1_oper;
+		target->on_init = (target_script_t)stm32l4xx_on_init,
+		mem[FLASH].op = &flash_stm32l4_oper;
 		mem[FLASH].blk.size = MEM_KiB(2);
 		mem[FLASH].blk.count = memsz / 2;
 		mem[EEPROM].blk.count = 0;
