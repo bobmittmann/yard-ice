@@ -97,19 +97,16 @@ void stm32l4xxx_flash_clr(cm3ice_ctrl_t * ctrl)
 	}
 }
 
-/*
-Page erase
-To erase a page (2 Kbyte), follow the procedure below:
-1. Check that no Flash memory operation is ongoing by checking the BSY bit in the Flash
-status register (FLASH_SR).
-2. Check and clear all error programming flags due to a previous programming. If not,
-	PGSERR is set.
-	3. Set the PER bit and select the page you wish to erase (PNB) in the Flash control
-	register (FLASH_CR).
-	4. Set the STRT bit in the FLASH_CR register.
-	5. Wait for the BSY bit to be cleared in the FLASH_SR register.
-*/
-
+/* Page erase
+   To erase a page (2 Kbyte), follow the procedure below:
+   1. Check that no Flash memory operation is ongoing by checking the 
+   BSY bit in the Flash status register (FLASH_SR).
+   2. Check and clear all error programming flags due to a previous 
+   programming. If not, PGSERR is set.
+   3. Set the PER bit and select the page you wish to erase (PNB) in 
+   the Flash control register (FLASH_CR).
+   4. Set the STRT bit in the FLASH_CR register.
+   5. Wait for the BSY bit to be cleared in the FLASH_SR register. */
 int stm32l4_flash_erase(cm3ice_ctrl_t * ctrl, 
 					   ice_mem_ref_t * mem, 
 					   ice_size_t len)
@@ -121,7 +118,6 @@ int stm32l4_flash_erase(cm3ice_ctrl_t * ctrl,
 
 	/* 2KiB pages */
 	page = mem->offs >> 11;
-	INF("page=%d", page);
 
 	/* Sabe ACR */
 	cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_ACR, &acr);
@@ -162,20 +158,20 @@ int stm32l4_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem,
  /*
    Standard programming
    The Flash memory programming sequence in standard mode is as follows:
-   1. Check that no Flash main memory operation is ongoing by checking the BSY bit in the
-   Flash status register (FLASH_SR).
-   2. Check and clear all error programming flags due to a previous programming. If not,
-   PGSERR is set.
+   1. Check that no Flash main memory operation is ongoing by checking the 
+   BSY bit in the Flash status register (FLASH_SR).
+   2. Check and clear all error programming flags due to a previous 
+   programming. If not, PGSERR is set.
    3. Set the PG bit in the Flash control register (FLASH_CR).
-   4. Perform the data write operation at the desired memory address, inside main memory
-   block or OTP area. Only double word can be programmed.
+   4. Perform the data write operation at the desired memory address, 
+   inside main memory block or OTP area. Only double word can be programmed.
    – Write a first word in an address aligned with double word
    – Write the second word
    5. Wait until the BSY bit is cleared in the FLASH_SR register.
-   6. Check that EOP flag is set in the FLASH_SR register (meaning that the programming
-   operation has succeed), and clear it by software.
-   7. Clear the PG bit in the FLASH_SR register if there no more programming request
-   anymore.
+   6. Check that EOP flag is set in the FLASH_SR register (meaning that the 
+   programming operation has succeed), and clear it by software.
+   7. Clear the PG bit in the FLASH_SR register if there no more 
+   programming request anymore.
    */
 
 	while (rem > 0) {
@@ -189,10 +185,7 @@ int stm32l4_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem,
 			data1 = ptr[4] | (ptr[5] << 8) | (ptr[6] << 16)| (ptr[7] << 24);
 		}
 
-		INF("offs=0x%08x", offs);
-
-		/* start half page write */
-		DCC_LOG(LOG_TRACE, "Half-Page write start...");
+		/* start write */
 		cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_CR, PG);
 
 		cm3ice_wr32(ctrl, base + offs, data0);
@@ -393,7 +386,6 @@ int stm32l4xx_on_init(FILE * f, const ice_drv_t * ice,
 		ice_wr32(ice, STM32F_BASE_FLASH + FLASH_KEYR, FLASH_KEY1);
 		ice_wr32(ice, STM32F_BASE_FLASH + FLASH_KEYR, FLASH_KEY2);
 	}
-
 
 #if 0
 	cr &= ~PLLON;
