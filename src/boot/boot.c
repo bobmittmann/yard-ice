@@ -81,8 +81,8 @@ int main(int argc, char ** argv)
 
 	thinkos_sleep(256);
 
-	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon_init()");
-	thinkos_dbgmon_init(comm, monitor_task);
+	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
+	thinkos_dbgmon(monitor_task, comm);
 
 #if THINKOS_ENABLE_MPU
 	DCC_LOG(LOG_TRACE, "9. thinkos_userland()");
