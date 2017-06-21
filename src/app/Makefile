@@ -21,6 +21,9 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+THINKOSDIR = ../../thinkos
+SDKDIR = $(THINKOSDIR)/sdk
+
 VERSION_DATE = "2017-06-15"
 VERSION_MAJOR = "0"
 VERSION_MINOR = "39"
@@ -31,13 +34,12 @@ CFILES = ../yard-ice.c ../io.c ../debugger.c ../ice_drv.c\
 		 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
 		 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c 
 
-SDK = ../../thinkos/sdk
-
-LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil $(SDK)/libice-comm\
-		  $(SDK)/libc $(SDK)/libtcpip $(SDK)/libstm32drv\
-		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc ../libaltera\
-		  $(SDK)/libtrace $(SDK)/libtty $(SDK)/libxmodem\
-		  $(SDK)/libshell $(SDK)/libconsole ../libopcodes\
+LIBDIRS = $(SDKDIR)/libcm3 $(SDKDIR)/libstm32f $(SDKDIR)/libutil \
+		  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \
+		  $(SDKDIR)/libstm32drv $(SDKDIR)/libbitvec $(SDKDIR)/libhexdump \
+		  $(SDKDIR)/libcrc $(SDKDIR)/libtrace $(SDKDIR)/libtty \
+		  $(SDKDIR)/libxmodem $(SDKDIR)/libshell $(SDKDIR)/libconsole \
+		  ../libopcodes ../libaltera\
 		  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
 		  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
 		  ../comm 
@@ -47,17 +49,15 @@ LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
 	targets tftp shell console tty gdb vcom telnet crc xmodem comm gcc
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O3 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,--gc-sections 
+CFLAGS = -g -O3 -Wall -fomit-frame-pointer
 OPTIONS = -mno-unaligned-access 
 
-INCPATH = ../../thinkos/sdk/include ../include
+INCPATH = $(SDKDIR)/include ../include
 
-MACH = stm32f207
-THINKAPP = 1
+THINKAPP = 0x08020000
 LDSCRIPT = yard-ice.ld
-APPADDR = 0x08020000
-include ../../thinkos/mk/stm32f2xx.mk
+MACH = stm32f207
+include $(THINKOSDIR)/mk/stm32.mk
 
 help:
 	@echo 'Targets:'

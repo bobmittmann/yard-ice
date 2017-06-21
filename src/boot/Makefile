@@ -19,6 +19,9 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+THINKOSDIR = ../../thinkos
+SDKDIR = $(THINKOSDIR)/sdk
+
 VERSION_DATE = "2017-06-09"
 VERSION_MAJOR = "0"
 VERSION_MINOR = "25"
@@ -27,21 +30,16 @@ PROG = thinkos-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 CFILES = boot.c monitor.c board.c otg_xflash_pic.c
 
-SDK = ../../thinkos/sdk
-
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil $(SDK)/libthinkos\
-		  $(SDK)/libice-comm 
+LIBDIRS = $(SDKDIR)/libstm32f $(SDKDIR)/libcm3 $(SDKDIR)/libutil\
+		  $(SDKDIR)/libthinkos $(SDKDIR)/libice-comm 
 
 LIBS = cm3 stm32f util thinkos ice-comm gcc 
 
-INCPATH = $(SDK)/include ../include
+INCPATH = $(SDKDIR)/include ../include
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
-CFLAGS = -g -Os -Wall -fno-builtin -ffreestanding -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,--gc-sections 
+CFLAGS = -g -Os -Wall -fno-builtin -ffreestanding -fomit-frame-pointer
 
-#JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f207
-include ../../thinkos/mk/stm32f2xx.mk
-
+include $(THINKOSDIR)/mk/stm32.mk
