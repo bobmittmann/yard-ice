@@ -49,7 +49,7 @@ LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
 	targets tftp shell console tty gdb vcom telnet crc xmodem comm gcc
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O3 -Wall -fomit-frame-pointer
+CFLAGS = -g -Ofast -Wall -fomit-frame-pointer
 OPTIONS = -mno-unaligned-access 
 
 INCPATH = $(SDKDIR)/include ../include

@@ -39,6 +39,7 @@
 
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
+	DCC_LOG(LOG_ERROR, "!");
 	udelay(1000000);
 	cm3_sysrst();
 }

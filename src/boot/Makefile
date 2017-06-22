@@ -40,6 +40,7 @@ INCPATH = $(SDKDIR)/include ../include
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
 CFLAGS = -g -Os -Wall -fno-builtin -ffreestanding -fomit-frame-pointer
+OPTIONS = -mno-unaligned-access 
 
 MACH = stm32f207
 include $(THINKOSDIR)/mk/stm32.mk
