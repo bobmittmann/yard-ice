@@ -247,10 +247,12 @@ int ultobin_lsb_first(char * s, uint32_t val, int width)
 	return i;
 }
 
+
 #define	GOT_PERCENT     0x80
 #define	ZERO_FILL       0x40
 #define	JUST_LEFT       0x20
 #define	CONVERT_ALT     0x10
+#define	GOT_DOT         0x08
 
 #define IP4_ADDR1(a)    (((in_addr_t) (a)) & 0xff)
 #define IP4_ADDR2(a)    ((((in_addr_t) (a)) >> 8) & 0xff)
@@ -263,6 +265,7 @@ int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 	char flags;
 	char sign = 0;
 	int width = 0;
+	int precision = 0;
 	char buf[80];
 	union {
 		char * cp;
@@ -298,6 +301,7 @@ int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 			n++;
 			flags = 0;
 			width = 0;
+			precision = 6;
 			continue;
 
 		case 's':
@@ -340,7 +344,7 @@ int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 			continue;
 
 		case '0':
-			if (width == 0)
+			if (!(flags & GOT_DOT) && (width == 0))
 				flags |= ZERO_FILL;
 		case '1':
 		case '2':
@@ -351,11 +355,19 @@ int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 		case '7':
 		case '8':
 		case '9':
-			width = (width * 10) + (c - '0');
+			if (flags & GOT_DOT)
+				precision = (precision * 10) + (c - '0');
+			else
+				width = (width * 10) + (c - '0');
 			continue;
 
 		case '-':
 			flags |= JUST_LEFT;
+			continue;
+
+		case '.':
+			flags |= GOT_DOT;
+			precision = 0 ;
 			continue;
 
 		case '+':
@@ -426,7 +438,7 @@ int dcc_logprintf(struct dcc_lnk * lnk, unsigned int opt, const char *fmt)
 
 		case 'f':
 			val.f = dcc_read_float(lnk);
-			val.n = sprintf(buf, "%f", val.f); 
+			val.n = sprintf(buf, "%.*f", precision, val.f); 
 			m++;
 			break;
 
@@ -507,7 +519,7 @@ int dcc_log_expand(struct dcc_lnk * lnk)
 	for (;;) {
 
 		if (dcc_read_addr(lnk, &addr) < 0) {
-			fprintf(stderr, "Can't read DCC entry address\n");
+			fprintf(stderr, "Can't read DCC entry: 0x%08x\n", addr);
 			fflush(stderr);
 			break;
 		}

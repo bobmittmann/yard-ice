@@ -62,23 +62,37 @@ struct tcp_drv {
 extern const struct dcc_lnk_op net_op;
 extern char * prog;
 
-int tcp_read_addr(struct tcp_drv * tcp, uint32_t * addr)
+int tcp_recv(struct tcp_drv * tcp, uint32_t * val)
 {
+	char * cp = (char *)val;
+	int rem = 4;
 	DBG(DBG_TRACE, "tcp=%p", tcp); 
 
-	if (recv(tcp->sock, (char *)addr, 4, 0) != 4) {
-		fprintf(stderr, "%s: recv(): %s\n", prog, strerror(errno));
-		return -1;
+	while (rem) {
+		int ret;
+		
+		if ((ret = recv(tcp->sock, (char *)cp, rem, 0)) < 0) {
+			fprintf(stderr, "%s: recv(): %s\n", prog, strerror(errno));
+			return ret;
+		}
+
+		rem -= ret;
+		cp += rem;
 	}
 
 	return 4;
+}
+
+int tcp_read_addr(struct tcp_drv * tcp, uint32_t * addr)
+{
+	return tcp_recv(tcp, addr);
 }
 
 uint32_t tcp_read_u32(struct tcp_drv * tcp)
 {
 	uint32_t val;
 
-	if (recv(tcp->sock, (char *)&val, 4, 0) != 4)
+	if (tcp_recv(tcp, &val) < 0)
 		return 0;
 
 	return val;
@@ -99,7 +113,7 @@ void * tcp_read_ptr(struct tcp_drv * tcp)
 {
 	uint32_t addr;
 
-	if (recv(tcp->sock, (char *)&addr, 4, 0) != 4)
+	if (tcp_recv(tcp, &addr) < 0)
 		return NULL;
 
 	return image_ptr(addr);
@@ -114,7 +128,7 @@ char * tcp_read_str(struct tcp_drv * tcp)
 
 	i = 0;
 	do {
-		if (recv(tcp->sock, (char *)&val, 4, 0) != 4)
+		if (tcp_recv(tcp, &val) < 0)
 			return NULL;
 		c = val & 0xff;
 		if (c != '\0') {
