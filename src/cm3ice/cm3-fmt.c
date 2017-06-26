@@ -171,17 +171,18 @@ int cm3_show_regs(FILE * f, uint32_t * reg)
 
 int cm3_show_fpu_regs(FILE * f, uint32_t * reg)
 {
+	float * fp = (float *)reg;
 	int r; 
 
 	for (r = 0; r < 8; r++) {
-		fprintf(f, "%s= %08x  ", 
-					  v7m_fpu_reg_name(r), reg[r]);
-		fprintf(f, "%s= %08x  ", 
-					  v7m_fpu_reg_name(r + 8), reg[r + 8]);
-		fprintf(f, "%s= %08x  ", 
-					  v7m_fpu_reg_name(r + 16), reg[r + 16]);
-		fprintf(f, "%s= %08x\n", 
-					  v7m_fpu_reg_name(r + 24), reg[r + 24]);
+		fprintf(f, "%s=%-14.6f ", 
+					  v7m_fpu_reg_name(r), fp[r]);
+		fprintf(f, "%s=%-14.6f ", 
+					  v7m_fpu_reg_name(r + 8), fp[r + 8]);
+		fprintf(f, "%s=%-14.6f ", 
+					  v7m_fpu_reg_name(r + 16), fp[r + 16]);
+		fprintf(f, "%s=%-14.6f\n", 
+					  v7m_fpu_reg_name(r + 24), fp[r + 24]);
 	}
 
 	return 0;

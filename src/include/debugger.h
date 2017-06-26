@@ -218,6 +218,8 @@ int target_ifa_set(uint32_t val);
 
 int target_enable_debug(bool en);
 
+int target_enable_irq(bool en);
+
 int target_reset(FILE * f, int mode);
 
 int target_init(FILE * f);

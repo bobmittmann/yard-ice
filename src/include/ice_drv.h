@@ -243,6 +243,8 @@ typedef int (* ice_info_t)(ice_ctrl_t * ctrl, FILE * f, uint32_t which);
 
 typedef int (* ice_dbgen_t)(ice_ctrl_t * ctrl, bool en);
 
+typedef int (* ice_irqen_t)(ice_ctrl_t * ctrl, bool en);
+
 typedef int (* ice_core_reset_t)(ice_ctrl_t * ctrl);
 
 typedef int (* ice_system_reset_t)(ice_ctrl_t * ctrl);
@@ -338,6 +340,8 @@ struct ice_oper {
 	ice_info_t info;
 	/* ice debug enable */	
 	ice_dbgen_t dbgen;
+	/* ice irq enable */	
+	ice_irqen_t irqen;
 
 	/* core reset */	
 	ice_core_reset_t core_reset;
@@ -627,7 +631,11 @@ static inline int ice_dbgen(const ice_drv_t * ice, bool en)
 	return ice->op.dbgen(ice->ctrl, en);
 }
 
-typedef int (* ice_dbgen_t)(ice_ctrl_t * ctrl, bool en);
+static inline int ice_irqen(const ice_drv_t * ice, bool en)
+{
+	return ice->op.irqen(ice->ctrl, en);
+}
+
 static inline int ice_print_insn(const ice_drv_t * ice, uint32_t addr, 
 								 struct disassemble_info * info)
 {

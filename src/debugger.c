@@ -3562,6 +3562,34 @@ int target_enable_debug(bool on)
 	return ret;
 }
 
+int target_enable_irq(bool on)
+{
+	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	int ret;
+
+	thinkos_mutex_lock(dbg->target_mutex);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		thinkos_mutex_unlock(dbg->target_mutex);
+		return ERR_STATE;
+	}
+
+	/* stop polling */
+	poll_stop(dbg);
+	thinkos_mutex_lock(dbg->ice_mutex);
+
+	ret = ice_irqen(ice, on);
+
+	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
+
+	thinkos_mutex_unlock(dbg->target_mutex);
+
+	return ret;
+}
+
 #if 0
 int target_int_enable(void)
 {
