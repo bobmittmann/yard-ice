@@ -383,7 +383,12 @@ struct ice_mem_entry stm32f_mem[] = {
 	},
 	{ .name = "scs", .flags = MEM_32_BITS,
 		.addr = { .base = 0xe000e000, .offs = 0x00000000 }, 
-		.blk = {.count = 1, .size = 0x1000},
+		.blk = {.count = 52, .size = 0x1000},
+		.op = &cm3_ram_oper 
+	},
+	{ .name = "dbg", .flags = MEM_32_BITS,
+		.addr = { .base = 0xe0042000, .offs = 0x00000000 }, 
+		.blk = {.count = 62, .size = 0x2000},
 		.op = &cm3_ram_oper 
 	},
 	{ .name = "", .flags = 0, .addr = { .base = 0, .offs = 0 }, 

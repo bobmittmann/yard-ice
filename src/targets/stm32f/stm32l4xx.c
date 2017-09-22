@@ -266,6 +266,7 @@ int stm32l4xx_on_init(FILE * f, const ice_drv_t * ice,
 {
 //	uint32_t obr;
 //	uint32_t opt[2];
+	uint32_t dbgmcu_cr;
 	uint32_t cr;
 	uint32_t sr;
 	uint32_t cfg;
@@ -333,25 +334,16 @@ int stm32l4xx_on_init(FILE * f, const ice_drv_t * ice,
 		}	
 	}
 
-#if 0
-	/*******************************************************************
-	 * Adjust core voltage regulator
-	 *******************************************************************/
-	ice_wr32(ice, STM32F_BASE_PWR + PWR_CR, VOS_1_8V);
-	/* wait for voltage to stabilize */
-	for (again = 8192; ; again--) {
-		uint32_t csr;
+	fprintf(f, " %s: Configuring DBGMCU\n", __func__);
+	ice_rd32(ice, STM32F_BASE_DBGMCU + DBGMCU_CR, &dbgmcu_cr);
+	INF("DBGMCU cr=0x%08x", dbgmcu_cr);
+	dbgmcu_cr |= DBG_SLEEP | DBG_STOP | DBG_STANDBY;
+	ice_wr32(ice, STM32F_BASE_DBGMCU + DBGMCU_CR,dbgmcu_cr);
 
-		ice_rd32(ice, STM32F_BASE_PWR + PWR_CSR, &csr);
-		if ((csr & VOSF) == 0)
-			break;
-		if (again == 0) {
-			fprintf(f, " %s: voltage regulator fail!\n", __func__);
-			DCC_LOG(LOG_WARNING, "voltage regulator fail!");
-			return -1;
-		}
-	}
-#endif
+
+	ice_rd32(ice, STM32F_BASE_RCC + RCC_AHB1ENR, &enr);
+	INF("RCC_AHB1ENR=0x%08x", enr);
+
 
 	/*******************************************************************
 	 * Configure flash

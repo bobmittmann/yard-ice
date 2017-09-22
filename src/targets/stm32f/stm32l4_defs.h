@@ -25,6 +25,8 @@
 
 #if defined(STM32L4XX)
 
+#define STM32F_BASE_DBGMCU  0xe0042000
+
 #define STM32F_BASE_RNG     0x50060800
 #define STM32F_BASE_AES     0x50060000
 #define STM32F_BASE_ADC     0x50040000
@@ -1184,4 +1186,21 @@ This bit triggers the mass erase (all user pages) when set.
 0: Flash programming disabled
 1: Flash programming enabled
 */
+
+/*-------------------------------------------------------------------------
+  Debug MCU Interface
+  -------------------------------------------------------------------------*/
+
+/* Flash access control register */
+#define DBGMCU_IDCODE      0x00
+#define DBGMCU_CR          0x04
+#define DBGMCU_APB1FZR1    0x08
+#define DBGMCU_APB1FZR2    0x0c
+#define DBGMCU_APB2FZR     0x10
+
+#define DBG_SLEEP         (1 << 0)
+#define DBG_STOP          (1 << 1)
+#define DBG_STANDBY       (1 << 2)
+#define TRACE_IOEN        (1 << 5)
+#define TRACE_MODE        (3 << 6)
 
