@@ -80,7 +80,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 
 [Document4]
-DocumentPath=yard-ice-fpga.SchDoc
+DocumentPath=yard-ice-fpga-pwr.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
 AnnotationIndexControlEnabled=0
@@ -207,85 +207,37 @@ ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
 
-[GeneratedDocument1]
-DocumentPath=..\doc\rev0.2\BOM\Bill of Materials-yard-ice.xls
+[Document12]
+DocumentPath=yard-ice-change-log.SchDoc
+AnnotationEnabled=1
+AnnotateStartValue=1
+AnnotationIndexControlEnabled=0
+AnnotateSuffix=
+AnnotateScope=All
+AnnotateOrder=5
+DoLibraryUpdate=1
+DoDatabaseUpdate=1
+ClassGenCCAutoEnabled=1
+ClassGenCCAutoRoomEnabled=1
+ClassGenNCAutoScope=None
 DItemRevisionGUID=
+GenerateClassCluster=0
 
-[GeneratedDocument2]
-DocumentPath=..\doc\rev0.2\Pick Place\Pick Place for yard-ice.txt
+[Document13]
+DocumentPath=yard-ice-fpga.SchDoc
+AnnotationEnabled=1
+AnnotateStartValue=1
+AnnotationIndexControlEnabled=0
+AnnotateSuffix=
+AnnotateScope=All
+AnnotateOrder=6
+DoLibraryUpdate=1
+DoDatabaseUpdate=1
+ClassGenCCAutoEnabled=1
+ClassGenCCAutoRoomEnabled=1
+ClassGenNCAutoScope=None
 DItemRevisionGUID=
-
-[GeneratedDocument3]
-DocumentPath=..\doc\rev0.2\NC Drill\yard-ice-BoardEdgeRout.TXT
-DItemRevisionGUID=
-
-[GeneratedDocument4]
-DocumentPath=..\doc\rev0.2\NC Drill\yard-ice.DRR
-DItemRevisionGUID=
-
-[GeneratedDocument5]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.EXTREP
-DItemRevisionGUID=
-
-[GeneratedDocument6]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GBL
-DItemRevisionGUID=
-
-[GeneratedDocument7]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GBS
-DItemRevisionGUID=
-
-[GeneratedDocument8]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GD1
-DItemRevisionGUID=
-
-[GeneratedDocument9]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GG1
-DItemRevisionGUID=
-
-[GeneratedDocument10]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GM3
-DItemRevisionGUID=
-
-[GeneratedDocument11]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GM4
-DItemRevisionGUID=
-
-[GeneratedDocument12]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GM11
-DItemRevisionGUID=
-
-[GeneratedDocument13]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTL
-DItemRevisionGUID=
-
-[GeneratedDocument14]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTO
-DItemRevisionGUID=
-
-[GeneratedDocument15]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTP
-DItemRevisionGUID=
-
-[GeneratedDocument16]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTS
-DItemRevisionGUID=
-
-[GeneratedDocument17]
-DocumentPath=..\doc\rev0.2\NC Drill\yard-ice.LDP
-DItemRevisionGUID=
-
-[GeneratedDocument18]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.REP
-DItemRevisionGUID=
-
-[GeneratedDocument19]
-DocumentPath=..\doc\rev0.2\Gerber\yard-ice.RUL
-DItemRevisionGUID=
-
-[GeneratedDocument20]
-DocumentPath=..\doc\rev0.2\NC Drill\yard-ice.TXT
-DItemRevisionGUID=
+GenerateClassCluster=0
 
 [PCBConfiguration1]
 ReleaseItemId=
@@ -297,7 +249,7 @@ GenerateBOM=0
 [OutputGroup1]
 Name=Netlist Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=CadnetixNetlist
 OutputName1=Cadnetix Netlist
@@ -423,7 +375,7 @@ OutputDefault24=0
 [OutputGroup2]
 Name=Simulator Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=AdvSimNetlist
 OutputName1=Mixed Sim
@@ -444,7 +396,7 @@ OutputDefault3=0
 [OutputGroup3]
 Name=Documentation Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=Composite
 OutputName1=Composite Drawing
@@ -560,7 +512,7 @@ PageOptions18=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|Print
 [OutputGroup4]
 Name=Assembly Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=Assembly
 OutputName1=Assembly Drawings
@@ -582,7 +534,7 @@ OutputDefault3=0
 [OutputGroup5]
 Name=Fabrication Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=CompositeDrill
 OutputName1=Composite Drill Drawing
@@ -638,7 +590,7 @@ OutputDefault9=0
 [OutputGroup6]
 Name=Report Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=BOM_PartType
 OutputName1=Bill of Materials
@@ -675,7 +627,7 @@ OutputDefault6=0
 [OutputGroup7]
 Name=Other Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=Text Print
 OutputName1=Text Print
@@ -855,7 +807,7 @@ PageOptions29=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|Print
 [OutputGroup8]
 Name=Validation Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=Design Rules Check
 OutputName1=Design Rules Check
@@ -884,7 +836,7 @@ OutputDefault4=0
 [OutputGroup9]
 Name=Export Outputs
 Description=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=HP Color LaserJet Pro M252 PCL 6 (Copy 2)
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=1
 OutputType1=ExportSTEP
 OutputName1=Export STEP

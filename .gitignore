@@ -45,3 +45,7 @@ RemoteSystemsTempFiles/
 /doc/thinkos/html/*
 /doc/thinkos/rtf/*
 /doc/thinkos/xml/*
+
+*.Zip
+*.LOG
+/pcb/*/*.htm
