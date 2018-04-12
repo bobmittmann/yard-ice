@@ -239,6 +239,10 @@ ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
 
+[GeneratedDocument1]
+DocumentPath=yard-ice.PcbDoc.htm
+DItemRevisionGUID=
+
 [PCBConfiguration1]
 ReleaseItemId=
 CurrentRevision=

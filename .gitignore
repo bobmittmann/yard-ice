@@ -49,3 +49,4 @@ RemoteSystemsTempFiles/
 *.Zip
 *.LOG
 /pcb/*/*.htm
+/pcb/yard-ice.PcbDoc.htm
