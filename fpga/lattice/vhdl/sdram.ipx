@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DiamondModule name="sdram" module="DDR_MEM" VendorName="Lattice Semiconductor Corporation" generator="IPexpress" date="2018 04 11 15:02:46.978" version="6.0" type="Module" synthesis="lse" source_format="VHDL">
+  <Package>
+		<File name="sdram.lpc" type="lpc" modified="2018 04 11 15:02:45.204"/>
+		<File name="sdram.vhd" type="top_level_vhdl" modified="2018 04 11 15:02:45.275"/>
+		<File name="sdram_tmpl.vhd" type="template_vhdl" modified="2018 04 11 15:02:45.276"/>
+  </Package>
+</DiamondModule>

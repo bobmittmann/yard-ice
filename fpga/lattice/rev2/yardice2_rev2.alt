@@ -1,0 +1,43 @@
+NOTE Copyright (C), 1992-2010, Lattice Semiconductor Corporation *
+NOTE All Rights Reserved *
+NOTE DATE CREATED: Wed Apr 11 14:48:35 2018 *
+NOTE DESIGN NAME: yard_ice *
+NOTE DEVICE NAME: LCMXO2-4000HE-5TQFP144 *
+NOTE PIN ASSIGNMENTS *
+NOTE PINS tp_rtck : 85 : in *
+NOTE PINS tp_tdo : 92 : in *
+NOTE PINS tp_dbgack : 48 : in *
+NOTE PINS uart_tx : 42 : in *
+NOTE PINS fsmc_nce : 25 : in *
+NOTE PINS fsmc_nwe : 23 : in *
+NOTE PINS fsmc_noe : 44 : in *
+NOTE PINS fsmc_clk : 49 : in *
+NOTE PINS mclk : 55 : in *
+NOTE PINS led_2 : 26 : out *
+NOTE PINS led_1 : 45 : out *
+NOTE PINS tp_rst : 60 : out *
+NOTE PINS tp_trst : 63 : out *
+NOTE PINS tp_tms : 59 : out *
+NOTE PINS tp_tdi : 91 : out *
+NOTE PINS tp_tck : 86 : out *
+NOTE PINS tp_dbgrq : 43 : out *
+NOTE PINS uart_rx : 47 : out *
+NOTE PINS irq : 126 : out *
+NOTE PINS fsmc_d[0] : 84 : inout *
+NOTE PINS fsmc_d[1] : 58 : inout *
+NOTE PINS fsmc_d[2] : 81 : inout *
+NOTE PINS fsmc_d[3] : 76 : inout *
+NOTE PINS fsmc_d[4] : 75 : inout *
+NOTE PINS fsmc_d[5] : 50 : inout *
+NOTE PINS fsmc_d[6] : 78 : inout *
+NOTE PINS fsmc_d[7] : 61 : inout *
+NOTE PINS fsmc_d[8] : 56 : inout *
+NOTE PINS fsmc_d[9] : 57 : inout *
+NOTE PINS fsmc_d[10] : 54 : inout *
+NOTE PINS fsmc_d[11] : 62 : inout *
+NOTE PINS fsmc_d[12] : 77 : inout *
+NOTE PINS fsmc_d[13] : 82 : inout *
+NOTE PINS fsmc_d[14] : 52 : inout *
+NOTE PINS fsmc_d[15] : 83 : inout *
+NOTE CONFIGURATION MODE: NONE *
+NOTE COMPRESSION: on *

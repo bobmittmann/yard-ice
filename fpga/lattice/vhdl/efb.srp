@@ -1,0 +1,28 @@
+SCUBA, Version Diamond (64-bit) 3.10.0.111.2
+Wed Apr 11 14:59:58 2018
+
+Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
+Copyright (c) 1995 AT&T Corp.   All rights reserved.
+Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
+Copyright (c) 2001 Agere Systems   All rights reserved.
+Copyright (c) 2002-2017 Lattice Semiconductor Corporation,  All rights reserved.
+
+    Issued command   : C:\lscc\diamond\3.10_x64\ispfpga\bin\nt64\scuba.exe -w -n efb -lang vhdl -synth lse -bus_exp 7 -bb -type efb -arch xo2c00 -freq 50 -i2c1config -i2c1_freq 100 -i2c1_sa 1000001 -i2c1_addr 7 -spi -spi_mode Both -spi_freq 1 -spi_cs 1 -tc -tc_mode WATCHDOG -tc_o TOGGLE -tc_div 1 -tc_top 65535 -tc_ocr 32767 -tc_oflow -tc_ctr -pll1 -pll2 -ufm -ufm_ebr 765 -mem_size 2 -ufm_0 -wb -dev 4000 
+    Circuit name     : efb
+    Module type      : efb
+    Module Version   : 1.2
+    Ports            : 
+	Inputs       : wb_clk_i, wb_rst_i, wb_cyc_i, wb_stb_i, wb_we_i, wb_adr_i[7:0], wb_dat_i[7:0], spi_scsn, tc_clki, tc_rstn, tc_ic, pll0_bus_i[8:0], pll1_bus_i[8:0], ufm_sn
+	Outputs      : wb_dat_o[7:0], wb_ack_o, i2c1_irqo, spi_csn[0:0], tc_int, tc_oc, pll0_bus_o[16:0], pll1_bus_o[16:0], wbc_ufm_irq
+	Inouts       : i2c1_scl, i2c1_sda, spi_clk, spi_miso, spi_mosi
+    I/O buffer       : not inserted
+    EDIF output      : efb.edn
+    VHDL output      : efb.vhd
+    VHDL template    : efb_tmpl.vhd
+    VHDL purpose     : for synthesis and simulation
+    Bus notation     : big endian
+    Report output    : efb.srp
+    Element Usage    :
+             BB : 5
+            EFB : 1
+    Estimated Resource Usage:

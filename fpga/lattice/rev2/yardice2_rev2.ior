@@ -1,0 +1,90 @@
+1 potential circuit loop found in timing analysis.
+Loading design for application iotiming from file yardice2_rev2.ncd.
+Design name: yard_ice
+NCD version: 3.3
+Vendor:      LATTICE
+Device:      LCMXO2-4000HE
+Package:     TQFP144
+Performance: 6
+Package Status:                     Final          Version 1.44.
+Performance Hardware Data Status:   Final          Version 34.4.
+Loading design for application iotiming from file yardice2_rev2.ncd.
+Design name: yard_ice
+NCD version: 3.3
+Vendor:      LATTICE
+Device:      LCMXO2-4000HE
+Package:     TQFP144
+Performance: M
+Package Status:                     Final          Version 1.44.
+Performance Hardware Data Status:   Final          Version 34.4.
+// Design: yard_ice
+// Package: TQFP144
+// ncd File: yardice2_rev2.ncd
+// Version: Diamond (64-bit) 3.10.0.111.2
+// Written on Wed Apr 11 14:48:08 2018
+// M: Minimum Performance Grade
+// iotiming yardice2_rev2.ncd yardice2_rev2.prf -gui
+
+I/O Timing Report (All units are in ns)
+
+Worst Case Results across Performance Grades (M, 6, 5):
+
+// Input Setup and Hold Times
+
+Port       Clock    Edge  Setup Performance_Grade  Hold Performance_Grade
+----------------------------------------------------------------------
+fsmc_d[0]  fsmc_clk R     2.734      5       0.441     6
+fsmc_d[10] fsmc_clk R     3.274      5       0.795     5
+fsmc_d[11] fsmc_clk R     2.862      5       0.532     5
+fsmc_d[12] fsmc_clk R     3.508      5       0.428     5
+fsmc_d[13] fsmc_clk R     3.176      5       0.840     5
+fsmc_d[14] fsmc_clk R     2.755      5       0.484     5
+fsmc_d[15] fsmc_clk R     3.741      5       0.458     6
+fsmc_d[1]  fsmc_clk R     5.856      5       0.464     5
+fsmc_d[2]  fsmc_clk R     3.240      5       0.071     M
+fsmc_d[3]  fsmc_clk R     5.380      5       0.170     6
+fsmc_d[4]  fsmc_clk R     2.258      5       0.296     5
+fsmc_d[5]  fsmc_clk R     3.137      5       0.351     5
+fsmc_d[6]  fsmc_clk R     3.056      5       0.275     6
+fsmc_d[7]  fsmc_clk R     2.509      5       0.156     6
+fsmc_d[8]  fsmc_clk R     3.336      5       0.836     5
+fsmc_d[9]  fsmc_clk R     2.677      5       0.205     6
+fsmc_nce   fsmc_clk R     2.042      5       0.190     6
+fsmc_nwe   mclk     R     1.931      5      -0.206     M
+fsmc_nwe   fsmc_clk R     5.974      5       0.186     6
+tp_rtck    mclk     R     0.000      5       0.845     5
+tp_tdo     mclk     R     0.753      5       0.321     6
+
+
+// Clock to Output Delay
+
+Port       Clock    Edge  Max_Delay Performance_Grade  Min_Delay Performance_Grade
+------------------------------------------------------------------------
+fsmc_d[0]  fsmc_clk R    18.173         5        3.434          M
+fsmc_d[10] fsmc_clk R    18.141         5        3.519          M
+fsmc_d[11] fsmc_clk R    17.832         5        3.174          M
+fsmc_d[12] fsmc_clk R    18.921         5        3.539          M
+fsmc_d[13] fsmc_clk R    18.667         5        3.448          M
+fsmc_d[14] fsmc_clk R    18.234         5        3.318          M
+fsmc_d[15] fsmc_clk R    17.632         5        3.418          M
+fsmc_d[1]  fsmc_clk R    18.601         5        3.407          M
+fsmc_d[2]  fsmc_clk R    17.733         5        3.337          M
+fsmc_d[3]  fsmc_clk R    17.345         5        3.402          M
+fsmc_d[4]  fsmc_clk R    17.933         5        3.149          M
+fsmc_d[5]  fsmc_clk R    18.406         5        3.558          M
+fsmc_d[6]  fsmc_clk R    18.114         5        3.132          M
+fsmc_d[7]  fsmc_clk R    16.587         5        3.078          M
+fsmc_d[8]  fsmc_clk R    17.895         5        3.171          M
+fsmc_d[9]  fsmc_clk R    18.353         5        3.300          M
+irq        mclk     R     9.924         5        3.186          M
+led_1      mclk     R     9.222         5        2.985          M
+led_2      mclk     R     9.237         5        2.962          M
+tp_dbgrq   mclk     R    10.953         5        3.400          M
+tp_rst     mclk     R    10.475         5        2.872          M
+tp_tck     mclk     R     8.466         5        2.749          M
+tp_tdi     mclk     R    10.065         5        3.146          M
+tp_tms     mclk     R     8.908         5        2.889          M
+tp_trst    mclk     R    11.044         5        3.448          M
+uart_rx    mclk     R    10.933         5        3.407          M
+WARNING: you must also run trce with hold speed: 5
+WARNING: you must also run trce with hold speed: 6

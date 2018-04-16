@@ -1,0 +1,509 @@
+
+Loading design for application trce from file yardice2_rev2_map.ncd.
+Design name: yard_ice
+NCD version: 3.3
+Vendor:      LATTICE
+Device:      LCMXO2-4000HE
+Package:     TQFP144
+Performance: 5
+Loading device for application trce from file 'xo2c4000.nph' in environment: C:/lscc/diamond/3.10_x64/ispfpga.
+Package Status:                     Final          Version 1.44.
+Performance Hardware Data Status:   Final          Version 34.4.
+Setup and Hold Report
+
+--------------------------------------------------------------------------------
+Lattice TRACE Report - Setup, Version Diamond (64-bit) 3.10.0.111.2
+Wed Apr 11 14:47:39 2018
+
+Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
+Copyright (c) 1995 AT&T Corp.   All rights reserved.
+Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
+Copyright (c) 2001 Agere Systems   All rights reserved.
+Copyright (c) 2002-2017 Lattice Semiconductor Corporation,  All rights reserved.
+
+Report Information
+------------------
+Command line:    trce -v 1 -gt -mapchkpnt 0 -sethld -o yardice2_rev2.tw1 -gui yardice2_rev2_map.ncd yardice2_rev2.prf 
+Design file:     yardice2_rev2_map.ncd
+Preference file: yardice2_rev2.prf
+Device,speed:    LCMXO2-4000HE,5
+Report level:    verbose report, limited to 1 item per preference
+--------------------------------------------------------------------------------
+
+1 potential circuit loop found in timing analysis.
+1 potential circuit loop found in timing analysis.
+1 potential circuit loop found in timing analysis.
+Report Type:     based on TRACE automatically generated preferences
+BLOCK ASYNCPATHS
+BLOCK RESETPATHS
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+Preference: FREQUENCY NET "mclk_c" 68.729000 MHz ;
+            4096 items scored, 4096 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+Error: The following path exceeds requirements by 1.350ns (weighted slack = -50.108ns)
+
+ Logical Details:  Cell type  Pin type       Cell/ASIC name  (clock net +/-)
+
+   Source:         FF         Q              shifter/io/s_tckn_r0_36  (from mclk_c_enable_115 +)
+   Destination:    FF         Data in        shifter/io/s_tckn_r1_37  (to mclk_c +)
+
+   Delay:               1.439ns  (28.4% logic, 71.6% route), 1 logic levels.
+
+ Constraint Details:
+
+      1.439ns physical path delay SLICE_377 to shifter/SLICE_608 exceeds
+      (delay constraint based on source clock period of 2.251ns and destination clock period of 14.550ns)
+      0.392ns delay constraint less
+      0.303ns M_SET requirement (totaling 0.089ns) by 1.350ns
+
+ Physical Path Details:
+
+      Data path SLICE_377 to shifter/SLICE_608:
+
+   Name    Fanout   Delay (ns)          Site               Resource
+REG_DEL     ---     0.409  SLICE_377.CLK to   SLICE_377.Q0 SLICE_377 (from mclk_c_enable_115)
+ROUTE         1   e 1.030   SLICE_377.Q0 to */SLICE_608.M0 shifter/io/s_tckn_r0_N_669 (to mclk_c)
+                  --------
+                    1.439   (28.4% logic, 71.6% route), 1 logic levels.
+
+Warning:  15.466MHz is the maximum frequency for this preference.
+
+
+================================================================================
+Preference: FREQUENCY NET "fsmc_clk_c" 108.143000 MHz ;
+            742 items scored, 0 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+Passed:  The following path meets requirements by 0.001ns
+         The internal maximum frequency of the following component is 108.155 MHz
+
+ Logical Details:  Cell type  Pin name       Component name
+
+   Destination:    DP8KC      CLKA           aux_mem/mem0
+
+   Delay:               9.246ns -- based on Minimum Pulse Width
+
+
+Passed: The following path meets requirements by 1.053ns
+
+ Logical Details:  Cell type  Pin type       Cell/ASIC name  (clock net +/-)
+
+   Source:         FF         Q              cram_bus/s_cram_st_FSM_i3  (from fsmc_clk_c +)
+   Destination:    FF         Data in        cram_bus/addr_r/s_count_reg_13__193  (to fsmc_clk_c +)
+
+   Delay:               8.044ns  (38.8% logic, 61.2% route), 7 logic levels.
+
+ Constraint Details:
+
+      8.044ns physical path delay cram_bus/SLICE_124 to cram_bus/addr_r/SLICE_163 meets
+      9.247ns delay constraint less
+      0.150ns DIN_SET requirement (totaling 9.097ns) by 1.053ns
+
+ Physical Path Details:
+
+      Data path cram_bus/SLICE_124 to cram_bus/addr_r/SLICE_163:
+
+   Name    Fanout   Delay (ns)          Site               Resource
+REG_DEL     ---     0.409 *SLICE_124.CLK to */SLICE_124.Q0 cram_bus/SLICE_124 (from fsmc_clk_c)
+ROUTE         9   e 1.030 */SLICE_124.Q0 to */SLICE_161.B1 cram_bus/s_cram_adi
+CTOF_DEL    ---     0.452 */SLICE_161.B1 to */SLICE_161.F1 cram_bus/addr_r/SLICE_161
+ROUTE         2   e 1.030 */SLICE_161.F1 to   SLICE_630.B0 cram_bus/addr_r/n8313
+CTOF_DEL    ---     0.452   SLICE_630.B0 to   SLICE_630.F0 SLICE_630
+ROUTE         2   e 0.401   SLICE_630.F0 to   SLICE_630.B1 cram_bus/addr_r/n8259
+CTOF_DEL    ---     0.452   SLICE_630.B1 to   SLICE_630.F1 SLICE_630
+ROUTE         2   e 1.030   SLICE_630.F1 to   SLICE_627.B1 cram_bus/addr_r/n8236
+CTOF_DEL    ---     0.452   SLICE_627.B1 to   SLICE_627.F1 SLICE_627
+ROUTE         2   e 0.401   SLICE_627.F1 to   SLICE_627.B0 cram_bus/addr_r/n8218
+CTOF_DEL    ---     0.452   SLICE_627.B0 to   SLICE_627.F0 SLICE_627
+ROUTE         1   e 1.030   SLICE_627.F0 to */SLICE_163.D1 cram_bus/addr_r/n8204
+CTOF_DEL    ---     0.452 */SLICE_163.D1 to */SLICE_163.F1 cram_bus/addr_r/SLICE_163
+ROUTE         1   e 0.001 */SLICE_163.F1 to *SLICE_163.DI1 cram_bus/addr_r/q_13__N_89 (to fsmc_clk_c)
+                  --------
+                    8.044   (38.8% logic, 61.2% route), 7 logic levels.
+
+Report:  108.155MHz is the maximum frequency for this preference.
+
+
+================================================================================
+Preference: FREQUENCY NET "mclk_c_enable_115" 444.247000 MHz ;
+            1 item scored, 1 timing error detected.
+--------------------------------------------------------------------------------
+
+
+Error: The following path exceeds requirements by 0.880ns (weighted slack = -1.641ns)
+
+ Logical Details:  Cell type  Pin type       Cell/ASIC name  (clock net +/-)
+
+   Source:         FF         Q              shifter/io/s_tckn_r1_37  (from mclk_c +)
+   Destination:    FF         Data in        shifter/io/s_tckn_r0_36  (to mclk_c_enable_115 +)
+
+   Delay:               1.439ns  (28.4% logic, 71.6% route), 1 logic levels.
+
+ Constraint Details:
+
+      1.439ns physical path delay shifter/SLICE_608 to SLICE_377 exceeds
+      (delay constraint based on source clock period of 14.550ns and destination clock period of 2.251ns)
+      1.207ns delay constraint less
+      0.648ns LSRREC_SET requirement (totaling 0.559ns) by 0.880ns
+
+ Physical Path Details:
+
+      Data path shifter/SLICE_608 to SLICE_377:
+
+   Name    Fanout   Delay (ns)          Site               Resource
+REG_DEL     ---     0.409 *SLICE_608.CLK to */SLICE_608.Q0 shifter/SLICE_608 (from mclk_c)
+ROUTE        22   e 1.030 */SLICE_608.Q0 to  SLICE_377.LSR shifter/tckn_stb (to mclk_c_enable_115)
+                  --------
+                    1.439   (28.4% logic, 71.6% route), 1 logic levels.
+
+Warning: 256.937MHz is the maximum frequency for this preference.
+
+Report Summary
+--------------
+----------------------------------------------------------------------------
+Preference                              |   Constraint|       Actual|Levels
+----------------------------------------------------------------------------
+                                        |             |             |
+FREQUENCY NET "mclk_c" 68.729000 MHz ;  |   68.729 MHz|   15.466 MHz|   1 *
+                                        |             |             |
+FREQUENCY NET "fsmc_clk_c" 108.143000   |             |             |
+MHz ;                                   |  108.143 MHz|  108.155 MHz|   0  
+                                        |             |             |
+FREQUENCY NET "mclk_c_enable_115"       |             |             |
+444.247000 MHz ;                        |  444.247 MHz|  256.937 MHz|   1 *
+                                        |             |             |
+----------------------------------------------------------------------------
+
+
+2 preferences(marked by "*" above) not met.
+
+----------------------------------------------------------------------------
+Critical Nets                           |   Loads|  Errors| % of total
+----------------------------------------------------------------------------
+shifter/exec_ctrl/s_tap_state_next_0    |       5|    4095|     99.95%
+                                        |        |        |
+shifter/exec_ctrl/s_tap_state_next_3_N_1|        |        |
+438_0                                   |       1|    4095|     99.95%
+                                        |        |        |
+shifter/s_mtms                          |       1|    4095|     99.95%
+                                        |        |        |
+s_goto_state_0                          |       1|    4095|     99.95%
+                                        |        |        |
+shifter/exec_ctrl/n5152                 |       4|    3891|     94.97%
+                                        |        |        |
+mux_177_Mux_1_0_1_0_f5a                 |       1|    3831|     93.51%
+                                        |        |        |
+mux_177_Mux_1_0_1_f5b                   |       1|    3831|     93.51%
+                                        |        |        |
+mux_177_Mux_1_0_f5a                     |       1|    3831|     93.51%
+                                        |        |        |
+shifter/exec_ctrl/s_tap_state_next_1    |       4|    3831|     93.51%
+                                        |        |        |
+s_goto_state_1                          |       1|    3831|     93.51%
+                                        |        |        |
+shifter/exec_ctrl/n182                  |       7|    2904|     70.88%
+                                        |        |        |
+n4959                                   |       9|    2751|     67.15%
+                                        |        |        |
+shifter/exec_ctrl/n8052                 |       1|    2622|     64.00%
+                                        |        |        |
+mux_177_Mux_0_0_f5a                     |       1|    2169|     52.94%
+                                        |        |        |
+mux_177_Mux_0_1_f5b                     |       1|    1926|     47.01%
+                                        |        |        |
+s_end_state_2                           |      26|    1794|     43.79%
+                                        |        |        |
+mux_177_Mux_0_0_0_f5a                   |       1|    1455|     35.51%
+                                        |        |        |
+mux_177_Mux_0_1_1_1_f5b                 |       1|    1068|     26.07%
+                                        |        |        |
+mux_177_Mux_0_1_1_f5b                   |       1|    1068|     26.07%
+                                        |        |        |
+s_end_state_1                           |      15|     990|     24.16%
+                                        |        |        |
+shifter/exec_ctrl/n20                   |       1|     968|     23.63%
+                                        |        |        |
+shifter/exec_ctrl/n19                   |       1|     968|     23.63%
+                                        |        |        |
+shifter/exec_ctrl/n7550                 |       1|     968|     23.63%
+                                        |        |        |
+s_end_state_3                           |      17|     939|     22.92%
+                                        |        |        |
+n8273                                   |       2|     876|     21.38%
+                                        |        |        |
+n8279                                   |      20|     823|     20.09%
+                                        |        |        |
+n8274                                   |       6|     764|     18.65%
+                                        |        |        |
+mux_177_Mux_0_1_0_0_f5a                 |       1|     729|     17.79%
+                                        |        |        |
+mux_177_Mux_0_1_0_f5a                   |       1|     729|     17.79%
+                                        |        |        |
+shifter/exec_ctrl/s_insn_r0_13          |       8|     641|     15.65%
+                                        |        |        |
+mux_177_Mux_0_0_0_1_f5b                 |       1|     639|     15.60%
+                                        |        |        |
+mux_177_Mux_0_0_0_0_f5a                 |       1|     639|     15.60%
+                                        |        |        |
+shifter/exec_ctrl/s_insn_r0_14          |       8|     638|     15.57%
+                                        |        |        |
+mux_177_Mux_0_0_1_f5b                   |       1|     585|     14.28%
+                                        |        |        |
+shifter/exec_ctrl/n8844                 |      26|     570|     13.91%
+                                        |        |        |
+shifter/exec_ctrl/n8845                 |      26|     570|     13.91%
+                                        |        |        |
+shifter/exec_ctrl/s_insn_r0_12          |       6|     482|     11.76%
+                                        |        |        |
+shifter/exec_ctrl/n2159                 |      11|     471|     11.50%
+                                        |        |        |
+----------------------------------------------------------------------------
+
+
+Clock Domains Analysis
+------------------------
+
+Found 3 clocks:
+
+Clock Domain: mclk_c_enable_115   Source: SLICE_699.F0   Loads: 4
+   No transfer within this clock domain is found
+
+   Data transfers from:
+   Clock Domain: mclk_c   Source: mclk.PAD
+      Covered under: FREQUENCY NET "mclk_c_enable_115" 444.247000 MHz ;   Transfers: 1
+
+Clock Domain: fsmc_clk_c   Source: fsmc_clk.PAD   Loads: 95
+   Covered under: FREQUENCY NET "fsmc_clk_c" 108.143000 MHz ;
+
+   Data transfers from:
+   Clock Domain: mclk_c   Source: mclk.PAD
+      Not reported because source and destination domains are unrelated.
+      To report these transfers please refer to preference CLKSKEWDIFF to define
+      external clock skew between clock ports.
+
+Clock Domain: mclk_c   Source: mclk.PAD   Loads: 354
+   Covered under: FREQUENCY NET "mclk_c" 68.729000 MHz ;
+
+   Data transfers from:
+   Clock Domain: mclk_c_enable_115   Source: SLICE_699.F0
+      Covered under: FREQUENCY NET "mclk_c" 68.729000 MHz ;   Transfers: 1
+
+   Clock Domain: fsmc_clk_c   Source: fsmc_clk.PAD
+      Not reported because source and destination domains are unrelated.
+      To report these transfers please refer to preference CLKSKEWDIFF to define
+      external clock skew between clock ports.
+
+
+Timing summary (Setup):
+---------------
+
+Timing errors: 4097  Score: 16384202
+Cumulative negative slack: 16384202
+
+Constraints cover 67331 paths, 3 nets, and 4268 connections (80.48% coverage)
+
+--------------------------------------------------------------------------------
+Lattice TRACE Report - Hold, Version Diamond (64-bit) 3.10.0.111.2
+Wed Apr 11 14:47:40 2018
+
+Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
+Copyright (c) 1995 AT&T Corp.   All rights reserved.
+Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
+Copyright (c) 2001 Agere Systems   All rights reserved.
+Copyright (c) 2002-2017 Lattice Semiconductor Corporation,  All rights reserved.
+
+Report Information
+------------------
+Command line:    trce -v 1 -gt -mapchkpnt 0 -sethld -o yardice2_rev2.tw1 -gui yardice2_rev2_map.ncd yardice2_rev2.prf 
+Design file:     yardice2_rev2_map.ncd
+Preference file: yardice2_rev2.prf
+Device,speed:    LCMXO2-4000HE,M
+Report level:    verbose report, limited to 1 item per preference
+--------------------------------------------------------------------------------
+
+1 potential circuit loop found in timing analysis.
+BLOCK ASYNCPATHS
+BLOCK RESETPATHS
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+Preference: FREQUENCY NET "mclk_c" 68.729000 MHz ;
+            4096 items scored, 0 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+Passed: The following path meets requirements by 0.351ns
+
+ Logical Details:  Cell type  Pin type       Cell/ASIC name  (clock net +/-)
+
+   Source:         FF         Q              led_con_drv/s_trip_r0_30  (from mclk_c +)
+   Destination:    FF         Data in        led_con_drv/s_trip_r1_31  (to mclk_c +)
+
+   Delay:               0.332ns  (40.1% logic, 59.9% route), 1 logic levels.
+
+ Constraint Details:
+
+      0.332ns physical path delay SLICE_151 to SLICE_151 meets
+     -0.019ns M_HLD and
+      0.000ns delay constraint requirement (totaling -0.019ns) by 0.351ns
+
+ Physical Path Details:
+
+      Data path SLICE_151 to SLICE_151:
+
+   Name    Fanout   Delay (ns)          Site               Resource
+REG_DEL     ---     0.133  SLICE_151.CLK to   SLICE_151.Q0 SLICE_151 (from mclk_c)
+ROUTE         4   e 0.199   SLICE_151.Q0 to   SLICE_151.M1 led_con_drv/s_trip_r0 (to mclk_c)
+                  --------
+                    0.332   (40.1% logic, 59.9% route), 1 logic levels.
+
+
+================================================================================
+Preference: FREQUENCY NET "fsmc_clk_c" 108.143000 MHz ;
+            742 items scored, 0 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+Passed: The following path meets requirements by 0.447ns
+
+ Logical Details:  Cell type  Pin type       Cell/ASIC name  (clock net +/-)
+
+   Source:         FF         Q              cram_bus/reg_wr_fifo/s_sel_in_754__i0  (from fsmc_clk_c +)
+   Destination:    FF         Data in        cram_bus/reg_wr_fifo/s_sel_in_754__i1  (to fsmc_clk_c +)
+
+   Delay:               0.434ns  (53.9% logic, 46.1% route), 2 logic levels.
+
+ Constraint Details:
+
+      0.434ns physical path delay cram_bus/reg_wr_fifo/SLICE_121 to cram_bus/reg_wr_fifo/SLICE_121 meets
+     -0.013ns DIN_HLD and
+      0.000ns delay constraint requirement (totaling -0.013ns) by 0.447ns
+
+ Physical Path Details:
+
+      Data path cram_bus/reg_wr_fifo/SLICE_121 to cram_bus/reg_wr_fifo/SLICE_121:
+
+   Name    Fanout   Delay (ns)          Site               Resource
+REG_DEL     ---     0.133 *SLICE_121.CLK to */SLICE_121.Q0 cram_bus/reg_wr_fifo/SLICE_121 (from fsmc_clk_c)
+ROUTE         7   e 0.199 */SLICE_121.Q0 to */SLICE_121.B1 cram_bus/reg_wr_fifo/s_sel_in_0
+CTOF_DEL    ---     0.101 */SLICE_121.B1 to */SLICE_121.F1 cram_bus/reg_wr_fifo/SLICE_121
+ROUTE         1   e 0.001 */SLICE_121.F1 to *SLICE_121.DI1 cram_bus/reg_wr_fifo/n14 (to fsmc_clk_c)
+                  --------
+                    0.434   (53.9% logic, 46.1% route), 2 logic levels.
+
+
+================================================================================
+Preference: FREQUENCY NET "mclk_c_enable_115" 444.247000 MHz ;
+            1 item scored, 0 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+Passed: The following path meets requirements by 0.648ns
+
+ Logical Details:  Cell type  Pin type       Cell/ASIC name  (clock net +/-)
+
+   Source:         FF         Q              shifter/io/s_tckn_r1_37  (from mclk_c +)
+   Destination:    FF         Data in        shifter/io/s_tckn_r0_36  (to mclk_c_enable_115 +)
+
+   Delay:               0.648ns  (20.5% logic, 79.5% route), 1 logic levels.
+
+ Constraint Details:
+
+      0.648ns physical path delay shifter/SLICE_608 to SLICE_377 meets
+      (delay constraint based on source clock period of 14.550ns and destination clock period of 2.251ns)
+      0.000ns LSRREC_HLD and
+      0.000ns delay constraint requirement (totaling 0.000ns) by 0.648ns
+
+ Physical Path Details:
+
+      Data path shifter/SLICE_608 to SLICE_377:
+
+   Name    Fanout   Delay (ns)          Site               Resource
+REG_DEL     ---     0.133 *SLICE_608.CLK to */SLICE_608.Q0 shifter/SLICE_608 (from mclk_c)
+ROUTE        22   e 0.515 */SLICE_608.Q0 to  SLICE_377.LSR shifter/tckn_stb (to mclk_c_enable_115)
+                  --------
+                    0.648   (20.5% logic, 79.5% route), 1 logic levels.
+
+Report Summary
+--------------
+----------------------------------------------------------------------------
+Preference(MIN Delays)                  |   Constraint|       Actual|Levels
+----------------------------------------------------------------------------
+                                        |             |             |
+FREQUENCY NET "mclk_c" 68.729000 MHz ;  |     0.000 ns|     0.351 ns|   1  
+                                        |             |             |
+FREQUENCY NET "fsmc_clk_c" 108.143000   |             |             |
+MHz ;                                   |     0.000 ns|     0.447 ns|   2  
+                                        |             |             |
+FREQUENCY NET "mclk_c_enable_115"       |             |             |
+444.247000 MHz ;                        |     0.000 ns|     0.648 ns|   1  
+                                        |             |             |
+----------------------------------------------------------------------------
+
+
+All preferences were met.
+
+
+Clock Domains Analysis
+------------------------
+
+Found 3 clocks:
+
+Clock Domain: mclk_c_enable_115   Source: SLICE_699.F0   Loads: 4
+   No transfer within this clock domain is found
+
+   Data transfers from:
+   Clock Domain: mclk_c   Source: mclk.PAD
+      Covered under: FREQUENCY NET "mclk_c_enable_115" 444.247000 MHz ;   Transfers: 1
+
+Clock Domain: fsmc_clk_c   Source: fsmc_clk.PAD   Loads: 95
+   Covered under: FREQUENCY NET "fsmc_clk_c" 108.143000 MHz ;
+
+   Data transfers from:
+   Clock Domain: mclk_c   Source: mclk.PAD
+      Not reported because source and destination domains are unrelated.
+      To report these transfers please refer to preference CLKSKEWDIFF to define
+      external clock skew between clock ports.
+
+Clock Domain: mclk_c   Source: mclk.PAD   Loads: 354
+   Covered under: FREQUENCY NET "mclk_c" 68.729000 MHz ;
+
+   Data transfers from:
+   Clock Domain: mclk_c_enable_115   Source: SLICE_699.F0
+      Covered under: FREQUENCY NET "mclk_c" 68.729000 MHz ;   Transfers: 1
+
+   Clock Domain: fsmc_clk_c   Source: fsmc_clk.PAD
+      Not reported because source and destination domains are unrelated.
+      To report these transfers please refer to preference CLKSKEWDIFF to define
+      external clock skew between clock ports.
+
+
+Timing summary (Hold):
+---------------
+
+Timing errors: 0  Score: 0
+Cumulative negative slack: 0
+
+Constraints cover 67331 paths, 3 nets, and 4613 connections (86.99% coverage)
+
+
+
+Timing summary (Setup and Hold):
+---------------
+
+Timing errors: 4097 (setup), 0 (hold)
+Score: 16384202 (setup), 0 (hold)
+Cumulative negative slack: 16384202 (16384202+0)
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+

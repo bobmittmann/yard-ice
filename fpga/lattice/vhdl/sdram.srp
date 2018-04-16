@@ -1,0 +1,32 @@
+SCUBA, Version Diamond (64-bit) 3.10.0.111.2
+Wed Apr 11 15:02:45 2018
+
+Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
+Copyright (c) 1995 AT&T Corp.   All rights reserved.
+Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
+Copyright (c) 2001 Agere Systems   All rights reserved.
+Copyright (c) 2002-2017 Lattice Semiconductor Corporation,  All rights reserved.
+
+    Issued command   : C:\lscc\diamond\3.10_x64\ispfpga\bin\nt64\scuba.exe -w -n sdram -lang vhdl -synth lse -bus_exp 7 -bb -arch xo2c00 -type iol -mode mem -io_type SSTL25_I -freq_in 100 -dqs 1 8 -sensitivity low 
+    Circuit name     : sdram
+    Module type      : iol
+    Module Version   : 5.8
+    Ports            : 
+	Inputs       : datatri_0, dqso_0, dqstri_0, freeze, read_0, readclksel0_0, readclksel1_0, reset, sclk, uddcntln, dataout0[15:0]
+	Outputs      : burstdet0, datavalid_0, lock, datain0[15:0]
+	Inouts       : dqs_0, dq_0[7:0]
+    I/O buffer       : not inserted
+    EDIF output      : sdram.edn
+    VHDL output      : sdram.vhd
+    VHDL template    : sdram_tmpl.vhd
+    VHDL purpose     : for synthesis and simulation
+    Bus notation     : big endian
+    Report output    : sdram.srp
+    Element Usage    :
+             BB : 9
+     IDDRDQSX1A : 8
+     ODDRDQSX1A : 9
+          TDDRA : 2
+        DQSBUFH : 1
+        DQSDLLC : 1
+    Estimated Resource Usage:

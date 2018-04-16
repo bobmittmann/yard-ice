@@ -1,0 +1,5 @@
+-rem
+-distrce
+-log "yardice2_rev2.log"
+-o "yardice2_rev2.csv"
+-pr "yardice2_rev2.prf"

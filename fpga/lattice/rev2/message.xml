@@ -1,0 +1,465 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BaliMessageLog>
+    <Task name="MapVerilogSimFile">
+        <Message>
+            <ID>35400250</ID>
+            <Severity>Info</Severity>
+            <Dynamic>0</Dynamic>
+        </Message>
+    </Task>
+    <Task name="MapVHDLSimFile">
+        <Message>
+            <ID>35400250</ID>
+            <Severity>Info</Severity>
+            <Dynamic>0</Dynamic>
+        </Message>
+    </Task>
+    <Task name="Map">
+        <Message>
+            <ID>1166064</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>input</Dynamic>
+            <Dynamic>clk_aux</Dynamic>
+        </Message>
+        <Message>
+            <ID>51001046</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>clk_aux</Dynamic>
+        </Message>
+    </Task>
+    <Task name="Lattice_Synthesis">
+        <Message>
+            <ID>35002000</ID>
+            <Severity>Info</Severity>
+        </Message>
+        <Message>
+            <ID>35001781</ID>
+            <Severity>Info</Severity>
+        </Message>
+        <Message>
+            <ID>35921504</ID>
+            <Severity>Info</Severity>
+            <Dynamic></Dynamic>
+            <Dynamic>C:/devel/yard-ice/fpga/lattice/rev2</Dynamic>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/counter.vhdl(30): </Dynamic>
+            <Dynamic>counter</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/counter.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/counter.vhdl(59): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/counter.vhdl</Navigation>
+            <Navigation>59</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/syncfifo.vhdl(31): </Dynamic>
+            <Dynamic>syncfifo</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/syncfifo.vhdl</Navigation>
+            <Navigation>31</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/syncfifo.vhdl(53): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/syncfifo.vhdl</Navigation>
+            <Navigation>53</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/cram_adaptor.vhdl(35): </Dynamic>
+            <Dynamic>cram_adaptor</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/cram_adaptor.vhdl</Navigation>
+            <Navigation>35</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/cram_adaptor.vhdl(74): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/cram_adaptor.vhdl</Navigation>
+            <Navigation>74</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/dpram.vhdl(30): </Dynamic>
+            <Dynamic>dpram</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/dpram.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/dpram.vhdl(50): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/dpram.vhdl</Navigation>
+            <Navigation>50</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl(31): </Dynamic>
+            <Dynamic>jtag_clk_scaler</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl</Navigation>
+            <Navigation>31</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl(51): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl</Navigation>
+            <Navigation>51</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_counter.vhdl(30): </Dynamic>
+            <Dynamic>jtag_counter</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_counter.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_counter.vhdl(59): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_counter.vhdl</Navigation>
+            <Navigation>59</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_cmem.vhdl(33): </Dynamic>
+            <Dynamic>jtag_cram16</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_cmem.vhdl</Navigation>
+            <Navigation>33</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_cmem.vhdl(57): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_cmem.vhdl</Navigation>
+            <Navigation>57</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl(6): </Dynamic>
+            <Dynamic>jtag_desc_ram</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl</Navigation>
+            <Navigation>6</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl(27): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl</Navigation>
+            <Navigation>27</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl(30): </Dynamic>
+            <Dynamic>jtag_enh_ckgen</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl(61): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl</Navigation>
+            <Navigation>61</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl(69): </Dynamic>
+            <Dynamic>jtag_enh_ecu</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl</Navigation>
+            <Navigation>69</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl(125): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl</Navigation>
+            <Navigation>125</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl(30): </Dynamic>
+            <Dynamic>jtag_enh_io</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl(59): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl</Navigation>
+            <Navigation>59</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl(31): </Dynamic>
+            <Dynamic>jtag_enh_rx</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl</Navigation>
+            <Navigation>31</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl(86): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl</Navigation>
+            <Navigation>86</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl(31): </Dynamic>
+            <Dynamic>jtag_enh_shift_ctrl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl</Navigation>
+            <Navigation>31</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl(72): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl</Navigation>
+            <Navigation>72</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl(31): </Dynamic>
+            <Dynamic>jtag_enh_tx</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl</Navigation>
+            <Navigation>31</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl(70): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl</Navigation>
+            <Navigation>70</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl(35): </Dynamic>
+            <Dynamic>jtag_enh_shifter</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl</Navigation>
+            <Navigation>35</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl(130): </Dynamic>
+            <Dynamic>structure</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl</Navigation>
+            <Navigation>130</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl(30): </Dynamic>
+            <Dynamic>jtag_io_dpram</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl(50): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl</Navigation>
+            <Navigation>50</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl(31): </Dynamic>
+            <Dynamic>jtag_led_drv</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl</Navigation>
+            <Navigation>31</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl(56): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl</Navigation>
+            <Navigation>56</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_reg.vhdl(30): </Dynamic>
+            <Dynamic>jtag_reg</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_reg.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/jtag_reg.vhdl(59): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/jtag_reg.vhdl</Navigation>
+            <Navigation>59</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/sram.vhdl(30): </Dynamic>
+            <Dynamic>sram</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/sram.vhdl</Navigation>
+            <Navigation>30</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/sram.vhdl(46): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/sram.vhdl</Navigation>
+            <Navigation>46</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(33): </Dynamic>
+            <Dynamic>yard_ice</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>33</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(75): </Dynamic>
+            <Dynamic>structure</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>75</Navigation>
+        </Message>
+        <Message>
+            <ID>35928037</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/syncfifo.vhdl(78): </Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/syncfifo.vhdl</Navigation>
+            <Navigation>78</Navigation>
+        </Message>
+        <Message>
+            <ID>35928037</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/syncfifo.vhdl(84): </Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/syncfifo.vhdl</Navigation>
+            <Navigation>84</Navigation>
+        </Message>
+        <Message>
+            <ID>35921205</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(73): </Dynamic>
+            <Dynamic>yard_ice</Dynamic>
+            <Dynamic>structure</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>73</Navigation>
+        </Message>
+        <Message>
+            <ID>35002005</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>clk_aux</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001774</ID>
+            <Severity>Info</Severity>
+            <Dynamic>\cram_bus/s_cram_st</Dynamic>
+            <Dynamic>one-hot</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001774</ID>
+            <Severity>Info</Severity>
+            <Dynamic>\shifter/rx/s_op_fifo.head</Dynamic>
+            <Dynamic>one-hot</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001774</ID>
+            <Severity>Info</Severity>
+            <Dynamic>\cram_bus/reg_wr_fifo/s_sel_out</Dynamic>
+            <Dynamic>one-hot</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001747</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>11</Dynamic>
+            <Dynamic>\mem_wr_addr/s_reg</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001747</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>11</Dynamic>
+            <Dynamic>\mem_rd_addr/s_reg</Dynamic>
+        </Message>
+        <Message>
+            <ID>35002005</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>clk_aux</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001611</ID>
+            <Severity>Warning</Severity>
+        </Message>
+        <Message>
+            <ID>1166052</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>logical</Dynamic>
+            <Dynamic>clk_aux</Dynamic>
+            <Navigation>clk_aux</Navigation>
+        </Message>
+        <Message>
+            <ID>1166064</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>input</Dynamic>
+            <Dynamic>clk_aux</Dynamic>
+        </Message>
+        <Message>
+            <ID>1163101</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>2</Dynamic>
+        </Message>
+    </Task>
+    <Task name="PAR">
+        <Message>
+            <ID>66011008</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>
+   Signal=mclk_c_enable_115 loads=4 clock_loads=1</Dynamic>
+        </Message>
+        <Message>
+            <ID>66011008</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>
+   Signal=mclk_c_enable_115 loads=4 clock_loads=1</Dynamic>
+        </Message>
+    </Task>
+</BaliMessageLog>

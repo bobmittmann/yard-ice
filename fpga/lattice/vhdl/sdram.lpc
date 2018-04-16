@@ -1,0 +1,50 @@
+[Device]
+Family=machxo2
+PartType=LCMXO2-4000HE
+PartName=LCMXO2-4000HE-5TG144C
+SpeedGrade=5
+Package=TQFP144
+OperatingCondition=COM
+Status=S
+
+[IP]
+VendorName=Lattice Semiconductor Corporation
+CoreType=LPM
+CoreStatus=Demo
+CoreName=DDR_MEM
+CoreRevision=6.0
+ModuleName=sdram
+SourceFormat=VHDL
+ParameterFileVersion=1.0
+Date=04/11/2018
+Time=15:02:45
+
+[Parameters]
+Verilog=0
+VHDL=1
+EDIF=1
+Destination=Synplicity
+Expression=BusA(0 to 7)
+Order=Big Endian [MSB:LSB]
+IO=0
+Mode=DDR
+IO_buffer=SSTL25_I
+Frequency=100
+Number=1
+dqs1=8
+dqs2=8
+DQSBuffer=Single-ended
+Width=8
+cac=DISABLED
+data_mask=DISABLED
+Sensitivity=LOW
+val=BYPASS
+num_clk=
+num_ce=
+addr_width=
+bank_width=
+num_odt=
+num_cs=
+
+[Command]
+cmd_line= -w -n sdram -lang vhdl -synth lse -bus_exp 7 -bb -arch xo2c00 -type iol -mode mem -io_type SSTL25_I -freq_in 100 -dqs 1 8 -sensitivity low

@@ -1,0 +1,5 @@
+
+
+-g RamCfg:Reset
+
+-path "C:/devel/yard-ice/fpga/lattice"  

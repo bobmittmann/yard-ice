@@ -1,0 +1,706 @@
+(edif sdram
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (keywordMap (keywordLevel 0))
+  (status
+    (written
+      (timestamp 2018 4 11 15 2 45)
+      (program "SCUBA" (version "Diamond (64-bit) 3.10.0.111.2"))))
+      (comment "C:\lscc\diamond\3.10_x64\ispfpga\bin\nt64\scuba.exe -w -n sdram -lang vhdl -synth lse -bus_exp 7 -bb -arch xo2c00 -type iol -mode mem -io_type SSTL25_I -freq_in 100 -dqs 1 8 -sensitivity low ")
+  (library ORCLIB
+    (edifLevel 0)
+    (technology
+      (numberDefinition))
+    (cell VLO
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port Z
+            (direction OUTPUT)))))
+    (cell BB
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port I
+            (direction INPUT))
+          (port T
+            (direction INPUT))
+          (port O
+            (direction OUTPUT))
+          (port B
+            (direction INOUT)))))
+    (cell IDDRDQSX1A
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port D
+            (direction INPUT))
+          (port DQSR90
+            (direction INPUT))
+          (port DDRCLKPOL
+            (direction INPUT))
+          (port SCLK
+            (direction INPUT))
+          (port RST
+            (direction INPUT))
+          (port Q0
+            (direction OUTPUT))
+          (port Q1
+            (direction OUTPUT)))))
+    (cell ODDRDQSX1A
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port DQSW90
+            (direction INPUT))
+          (port SCLK
+            (direction INPUT))
+          (port D0
+            (direction INPUT))
+          (port D1
+            (direction INPUT))
+          (port RST
+            (direction INPUT))
+          (port Q
+            (direction OUTPUT)))))
+    (cell TDDRA
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port DQSW90
+            (direction INPUT))
+          (port SCLK
+            (direction INPUT))
+          (port TD
+            (direction INPUT))
+          (port RST
+            (direction INPUT))
+          (port TQ
+            (direction OUTPUT)))))
+    (cell DQSBUFH
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port SCLK
+            (direction INPUT))
+          (port DQSI
+            (direction INPUT))
+          (port READ
+            (direction INPUT))
+          (port READCLKSEL1
+            (direction INPUT))
+          (port READCLKSEL0
+            (direction INPUT))
+          (port RST
+            (direction INPUT))
+          (port DQSDEL
+            (direction INPUT))
+          (port DDRCLKPOL
+            (direction OUTPUT))
+          (port DQSR90
+            (direction OUTPUT))
+          (port DQSW90
+            (direction OUTPUT))
+          (port DATAVALID
+            (direction OUTPUT))
+          (port BURSTDET
+            (direction OUTPUT)))))
+    (cell DQSDLLC
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port CLK
+            (direction INPUT))
+          (port RST
+            (direction INPUT))
+          (port UDDCNTLN
+            (direction INPUT))
+          (port FREEZE
+            (direction INPUT))
+          (port LOCK
+            (direction OUTPUT))
+          (port DQSDEL
+            (direction OUTPUT)))))
+    (cell sdram
+      (cellType GENERIC)
+      (view view1
+        (viewType NETLIST)
+        (interface
+          (port burstdet0
+            (direction OUTPUT))
+          (port datatri_0
+            (direction INPUT))
+          (port datavalid_0
+            (direction OUTPUT))
+          (port dqs_0
+            (direction INOUT))
+          (port dqso_0
+            (direction INPUT))
+          (port dqstri_0
+            (direction INPUT))
+          (port freeze
+            (direction INPUT))
+          (port lock
+            (direction OUTPUT))
+          (port read_0
+            (direction INPUT))
+          (port readclksel0_0
+            (direction INPUT))
+          (port readclksel1_0
+            (direction INPUT))
+          (port reset
+            (direction INPUT))
+          (port sclk
+            (direction INPUT))
+          (port uddcntln
+            (direction INPUT))
+          (port (array (rename datain0 "datain0(15:0)") 16)
+            (direction OUTPUT))
+          (port (array (rename dataout0 "dataout0(15:0)") 16)
+            (direction INPUT))
+          (port (array (rename dq_0 "dq_0(7:0)") 8)
+            (direction INOUT)))
+        (property NGD_DRC_MASK (integer 1))
+        (contents
+          (instance Inst7_TDDRA0
+            (viewRef view1 
+              (cellRef TDDRA))
+            (property DQSW90_INVERT
+              (string "ENABLED")))
+          (instance scuba_vlo_inst
+            (viewRef view1 
+              (cellRef VLO)))
+          (instance Inst6_ODDRDQSX1A0
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst5_TDDRA0
+            (viewRef view1 
+              (cellRef TDDRA))
+            (property DQSW90_INVERT
+              (string "DISABLED")))
+          (instance Inst_ODDRDQSX1A_0_7
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_ODDRDQSX1A_0_6
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_ODDRDQSX1A_0_5
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_ODDRDQSX1A_0_4
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_ODDRDQSX1A_0_3
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_ODDRDQSX1A_0_2
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_ODDRDQSX1A_0_1
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_ODDRDQSX1A_0_0
+            (viewRef view1 
+              (cellRef ODDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_7
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_6
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_5
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_4
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_3
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_2
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_1
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst_IDDRDQSX1A_0_0
+            (viewRef view1 
+              (cellRef IDDRDQSX1A)))
+          (instance Inst4_DQSBUFH0
+            (viewRef view1 
+              (cellRef DQSBUFH))
+            (property LPDDR
+              (string "DISABLED")))
+          (instance Inst3_DQSDLLC
+            (viewRef view1 
+              (cellRef DQSDLLC))
+            (property FORCE_MAX_DELAY
+              (string "NO"))
+            (property FIN
+              (string "100.0"))
+            (property LOCK_SENSITIVITY
+              (string "LOW")))
+          (instance Inst2_BB7
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst2_BB6
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst2_BB5
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst2_BB4
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst2_BB3
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst2_BB2
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst2_BB1
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst2_BB0
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (instance Inst1_BB
+            (viewRef view1 
+              (cellRef BB))
+            (property IO_TYPE
+              (string "SSTL25_I")))
+          (net sclk90
+            (joined
+              (portRef sclk)
+              (portRef SCLK (instanceRef Inst7_TDDRA0))
+              (portRef DQSW90 (instanceRef Inst7_TDDRA0))
+              (portRef SCLK (instanceRef Inst6_ODDRDQSX1A0))
+              (portRef DQSW90 (instanceRef Inst6_ODDRDQSX1A0))
+              (portRef SCLK (instanceRef Inst5_TDDRA0))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_7))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_6))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_5))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_4))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_3))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_2))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_1))
+              (portRef SCLK (instanceRef Inst_ODDRDQSX1A_0_0))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_7))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_6))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_5))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_4))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_3))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_2))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_1))
+              (portRef SCLK (instanceRef Inst_IDDRDQSX1A_0_0))
+              (portRef SCLK (instanceRef Inst4_DQSBUFH0))
+              (portRef CLK (instanceRef Inst3_DQSDLLC))))
+          (net scuba_vlo
+            (joined
+              (portRef Z (instanceRef scuba_vlo_inst))
+              (portRef D0 (instanceRef Inst6_ODDRDQSX1A0))))
+          (net dqsw90_0
+            (joined
+              (portRef DQSW90 (instanceRef Inst4_DQSBUFH0))
+              (portRef DQSW90 (instanceRef Inst5_TDDRA0))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_7))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_6))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_5))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_4))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_3))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_2))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_1))
+              (portRef DQSW90 (instanceRef Inst_ODDRDQSX1A_0_0))))
+          (net dqsr90_0
+            (joined
+              (portRef DQSR90 (instanceRef Inst4_DQSBUFH0))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_7))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_6))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_5))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_4))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_3))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_2))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_1))
+              (portRef DQSR90 (instanceRef Inst_IDDRDQSX1A_0_0))))
+          (net ddrclkpol0
+            (joined
+              (portRef DDRCLKPOL (instanceRef Inst4_DQSBUFH0))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_7))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_6))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_5))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_4))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_3))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_2))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_1))
+              (portRef DDRCLKPOL (instanceRef Inst_IDDRDQSX1A_0_0))))
+          (net dqsdel
+            (joined
+              (portRef DQSDEL (instanceRef Inst3_DQSDLLC))
+              (portRef DQSDEL (instanceRef Inst4_DQSBUFH0))))
+          (net db7
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_7))
+              (portRef (member dataout0 0))))
+          (net db6
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_6))
+              (portRef (member dataout0 1))))
+          (net db5
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_5))
+              (portRef (member dataout0 2))))
+          (net db4
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_4))
+              (portRef (member dataout0 3))))
+          (net db3
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_3))
+              (portRef (member dataout0 4))))
+          (net db2
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_2))
+              (portRef (member dataout0 5))))
+          (net db1
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_1))
+              (portRef (member dataout0 6))))
+          (net db0
+            (joined
+              (portRef D1 (instanceRef Inst_ODDRDQSX1A_0_0))
+              (portRef (member dataout0 7))))
+          (net da7
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_7))
+              (portRef (member dataout0 8))))
+          (net da6
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_6))
+              (portRef (member dataout0 9))))
+          (net da5
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_5))
+              (portRef (member dataout0 10))))
+          (net da4
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_4))
+              (portRef (member dataout0 11))))
+          (net da3
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_3))
+              (portRef (member dataout0 12))))
+          (net da2
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_2))
+              (portRef (member dataout0 13))))
+          (net da1
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_1))
+              (portRef (member dataout0 14))))
+          (net da0
+            (joined
+              (portRef D0 (instanceRef Inst_ODDRDQSX1A_0_0))
+              (portRef (member dataout0 15))))
+          (net datain_t7
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_7))
+              (portRef O (instanceRef Inst2_BB7))))
+          (net datain_t6
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_6))
+              (portRef O (instanceRef Inst2_BB6))))
+          (net datain_t5
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_5))
+              (portRef O (instanceRef Inst2_BB5))))
+          (net datain_t4
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_4))
+              (portRef O (instanceRef Inst2_BB4))))
+          (net datain_t3
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_3))
+              (portRef O (instanceRef Inst2_BB3))))
+          (net datain_t2
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_2))
+              (portRef O (instanceRef Inst2_BB2))))
+          (net datain_t1
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_1))
+              (portRef O (instanceRef Inst2_BB1))))
+          (net datain_t0
+            (joined
+              (portRef D (instanceRef Inst_IDDRDQSX1A_0_0))
+              (portRef O (instanceRef Inst2_BB0))))
+          (net buf_dq_0t7
+            (joined
+              (portRef T (instanceRef Inst2_BB7))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o7
+            (joined
+              (portRef I (instanceRef Inst2_BB7))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_7))))
+          (net buf_dq_0t6
+            (joined
+              (portRef T (instanceRef Inst2_BB6))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o6
+            (joined
+              (portRef I (instanceRef Inst2_BB6))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_6))))
+          (net buf_dq_0t5
+            (joined
+              (portRef T (instanceRef Inst2_BB5))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o5
+            (joined
+              (portRef I (instanceRef Inst2_BB5))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_5))))
+          (net buf_dq_0t4
+            (joined
+              (portRef T (instanceRef Inst2_BB4))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o4
+            (joined
+              (portRef I (instanceRef Inst2_BB4))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_4))))
+          (net buf_dq_0t3
+            (joined
+              (portRef T (instanceRef Inst2_BB3))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o3
+            (joined
+              (portRef I (instanceRef Inst2_BB3))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_3))))
+          (net buf_dq_0t2
+            (joined
+              (portRef T (instanceRef Inst2_BB2))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o2
+            (joined
+              (portRef I (instanceRef Inst2_BB2))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_2))))
+          (net buf_dq_0t1
+            (joined
+              (portRef T (instanceRef Inst2_BB1))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o1
+            (joined
+              (portRef I (instanceRef Inst2_BB1))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_1))))
+          (net buf_dq_0t0
+            (joined
+              (portRef T (instanceRef Inst2_BB0))
+              (portRef TQ (instanceRef Inst5_TDDRA0))))
+          (net buf_dq_0o0
+            (joined
+              (portRef I (instanceRef Inst2_BB0))
+              (portRef Q (instanceRef Inst_ODDRDQSX1A_0_0))))
+          (net dqsin0
+            (joined
+              (portRef DQSI (instanceRef Inst4_DQSBUFH0))
+              (portRef O (instanceRef Inst1_BB))))
+          (net buf_dqs_0t
+            (joined
+              (portRef T (instanceRef Inst1_BB))
+              (portRef TQ (instanceRef Inst7_TDDRA0))))
+          (net buf_dqs_0o
+            (joined
+              (portRef I (instanceRef Inst1_BB))
+              (portRef Q (instanceRef Inst6_ODDRDQSX1A0))))
+          (net dq_07
+            (joined
+              (portRef (member dq_0 0))
+              (portRef B (instanceRef Inst2_BB7))))
+          (net dq_06
+            (joined
+              (portRef (member dq_0 1))
+              (portRef B (instanceRef Inst2_BB6))))
+          (net dq_05
+            (joined
+              (portRef (member dq_0 2))
+              (portRef B (instanceRef Inst2_BB5))))
+          (net dq_04
+            (joined
+              (portRef (member dq_0 3))
+              (portRef B (instanceRef Inst2_BB4))))
+          (net dq_03
+            (joined
+              (portRef (member dq_0 4))
+              (portRef B (instanceRef Inst2_BB3))))
+          (net dq_02
+            (joined
+              (portRef (member dq_0 5))
+              (portRef B (instanceRef Inst2_BB2))))
+          (net dq_01
+            (joined
+              (portRef (member dq_0 6))
+              (portRef B (instanceRef Inst2_BB1))))
+          (net dq_00
+            (joined
+              (portRef (member dq_0 7))
+              (portRef B (instanceRef Inst2_BB0))))
+          (net datain015
+            (joined
+              (portRef (member datain0 0))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_7))))
+          (net datain014
+            (joined
+              (portRef (member datain0 1))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_6))))
+          (net datain013
+            (joined
+              (portRef (member datain0 2))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_5))))
+          (net datain012
+            (joined
+              (portRef (member datain0 3))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_4))))
+          (net datain011
+            (joined
+              (portRef (member datain0 4))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_3))))
+          (net datain010
+            (joined
+              (portRef (member datain0 5))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_2))))
+          (net datain09
+            (joined
+              (portRef (member datain0 6))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_1))))
+          (net datain08
+            (joined
+              (portRef (member datain0 7))
+              (portRef Q1 (instanceRef Inst_IDDRDQSX1A_0_0))))
+          (net datain07
+            (joined
+              (portRef (member datain0 8))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_7))))
+          (net datain06
+            (joined
+              (portRef (member datain0 9))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_6))))
+          (net datain05
+            (joined
+              (portRef (member datain0 10))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_5))))
+          (net datain04
+            (joined
+              (portRef (member datain0 11))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_4))))
+          (net datain03
+            (joined
+              (portRef (member datain0 12))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_3))))
+          (net datain02
+            (joined
+              (portRef (member datain0 13))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_2))))
+          (net datain01
+            (joined
+              (portRef (member datain0 14))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_1))))
+          (net datain00
+            (joined
+              (portRef (member datain0 15))
+              (portRef Q0 (instanceRef Inst_IDDRDQSX1A_0_0))))
+          (net uddcntln
+            (joined
+              (portRef uddcntln)
+              (portRef UDDCNTLN (instanceRef Inst3_DQSDLLC))))
+          (net reset
+            (joined
+              (portRef reset)
+              (portRef RST (instanceRef Inst7_TDDRA0))
+              (portRef RST (instanceRef Inst6_ODDRDQSX1A0))
+              (portRef RST (instanceRef Inst5_TDDRA0))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_7))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_6))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_5))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_4))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_3))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_2))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_1))
+              (portRef RST (instanceRef Inst_ODDRDQSX1A_0_0))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_7))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_6))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_5))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_4))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_3))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_2))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_1))
+              (portRef RST (instanceRef Inst_IDDRDQSX1A_0_0))
+              (portRef RST (instanceRef Inst4_DQSBUFH0))
+              (portRef RST (instanceRef Inst3_DQSDLLC))))
+          (net readclksel1_0
+            (joined
+              (portRef readclksel1_0)
+              (portRef READCLKSEL1 (instanceRef Inst4_DQSBUFH0))))
+          (net readclksel0_0
+            (joined
+              (portRef readclksel0_0)
+              (portRef READCLKSEL0 (instanceRef Inst4_DQSBUFH0))))
+          (net read_0
+            (joined
+              (portRef read_0)
+              (portRef READ (instanceRef Inst4_DQSBUFH0))))
+          (net lock
+            (joined
+              (portRef lock)
+              (portRef LOCK (instanceRef Inst3_DQSDLLC))))
+          (net freeze
+            (joined
+              (portRef freeze)
+              (portRef FREEZE (instanceRef Inst3_DQSDLLC))))
+          (net dqstri_0
+            (joined
+              (portRef dqstri_0)
+              (portRef TD (instanceRef Inst7_TDDRA0))))
+          (net dqso_0
+            (joined
+              (portRef dqso_0)
+              (portRef D1 (instanceRef Inst6_ODDRDQSX1A0))))
+          (net dqs_0
+            (joined
+              (portRef dqs_0)
+              (portRef B (instanceRef Inst1_BB))))
+          (net datavalid_0
+            (joined
+              (portRef datavalid_0)
+              (portRef DATAVALID (instanceRef Inst4_DQSBUFH0))))
+          (net datatri_0
+            (joined
+              (portRef datatri_0)
+              (portRef TD (instanceRef Inst5_TDDRA0))))
+          (net burstdet0
+            (joined
+              (portRef burstdet0)
+              (portRef BURSTDET (instanceRef Inst4_DQSBUFH0))))))))
+  (design sdram
+    (cellRef sdram
+      (libraryRef ORCLIB)))
+)

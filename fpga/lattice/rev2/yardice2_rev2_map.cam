@@ -1,0 +1,93 @@
+[ START MERGED ]
+n2841 s_cfg_11
+mclk_c_enable_91 s_cfg_6
+shifter/rx/n8309 shifter/rx/busy
+shifter/exec_ctrl/n8342 s_status_3
+shifter/ckgen/n8310 shifter/ckgen/s_enabled
+shifter/ckgen/s_rtck_r1_N_660 shifter/ckgen/s_rtck_r1
+[ END MERGED ]
+[ START CLIPPED ]
+n8850
+shifter/ckgen/s_cnt_lo_r_14__I_0_15_4814/S1
+shifter/ckgen/s_cnt_lo_r_14__I_0_15_4814/S0
+shifter/ckgen/s_cnt_hi_r_756_add_4_15/CO
+shifter/ckgen/s_cnt_lo_r_14__I_0_0/S1
+shifter/ckgen/s_cnt_lo_r_14__I_0_0/S0
+shifter/ckgen/s_cnt_lo_r_14__I_0_0/CI
+shifter/ckgen/sub_91_add_2_1/S0
+shifter/ckgen/sub_91_add_2_1/CI
+shifter/ckgen/s_cnt_lo_r_14__I_0_15/S1
+shifter/ckgen/s_cnt_lo_r_14__I_0_15/CO
+shifter/ckgen/s_cnt_hi_r_14__I_0_0/S1
+shifter/ckgen/s_cnt_hi_r_14__I_0_0/S0
+shifter/ckgen/s_cnt_hi_r_14__I_0_0/CI
+shifter/ckgen/sub_91_add_2_15/CO
+shifter/ckgen/sub_92_add_2_1/S0
+shifter/ckgen/sub_92_add_2_1/CI
+shifter/ckgen/s_cnt_hi_r_14__I_0_11/S1
+shifter/ckgen/s_cnt_hi_r_14__I_0_11/S0
+shifter/ckgen/sub_92_add_2_15/CO
+shifter/ckgen/s_cnt_lo_r_755_add_4_15/CO
+shifter/ckgen/s_cnt_hi_r_756_add_4_1/S0
+shifter/ckgen/s_cnt_hi_r_756_add_4_1/CI
+shifter/ckgen/s_cnt_lo_r_14__I_0_11/S1
+shifter/ckgen/s_cnt_lo_r_14__I_0_11/S0
+shifter/ckgen/s_cnt_lo_r_755_add_4_1/S0
+shifter/ckgen/s_cnt_lo_r_755_add_4_1/CI
+shifter/ckgen/s_cnt_hi_r_14__I_0_13/S1
+shifter/ckgen/s_cnt_hi_r_14__I_0_13/S0
+shifter/ckgen/s_cnt_hi_r_14__I_0_15_4815/S1
+shifter/ckgen/s_cnt_hi_r_14__I_0_15_4815/S0
+shifter/ckgen/s_cnt_lo_r_14__I_0_13/S1
+shifter/ckgen/s_cnt_lo_r_14__I_0_13/S0
+shifter/ckgen/s_cnt_hi_r_14__I_0_15/S1
+shifter/ckgen/s_cnt_hi_r_14__I_0_15/CO
+shifter/exec_ctrl/add_108_1/S0
+shifter/exec_ctrl/add_108_1/CI
+shifter/exec_ctrl/add_108_9/S1
+shifter/exec_ctrl/add_108_9/CO
+shifter/exec_ctrl/s_cnt_reg_7__I_0_0/S1
+shifter/exec_ctrl/s_cnt_reg_7__I_0_0/S0
+shifter/exec_ctrl/s_cnt_reg_7__I_0_0/CI
+shifter/exec_ctrl/s_cnt_reg_7__I_0_7/S1
+shifter/exec_ctrl/s_cnt_reg_7__I_0_7/S0
+shifter/exec_ctrl/s_cnt_reg_7__I_0_8/S0
+shifter/exec_ctrl/s_cnt_reg_7__I_0_8/CO
+shifter/rx/add_518_1/S0
+shifter/rx/add_518_1/CI
+shifter/rx/add_518_11/S1
+shifter/rx/add_518_11/CO
+shifter/shift_ctrl/desc_base_7__I_0_2/S0
+shifter/shift_ctrl/desc_base_7__I_0_2/CI
+shifter/shift_ctrl/desc_base_7__I_0_8/CO
+shifter/shift_ctrl/s_offs_r_7__I_0_0/S1
+shifter/shift_ctrl/s_offs_r_7__I_0_0/S0
+shifter/shift_ctrl/s_offs_r_7__I_0_0/CI
+shifter/shift_ctrl/s_offs_r_7__I_0_7/S1
+shifter/shift_ctrl/s_offs_r_7__I_0_7/S0
+shifter/shift_ctrl/s_offs_r_7__I_0_8/S0
+shifter/shift_ctrl/s_offs_r_7__I_0_8/CO
+shifter/shift_ctrl/add_191_1/S0
+shifter/shift_ctrl/add_191_1/CI
+shifter/shift_ctrl/add_191_9/S1
+shifter/shift_ctrl/add_191_9/CO
+shifter/tx/add_516_1/S1
+shifter/tx/add_516_1/S0
+shifter/tx/add_516_1/CI
+shifter/tx/add_516_11/CO
+cklgen_1mhz/s_count_752_add_4_7/S1
+cklgen_1mhz/s_count_752_add_4_7/CO
+cklgen_1mhz/s_count_752_add_4_1/S0
+cklgen_1mhz/s_count_752_add_4_1/CI
+cklgen_1khz/s_count_753_add_4_1/S0
+cklgen_1khz/s_count_753_add_4_1/CI
+cklgen_1khz/s_count_753_add_4_11/S1
+cklgen_1khz/s_count_753_add_4_11/CO
+[ END CLIPPED ]
+[ START DESIGN PREFS ]
+SCHEMATIC START ;
+# map:  version Diamond (64-bit) 3.10.0.111.2 -- WARNING: Map write only section -- Wed Apr 11 14:48:26 2018
+
+SYSCONFIG SDM_PORT=DISABLE SLAVE_SPI_PORT=DISABLE I2C_PORT=DISABLE MASTER_SPI_PORT=DISABLE COMPRESS_CONFIG=ON CONFIGURATION=CFG MY_ASSP=OFF ONE_TIME_PROGRAM=OFF CONFIG_SECURE=OFF MCCLK_FREQ=2.08 JTAG_PORT=ENABLE ENABLE_TRANSFR=DISABLE SHAREDEBRINIT=DISABLE MUX_CONFIGURATION_PORTS=DISABLE BACKGROUND_RECONFIG=OFF INBUF=ON ;
+SCHEMATIC END ;
+[ END DESIGN PREFS ]

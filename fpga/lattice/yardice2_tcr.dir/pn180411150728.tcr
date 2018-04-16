@@ -1,0 +1,24 @@
+#Start recording tcl command: 4/11/2018 14:45:13
+#Project Location: C:/devel/yard-ice/fpga/lattice; Project name: yardice2
+prj_project new -name "yardice2" -impl "rev2" -dev LCMXO2-4000HE-5TG144C -synthesis "lse"
+prj_src add "C:/devel/yard-ice/src/fpga/counter.vhdl" "C:/devel/yard-ice/src/fpga/cram_adaptor.vhdl" "C:/devel/yard-ice/src/fpga/dpram.vhdl" "C:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl" "C:/devel/yard-ice/src/fpga/jtag_cmem.vhdl" "C:/devel/yard-ice/src/fpga/jtag_counter.vhdl" "C:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl" "C:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl" "C:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl" "C:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl" "C:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl" "C:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl" "C:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl" "C:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl" "C:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl" "C:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl" "C:/devel/yard-ice/src/fpga/jtag_reg.vhdl" "C:/devel/yard-ice/src/fpga/sram.vhdl" "C:/devel/yard-ice/src/fpga/syncfifo.vhdl" "C:/devel/yard-ice/src/fpga/yard_ice.vhdl"
+prj_project save
+prj_run Synthesis -impl rev2 -task Lattice_Synthesis
+prj_run Synthesis -impl rev2 -task Lattice_Synthesis
+prj_run Map -impl rev2
+prj_run Map -impl rev2 -task MapTrace
+prj_run Map -impl rev2 -task MapVerilogSimFile
+prj_run Map -impl rev2 -task MapVHDLSimFile
+prj_run PAR -impl rev2
+prj_run PAR -impl rev2 -task PARTrace
+prj_run PAR -impl rev2 -task IOTiming
+prj_run Export -impl rev2
+prj_run Export -impl rev2 -task Bitgen
+prj_run Export -impl rev2 -task Bitgen -forceAll
+pwc_command new
+rvl_project new
+prj_src add "C:/devel/yard-ice/fpga/lattice/vhdl/memctl.ipx"
+prj_src add "C:/devel/yard-ice/fpga/lattice/vhdl/efb.ipx"
+prj_src add "C:/devel/yard-ice/fpga/lattice/vhdl/sdram.ipx"
+pwc_command exit
+#Stop recording: 4/11/2018 15:07:28
