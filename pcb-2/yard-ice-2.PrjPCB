@@ -38,7 +38,7 @@ PrefsVaultGUID=
 PrefsRevisionGUID=
 
 [Document1]
-DocumentPath=yard-ice-toplevel.SchDoc
+DocumentPath=yard-ice-2-toplevel.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
 AnnotationIndexControlEnabled=0
@@ -69,7 +69,7 @@ ClassGenCCAutoRoomEnabled=1
 ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
-DocumentUniqueId=VXJJAUYA
+DocumentUniqueId=IIKABABD
 
 [Document3]
 DocumentPath=yard-ice-cpu.SchDoc
@@ -106,23 +106,6 @@ GenerateClassCluster=0
 DocumentUniqueId=QEVPGHHO
 
 [Document5]
-DocumentPath=yard-ice.PcbDoc
-AnnotationEnabled=1
-AnnotateStartValue=1
-AnnotationIndexControlEnabled=0
-AnnotateSuffix=
-AnnotateScope=All
-AnnotateOrder=-1
-DoLibraryUpdate=1
-DoDatabaseUpdate=1
-ClassGenCCAutoEnabled=1
-ClassGenCCAutoRoomEnabled=1
-ClassGenNCAutoScope=None
-DItemRevisionGUID=
-GenerateClassCluster=0
-DocumentUniqueId=GFDWLRAF
-
-[Document6]
 DocumentPath=yard-ice-ethernet.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -137,9 +120,9 @@ ClassGenCCAutoRoomEnabled=1
 ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
-DocumentUniqueId=UQWVPCGW
+DocumentUniqueId=XGMSPSPW
 
-[Document7]
+[Document6]
 DocumentPath=yard-ice-ethernet.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -156,7 +139,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document8]
+[Document7]
 DocumentPath=yard-ice-fpga.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -173,7 +156,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document9]
+[Document8]
 DocumentPath=yard-ice-toplevel.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -190,7 +173,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document10]
+[Document9]
 DocumentPath=yard-ice.OutJob
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -207,7 +190,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document11]
+[Document10]
 DocumentPath=yard-ice-cpu.Harness
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -224,7 +207,7 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=
 
-[Document12]
+[Document11]
 DocumentPath=yard-ice-change-log.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -239,10 +222,10 @@ ClassGenCCAutoRoomEnabled=1
 ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
-DocumentUniqueId=CJKTHOPU
+DocumentUniqueId=OBWNUNXE
 
-[Document13]
-DocumentPath=yard-ice-fpga.SchDoc
+[Document12]
+DocumentPath=yard-ice-2-fpga.SchDoc
 AnnotationEnabled=1
 AnnotateStartValue=1
 AnnotationIndexControlEnabled=0
@@ -258,13 +241,22 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=QHBUQETX
 
-[GeneratedDocument1]
-DocumentPath=Project Outputs for yard-ice\Design Rule Check - yard-ice.html
+[Document13]
+DocumentPath=yard-ice-2.PcbDoc
+AnnotationEnabled=1
+AnnotateStartValue=1
+AnnotationIndexControlEnabled=0
+AnnotateSuffix=
+AnnotateScope=All
+AnnotateOrder=-1
+DoLibraryUpdate=1
+DoDatabaseUpdate=1
+ClassGenCCAutoEnabled=1
+ClassGenCCAutoRoomEnabled=1
+ClassGenNCAutoScope=None
 DItemRevisionGUID=
-
-[GeneratedDocument2]
-DocumentPath=yard-ice.PcbDoc.htm
-DItemRevisionGUID=
+GenerateClassCluster=0
+DocumentUniqueId=GFDWLRAF
 
 [Configuration1]
 Name=Default Configuration

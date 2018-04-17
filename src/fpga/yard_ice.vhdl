@@ -18,7 +18,6 @@
 -- along with this program; if not, write to the Free Software
 -- Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 -- 
-
 -- 
 -- Enhaced JTAG controller
 -- 
@@ -29,6 +28,40 @@ use ieee.numeric_std.all;
 
 library work;
 use work.all;
+
+-- parameterized module component declaration
+--component sdram
+    --port (burstdet0: out  std_logic; burstdet1: out  std_logic; 
+        --casn: out  std_logic; casn_din: in  std_logic; 
+        --datatri_0: in  std_logic; datatri_1: in  std_logic; 
+        --datavalid_0: out  std_logic; datavalid_1: out  std_logic; 
+        --dqs_0: inout  std_logic; dqs_1: inout  std_logic; 
+        --dqso_0: in  std_logic; dqso_1: in  std_logic; 
+        --dqstri_0: in  std_logic; dqstri_1: in  std_logic; 
+        --freeze: in  std_logic; lock: out  std_logic; 
+        --rasn: out  std_logic; rasn_din: in  std_logic; 
+        --read_0: in  std_logic; read_1: in  std_logic; 
+        --readclksel0_0: in  std_logic; readclksel0_1: in  std_logic; 
+        --readclksel1_0: in  std_logic; readclksel1_1: in  std_logic; 
+        --reset: in  std_logic; sclk: in  std_logic; 
+        --uddcntln: in  std_logic; wen: out  std_logic; 
+        --wen_din: in  std_logic; addr: out  std_logic_vector(11 downto 0); 
+        --addr_din: in  std_logic_vector(11 downto 0); 
+        --ba: out  std_logic_vector(1 downto 0); 
+        --ba_din: in  std_logic_vector(1 downto 0); 
+        --cke: out  std_logic_vector(0 downto 0); 
+        --cke_din: in  std_logic_vector(0 downto 0); 
+        --csn: out  std_logic_vector(0 downto 0); 
+        --csn_din: in  std_logic_vector(0 downto 0); 
+        --datain0: out  std_logic_vector(15 downto 0); 
+        --datain1: out  std_logic_vector(15 downto 0); 
+        --dataout0: in  std_logic_vector(15 downto 0); 
+        --dataout1: in  std_logic_vector(15 downto 0); 
+        --ddrclk: out  std_logic_vector(0 downto 0); 
+        --dq_0: inout  std_logic_vector(7 downto 0); 
+        --dq_1: inout  std_logic_vector(7 downto 0));
+--end component;
+
 
 entity yard_ice is
 port(
@@ -64,6 +97,18 @@ port(
 	-- leds
 	led_1 : out std_logic;
 	led_2 : out std_logic;
+	-- DDR memory	
+	ddr_addr : out  std_logic_vector(11 downto 0); 
+	ddr_cke : out  std_logic;
+	ddr_clk : out  std_logic;
+	ddr_cas : out  std_logic;
+	ddr_ras : out  std_logic;
+	ddr_we : out  std_logic;
+	ddr_cs : out  std_logic;
+	ddr_ba : out  std_logic_vector(1 downto 0); 
+	ddr_dqm : out  std_logic;
+	ddr_dq : inout  std_logic_vector(15 downto 0);
+	ddr_dqs : inout  std_logic_vector(1 downto 0);
 	--
 	clk_aux : in std_logic
 	
@@ -290,6 +335,10 @@ architecture structure of yard_ice is
 	signal s_uart_rx : std_logic;
 	signal s_uart_tx : std_logic;
 	signal s_uart_en : std_logic;
+	-----------------------
+
+	-----------------------
+	signal s_ddr_dqs : std_logic;
 	-----------------------
 
 	-----------------------
@@ -991,6 +1040,58 @@ begin
 	tp_rst <= s_tap_nrst;
 	
 --	tap_state <= s_tap_state;
+
+	s_ddr_dqs <= s_tap_tck;
+
+	ddr_phy : entity sdram
+		port map (
+--        burstdet0 = >,
+--        burstdet1 = >, 
+        casn => ddr_cas, 
+        casn_din => '1', 
+        datatri_0 => '0', 
+        datatri_1 => '0', 
+--        datavalid_0: out  std_logic,
+--        datavalid_1: out  std_logic, 
+        dqs_0 => ddr_dqs(0),
+        dqs_1 => ddr_dqs(1), 
+        dqso_0 => s_ddr_dqs,
+        dqso_1 => s_ddr_dqs, 
+        dqstri_0 => '0',
+        dqstri_1 => '0', 
+        freeze => '0',
+--        lock: out  std_logic,
+        rasn => ddr_ras,
+        rasn_din => '0', 
+        read_0 => '0',
+        read_1 => '0',
+        readclksel0_0 => '1',
+        readclksel0_1 => '1', 
+        readclksel1_0 => '1', 
+        readclksel1_1 => '1', 
+        reset =>  s_rst,
+        sclk => s_clk_main,
+        uddcntln => '0',
+        wen => ddr_we, 
+        wen_din => '0', 
+        addr => ddr_addr, 
+        addr_din => (others => '0'),
+        ba => ddr_ba,
+        ba_din => "00",
+        cke(0) => ddr_cke,
+        cke_din => "0",
+--        csn(0) => ddr_cs, 
+        csn_din => "0",
+--        datain0 => ..,
+--        datain1 => .., 
+        dataout0 => (others => '0'),
+        dataout1 => (others => '0'), 
+        ddrclk(0) => ddr_clk,
+        dq_0 => ddr_dq(7 downto 0),
+        dq_1 => ddr_dq(15 downto 8)
+	);
+
+
 
 end structure;
 
