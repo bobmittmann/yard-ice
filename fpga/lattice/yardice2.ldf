@@ -2,7 +2,7 @@
 <BaliProject version="3.2" title="yardice2" device="LCMXO2-4000HE-5TG144C" default_implementation="rev2">
     <Options/>
     <Implementation title="rev2" dir="rev2" description="rev2" synthesis="lse" default_strategy="Strategy1">
-        <Options def_top="sdram" top="yard_ice"/>
+        <Options def_top="yard_ice" top="yard_ice"/>
         <Source name="../../src/fpga/counter.vhdl" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
@@ -60,17 +60,17 @@
         <Source name="../../src/fpga/syncfifo.vhdl" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
+        <Source name="ddr_phy.ipx" type="IPX_Module" type_short="IPX">
+            <Options/>
+        </Source>
+        <Source name="ddr_phy.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="vhdl/ddr_sdram_dual.vhdl" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
         <Source name="../../src/fpga/yard_ice.vhdl" type="VHDL" type_short="VHDL">
             <Options top_module="yard_ice"/>
-        </Source>
-        <Source name="vhdl/memctl.ipx" type="IPX_Module" type_short="IPX">
-            <Options/>
-        </Source>
-        <Source name="vhdl/efb.ipx" type="IPX_Module" type_short="IPX">
-            <Options/>
-        </Source>
-        <Source name="vhdl/sdram.ipx" type="IPX_Module" type_short="IPX">
-            <Options/>
         </Source>
         <Source name="yardice2.lpf" type="Logic Preference" type_short="LPF">
             <Options/>

@@ -1,10 +1,10 @@
 <top name = "yard_ice"  library = "work"  arch = "RTL"  entry = "VHDL">
 
 <clocks>
-    <clockitem name = "mclk"  type = "port" />
     <clockitem name = "fsmc_clk"  type = "port" />
-    <clockitem name = "shifter/s_iotckn"  type = "net" />
     <clockitem name = "shifter/s_iotckp"  type = "net" />
+    <clockitem name = "shifter/s_iotckn"  type = "net" />
+    <clockitem name = "mclk"  type = "port" />
 </clocks>
 
 <!--
@@ -22,7 +22,7 @@
 <unit name = "yard_ice">
 
     <!--
-        Top Level Pins: 36
+        Top Level Pins: 78
     -->
 
     <pins>
@@ -61,11 +61,53 @@
         <pitem  name = "tp_rst"  direction = "out"  />
         <pitem  name = "led_1"  direction = "out"  />
         <pitem  name = "led_2"  direction = "out"  />
+        <pitem  name = "ddr_addr[12]"  direction = "out"  />
+        <pitem  name = "ddr_addr[11]"  direction = "out"  />
+        <pitem  name = "ddr_addr[10]"  direction = "out"  />
+        <pitem  name = "ddr_addr[9]"  direction = "out"  />
+        <pitem  name = "ddr_addr[8]"  direction = "out"  />
+        <pitem  name = "ddr_addr[7]"  direction = "out"  />
+        <pitem  name = "ddr_addr[6]"  direction = "out"  />
+        <pitem  name = "ddr_addr[5]"  direction = "out"  />
+        <pitem  name = "ddr_addr[4]"  direction = "out"  />
+        <pitem  name = "ddr_addr[3]"  direction = "out"  />
+        <pitem  name = "ddr_addr[2]"  direction = "out"  />
+        <pitem  name = "ddr_addr[1]"  direction = "out"  />
+        <pitem  name = "ddr_addr[0]"  direction = "out"  />
+        <pitem  name = "ddr_cke"  direction = "out"  />
+        <pitem  name = "ddr_clk"  direction = "out"  />
+        <pitem  name = "ddr_casn"  direction = "out"  />
+        <pitem  name = "ddr_rasn"  direction = "out"  />
+        <pitem  name = "ddr_wen"  direction = "out"  />
+        <pitem  name = "ddr_csn0"  direction = "out"  />
+        <pitem  name = "ddr_csn1"  direction = "out"  />
+        <pitem  name = "ddr_ba[1]"  direction = "out"  />
+        <pitem  name = "ddr_ba[0]"  direction = "out"  />
+        <pitem  name = "ddr_ldqm"  direction = "out"  />
+        <pitem  name = "ddr_udqm"  direction = "out"  />
+        <pitem  name = "ddr_dq[15]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[14]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[13]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[12]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[11]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[10]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[9]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[8]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[7]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[6]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[5]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[4]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[3]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[2]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[1]"  direction = "inout"  />
+        <pitem  name = "ddr_dq[0]"  direction = "inout"  />
+        <pitem  name = "ddr_ldqs"  direction = "inout"  />
+        <pitem  name = "ddr_udqs"  direction = "inout"  />
         <pitem  name = "clk_aux"  direction = "in"  />
     </pins>
 
     <!--
-        Instances in netlist: 1705
+        Instances in netlist: 1813
     -->
 
     <instance  name = "cram_bus/s_op_mem_rd_133"  library = "work"  arch = "RTL"  type = "reg">
@@ -112,7 +154,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_mem_wr_sel[1]"  />
         <nitem  name = "s_mem_wr_sel[0]"  />
         <nitem  name = "s_tx_mem_wr_stb_N_23"  />
@@ -128,14 +170,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_mem_wr_stb"  />
         <nitem  name = "s_tx_mem_wr_stb_N_23"  />
         <nitem  name = "s_tx_mem_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_mem_wr_sel_1__I_0_70"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_mem_wr_sel_1__I_0_71"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[1]"  direction = "in"  />
         <pitem  name = "a[0]"  direction = "in"  />
@@ -145,7 +187,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "s_mem_wr_sel[1]"  />
         <nitem  name = "s_mem_wr_sel[0]"  />
@@ -153,7 +195,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_mem_wr_stb_I_0_69"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_mem_wr_stb_I_0_70"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -162,14 +204,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_mem_wr_stb"  />
         <nitem  name = "s_desc_mem_wr_stb_N_13"  />
         <nitem  name = "s_desc_mem_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_mem_wr_sel_1__I_0_72"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_mem_wr_sel_1__I_0_73"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[1]"  direction = "in"  />
         <pitem  name = "a[0]"  direction = "in"  />
@@ -180,14 +222,14 @@
 
         <nets>
         <nitem  name = "pwr"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_mem_wr_sel[1]"  />
         <nitem  name = "s_mem_wr_sel[0]"  />
         <nitem  name = "s_ptr_mem_wr_stb_N_14"  />
         </nets>
     </instance>
 
-    <instance  name = "s_mem_wr_stb_I_0_71"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_mem_wr_stb_I_0_72"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -196,14 +238,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_mem_wr_stb"  />
         <nitem  name = "s_ptr_mem_wr_stb_N_14"  />
         <nitem  name = "s_ptr_mem_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_mem_wr_sel_1__I_0_86"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_mem_wr_sel_1__I_0_87"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[1]"  direction = "in"  />
         <pitem  name = "a[0]"  direction = "in"  />
@@ -220,7 +262,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_mem_wr_stb_I_0_85"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_mem_wr_stb_I_0_86"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -229,7 +271,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_mem_wr_stb"  />
         <nitem  name = "s_aux_mem_wr_stb_N_15"  />
         <nitem  name = "s_aux_mem_wr_stb"  />
@@ -341,7 +383,7 @@
         <nitem  name = "s_aux_mem_dout[2]"  />
         <nitem  name = "s_aux_mem_dout[1]"  />
         <nitem  name = "s_aux_mem_dout[0]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_rx_mem_dout[15]"  />
         <nitem  name = "s_rx_mem_dout[14]"  />
         <nitem  name = "s_rx_mem_dout[13]"  />
@@ -662,7 +704,7 @@
         <nitem  name = "s_mem_addr[3]"  />
         <nitem  name = "s_mem_addr[2]"  />
         <nitem  name = "s_mem_addr[1]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_desc_hi[15]"  />
         <nitem  name = "s_desc_hi[14]"  />
         <nitem  name = "s_desc_hi[13]"  />
@@ -833,7 +875,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_sel_3__I_0_74"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_sel_3__I_0_75"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[3]"  direction = "in"  />
         <pitem  name = "a[2]"  direction = "in"  />
@@ -847,7 +889,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_sel[3]"  />
         <nitem  name = "s_reg_wr_sel[2]"  />
         <nitem  name = "s_reg_wr_sel[1]"  />
@@ -856,7 +898,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_stb_I_0_73"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_stb_I_0_74"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -865,14 +907,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_stb"  />
         <nitem  name = "s_insn_wr_stb_N_16"  />
         <nitem  name = "s_insn_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_sel_3__I_0_76"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_sel_3__I_0_77"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[3]"  direction = "in"  />
         <pitem  name = "a[2]"  direction = "in"  />
@@ -886,7 +928,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "s_reg_wr_sel[3]"  />
         <nitem  name = "s_reg_wr_sel[2]"  />
@@ -896,7 +938,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_stb_I_0_75"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_stb_I_0_76"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -905,14 +947,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_stb"  />
         <nitem  name = "s_irq_en_wr_stb_N_17"  />
         <nitem  name = "s_irq_en_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_sel_3__I_0_78"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_sel_3__I_0_79"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[3]"  direction = "in"  />
         <pitem  name = "a[2]"  direction = "in"  />
@@ -926,7 +968,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "s_reg_wr_sel[3]"  />
         <nitem  name = "s_reg_wr_sel[2]"  />
@@ -936,7 +978,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_stb_I_0_77"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_stb_I_0_78"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -945,14 +987,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_stb"  />
         <nitem  name = "s_r3_wr_stb_N_18"  />
         <nitem  name = "s_r3_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_sel_3__I_0_80"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_sel_3__I_0_81"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[3]"  direction = "in"  />
         <pitem  name = "a[2]"  direction = "in"  />
@@ -966,7 +1008,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "s_reg_wr_sel[3]"  />
         <nitem  name = "s_reg_wr_sel[2]"  />
@@ -976,7 +1018,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_stb_I_0_79"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_stb_I_0_80"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -985,14 +1027,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_stb"  />
         <nitem  name = "s_ckgen_div_wr_stb_N_19"  />
         <nitem  name = "s_ckgen_div_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_sel_3__I_0_82"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_sel_3__I_0_83"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[3]"  direction = "in"  />
         <pitem  name = "a[2]"  direction = "in"  />
@@ -1006,7 +1048,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "s_reg_wr_sel[3]"  />
         <nitem  name = "s_reg_wr_sel[2]"  />
@@ -1016,7 +1058,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_stb_I_0_81"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_stb_I_0_82"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -1025,7 +1067,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_stb"  />
         <nitem  name = "s_ckgen_rtdiv_wr_stb_N_20"  />
         <nitem  name = "s_ckgen_rtdiv_wr_stb"  />
@@ -1046,7 +1088,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "s_reg_wr_sel[3]"  />
         <nitem  name = "s_reg_wr_sel[2]"  />
@@ -1065,14 +1107,14 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_stb"  />
         <nitem  name = "s_cfg_wr_stb_N_22"  />
         <nitem  name = "s_cfg_wr_stb"  />
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_sel_3__I_0_84"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_sel_3__I_0_85"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[3]"  direction = "in"  />
         <pitem  name = "a[2]"  direction = "in"  />
@@ -1086,7 +1128,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "s_reg_wr_sel[3]"  />
         <nitem  name = "s_reg_wr_sel[2]"  />
@@ -1096,7 +1138,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_reg_wr_stb_I_0_83"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_reg_wr_stb_I_0_84"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -1105,7 +1147,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_reg_wr_stb"  />
         <nitem  name = "s_tmr_wr_stb_N_21"  />
         <nitem  name = "s_tmr_wr_stb"  />
@@ -1152,7 +1194,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_irq_out_65"  library = "work"  arch = "RTL"  type = "reg">
+    <instance  name = "s_irq_out_66"  library = "work"  arch = "RTL"  type = "reg">
         <pins>
         <pitem  name = "d"  direction = "in"  />
         <pitem  name = "clk"  direction = "in"  />
@@ -1164,7 +1206,7 @@
         <nets>
         <nitem  name = "irq_N_5"  />
         <nitem  name = "mclk"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "irq"  />
         </nets>
     </instance>
@@ -1221,7 +1263,7 @@
         </nets>
     </instance>
 
-    <instance  name = "and_36"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "and_37"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a[3]"  direction = "in"  />
         <pitem  name = "a[2]"  direction = "in"  />
@@ -1307,7 +1349,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_tmr_cnt_en_66"  library = "work"  arch = "RTL"  type = "reg">
+    <instance  name = "s_tmr_cnt_en_67"  library = "work"  arch = "RTL"  type = "reg">
         <pins>
         <pitem  name = "d"  direction = "in"  />
         <pitem  name = "clk"  direction = "in"  />
@@ -1319,7 +1361,7 @@
         <nets>
         <nitem  name = "s_tmr_cnt_en_N_2"  />
         <nitem  name = "mclk"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_cfg[6]"  />
         <nitem  name = "s_tmr_cnt_en"  />
         </nets>
@@ -1401,7 +1443,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_cfg[11]"  />
         <nitem  name = "tp_rst"  />
         </nets>
@@ -1484,7 +1526,7 @@
         </nets>
     </instance>
 
-    <instance  name = "s_tmr_cnt_en_I_0_68"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_tmr_cnt_en_I_0_69"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -1494,13 +1536,13 @@
 
         <nets>
         <nitem  name = "s_tmr_cnt_en"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_tmr_timeout"  />
         <nitem  name = "s_tmr_cnt_en_N_3"  />
         </nets>
     </instance>
 
-    <instance  name = "s_tmr_cnt_en_I_0_67"  library = "work"  arch = "RTL"  type = "comb">
+    <instance  name = "s_tmr_cnt_en_I_0_68"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
         <pitem  name = "a1"  direction = "in"  />
@@ -1576,6 +1618,18 @@
         </nets>
     </instance>
 
+    <instance  name = "ddr_phy/Inst25_OB0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_cke"  />
+        <nitem  name = "ddr_phy/buf_ckeo0"  />
+        </nets>
+    </instance>
+
     <instance  name = "uart_tx_I_0"  library = "work"  arch = "RTL"  type = "comb">
         <pins>
         <pitem  name = "a0"  direction = "in"  />
@@ -1585,7 +1639,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "uart_tx"  />
         <nitem  name = "s_cfg[7]"  />
         <nitem  name = "tp_dbgrq"  />
@@ -1651,10 +1705,294 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "s_tap_tdi"  />
         <nitem  name = "s_cfg[4]"  />
         <nitem  name = "tp_tdi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_ctl"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "clk_i"  direction = "in"  />
+        <pitem  name = "rst_i"  direction = "in"  />
+        <pitem  name = "cmd_stb_i"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[15]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[14]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[13]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[12]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[11]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[10]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[9]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[8]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[7]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[6]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[5]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[4]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[3]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[2]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[1]"  direction = "in"  />
+        <pitem  name = "cmd_dat_i[0]"  direction = "in"  />
+        <pitem  name = "mwr_cyc_i"  direction = "in"  />
+        <pitem  name = "mwr_we_i"  direction = "in"  />
+        <pitem  name = "mwr_stb_i"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[20]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[19]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[18]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[17]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[16]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[15]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[14]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[13]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[12]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[11]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[10]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[9]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[8]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[7]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[6]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[5]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[4]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[3]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[2]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[1]"  direction = "in"  />
+        <pitem  name = "mwr_adr_i[0]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[31]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[30]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[29]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[28]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[27]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[26]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[25]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[24]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[23]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[22]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[21]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[20]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[19]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[18]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[17]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[16]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[15]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[14]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[13]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[12]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[11]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[10]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[9]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[8]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[7]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[6]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[5]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[4]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[3]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[2]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[1]"  direction = "in"  />
+        <pitem  name = "mwr_dat_i[0]"  direction = "in"  />
+        <pitem  name = "mwr_bst_i"  direction = "in"  />
+        <pitem  name = "mrd_cyc_i"  direction = "in"  />
+        <pitem  name = "mrd_we_i"  direction = "in"  />
+        <pitem  name = "mrd_stb_i"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[20]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[19]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[18]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[17]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[16]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[15]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[14]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[13]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[12]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[11]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[10]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[9]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[8]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[7]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[6]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[5]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[4]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[3]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[2]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[1]"  direction = "in"  />
+        <pitem  name = "mrd_adr_i[0]"  direction = "in"  />
+        <pitem  name = "mrd_bst_i"  direction = "in"  />
+        <pitem  name = "phy_burstdet0_i"  direction = "in"  />
+        <pitem  name = "phy_burstdet1_i"  direction = "in"  />
+        <pitem  name = "phy_casn_o"  direction = "out"  />
+        <pitem  name = "phy_dtri0_o"  direction = "out"  />
+        <pitem  name = "phy_dtri1_o"  direction = "out"  />
+        <pitem  name = "phy_dqs0_o"  direction = "out"  />
+        <pitem  name = "phy_dqs1_o"  direction = "out"  />
+        <pitem  name = "phy_dqstri0_o"  direction = "out"  />
+        <pitem  name = "phy_dqstri1_o"  direction = "out"  />
+        <pitem  name = "phy_freeze_o"  direction = "out"  />
+        <pitem  name = "phy_lock_i"  direction = "in"  />
+        <pitem  name = "phy_rasn_o"  direction = "out"  />
+        <pitem  name = "phy_read0_o"  direction = "out"  />
+        <pitem  name = "phy_read1_o"  direction = "out"  />
+        <pitem  name = "phy_readclksel00_o"  direction = "out"  />
+        <pitem  name = "phy_readclksel01_o"  direction = "out"  />
+        <pitem  name = "phy_readclksel10_o"  direction = "out"  />
+        <pitem  name = "phy_readclksel11_o"  direction = "out"  />
+        <pitem  name = "phy_uddcntln_o"  direction = "out"  />
+        <pitem  name = "phy_wen_o"  direction = "out"  />
+        <pitem  name = "phy_addr_o[12]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[11]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[10]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[9]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[8]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[7]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[6]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[5]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[4]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[3]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[2]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[1]"  direction = "out"  />
+        <pitem  name = "phy_addr_o[0]"  direction = "out"  />
+        <pitem  name = "phy_ba_o[1]"  direction = "out"  />
+        <pitem  name = "phy_ba_o[0]"  direction = "out"  />
+        <pitem  name = "phy_cke_o"  direction = "out"  />
+        <pitem  name = "phy_csn0_o"  direction = "out"  />
+        <pitem  name = "phy_csn1_o"  direction = "out"  />
+        <pitem  name = "phy_dat0_i[15]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[14]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[13]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[12]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[11]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[10]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[9]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[8]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[7]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[6]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[5]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[4]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[3]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[2]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[1]"  direction = "in"  />
+        <pitem  name = "phy_dat0_i[0]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[15]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[14]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[13]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[12]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[11]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[10]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[9]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[8]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[7]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[6]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[5]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[4]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[3]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[2]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[1]"  direction = "in"  />
+        <pitem  name = "phy_dat1_i[0]"  direction = "in"  />
+        <pitem  name = "phy_dat0_o[15]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[14]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[13]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[12]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[11]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[10]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[9]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[8]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[7]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[6]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[5]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[4]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[3]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[2]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[1]"  direction = "out"  />
+        <pitem  name = "phy_dat0_o[0]"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "n1"  />
+        <nitem  name = "s_ddr_burstdet0"  />
+        <nitem  name = "s_ddr_burstdet1"  />
+        <nitem  name = "s_ddr_casn"  />
+        <nitem  name = "s_ddr_dtri0"  />
+        <nitem  name = "s_ddr_dtri1"  />
+        <nitem  name = "s_ddr_dqs0"  />
+        <nitem  name = "s_ddr_dqs1"  />
+        <nitem  name = "s_ddr_dqstri0"  />
+        <nitem  name = "s_ddr_dqstri1"  />
+        <nitem  name = "s_ddr_freeze"  />
+        <nitem  name = "s_ddr_lock"  />
+        <nitem  name = "s_ddr_rasn"  />
+        <nitem  name = "s_ddr_read0"  />
+        <nitem  name = "s_ddr_read1"  />
+        <nitem  name = "s_ddr_readclksel00"  />
+        <nitem  name = "s_ddr_readclksel01"  />
+        <nitem  name = "s_ddr_readclksel10"  />
+        <nitem  name = "s_ddr_readclksel11"  />
+        <nitem  name = "s_ddr_uddcntln"  />
+        <nitem  name = "s_ddr_wen"  />
+        <nitem  name = "s_ddr_addr[12]"  />
+        <nitem  name = "s_ddr_addr[11]"  />
+        <nitem  name = "s_ddr_addr[10]"  />
+        <nitem  name = "s_ddr_addr[9]"  />
+        <nitem  name = "s_ddr_addr[8]"  />
+        <nitem  name = "s_ddr_addr[7]"  />
+        <nitem  name = "s_ddr_addr[6]"  />
+        <nitem  name = "s_ddr_addr[5]"  />
+        <nitem  name = "s_ddr_addr[4]"  />
+        <nitem  name = "s_ddr_addr[3]"  />
+        <nitem  name = "s_ddr_addr[2]"  />
+        <nitem  name = "s_ddr_addr[1]"  />
+        <nitem  name = "s_ddr_addr[0]"  />
+        <nitem  name = "s_ddr_ba[1]"  />
+        <nitem  name = "s_ddr_ba[0]"  />
+        <nitem  name = "s_ddr_cke"  />
+        <nitem  name = "s_ddr_csn[0]"  />
+        <nitem  name = "s_ddr_csn[1]"  />
+        <nitem  name = "s_ddr_datain0[15]"  />
+        <nitem  name = "s_ddr_datain0[14]"  />
+        <nitem  name = "s_ddr_datain0[13]"  />
+        <nitem  name = "s_ddr_datain0[12]"  />
+        <nitem  name = "s_ddr_datain0[11]"  />
+        <nitem  name = "s_ddr_datain0[10]"  />
+        <nitem  name = "s_ddr_datain0[9]"  />
+        <nitem  name = "s_ddr_datain0[8]"  />
+        <nitem  name = "s_ddr_datain0[7]"  />
+        <nitem  name = "s_ddr_datain0[6]"  />
+        <nitem  name = "s_ddr_datain0[5]"  />
+        <nitem  name = "s_ddr_datain0[4]"  />
+        <nitem  name = "s_ddr_datain0[3]"  />
+        <nitem  name = "s_ddr_datain0[2]"  />
+        <nitem  name = "s_ddr_datain0[1]"  />
+        <nitem  name = "s_ddr_datain0[0]"  />
+        <nitem  name = "s_ddr_datain1[15]"  />
+        <nitem  name = "s_ddr_datain1[14]"  />
+        <nitem  name = "s_ddr_datain1[13]"  />
+        <nitem  name = "s_ddr_datain1[12]"  />
+        <nitem  name = "s_ddr_datain1[11]"  />
+        <nitem  name = "s_ddr_datain1[10]"  />
+        <nitem  name = "s_ddr_datain1[9]"  />
+        <nitem  name = "s_ddr_datain1[8]"  />
+        <nitem  name = "s_ddr_datain1[7]"  />
+        <nitem  name = "s_ddr_datain1[6]"  />
+        <nitem  name = "s_ddr_datain1[5]"  />
+        <nitem  name = "s_ddr_datain1[4]"  />
+        <nitem  name = "s_ddr_datain1[3]"  />
+        <nitem  name = "s_ddr_datain1[2]"  />
+        <nitem  name = "s_ddr_datain1[1]"  />
+        <nitem  name = "s_ddr_datain1[0]"  />
+        <nitem  name = "s_ddr_dataout0[15]"  />
+        <nitem  name = "s_ddr_dataout0[14]"  />
+        <nitem  name = "s_ddr_dataout0[13]"  />
+        <nitem  name = "s_ddr_dataout0[12]"  />
+        <nitem  name = "s_ddr_dataout0[11]"  />
+        <nitem  name = "s_ddr_dataout0[10]"  />
+        <nitem  name = "s_ddr_dataout0[9]"  />
+        <nitem  name = "s_ddr_dataout0[8]"  />
+        <nitem  name = "s_ddr_dataout0[7]"  />
+        <nitem  name = "s_ddr_dataout0[6]"  />
+        <nitem  name = "s_ddr_dataout0[5]"  />
+        <nitem  name = "s_ddr_dataout0[4]"  />
+        <nitem  name = "s_ddr_dataout0[3]"  />
+        <nitem  name = "s_ddr_dataout0[2]"  />
+        <nitem  name = "s_ddr_dataout0[1]"  />
+        <nitem  name = "s_ddr_dataout0[0]"  />
         </nets>
     </instance>
 
@@ -1684,7 +2022,7 @@
         <nitem  name = "s_1khz_stb"  />
         <nitem  name = "s_irq[1]"  />
         <nitem  name = "s_tap_busy_N_4"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "mclk"  />
         <nitem  name = "s_irq_st[3]"  />
         <nitem  name = "s_irq_st[2]"  />
@@ -4005,7 +4343,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n5"  />
         </nets>
@@ -4019,7 +4357,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n6"  />
         </nets>
@@ -4065,7 +4403,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n9"  />
         </nets>
@@ -4079,7 +4417,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n10"  />
         </nets>
@@ -4125,7 +4463,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n13"  />
         </nets>
@@ -4139,7 +4477,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n14"  />
         </nets>
@@ -4185,7 +4523,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n17"  />
         </nets>
@@ -4199,7 +4537,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "int_en_r/n18"  />
         </nets>
@@ -4349,7 +4687,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n5"  />
         </nets>
@@ -4409,7 +4747,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n9"  />
         </nets>
@@ -4469,7 +4807,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n13"  />
         </nets>
@@ -4529,7 +4867,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n17"  />
         </nets>
@@ -4589,7 +4927,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n21"  />
         </nets>
@@ -4649,7 +4987,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n25"  />
         </nets>
@@ -4709,7 +5047,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n29"  />
         </nets>
@@ -4769,7 +5107,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n33"  />
         </nets>
@@ -4829,7 +5167,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n37"  />
         </nets>
@@ -4889,7 +5227,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n41"  />
         </nets>
@@ -4949,7 +5287,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n45"  />
         </nets>
@@ -5009,7 +5347,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n49"  />
         </nets>
@@ -5069,7 +5407,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n53"  />
         </nets>
@@ -5129,7 +5467,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n57"  />
         </nets>
@@ -5189,7 +5527,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n61"  />
         </nets>
@@ -5249,7 +5587,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "cfg_r/n65"  />
         </nets>
@@ -5660,7 +5998,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_0__N_141"  />
         <nitem  name = "tmr_r/q_0__N_140"  />
         </nets>
@@ -5768,7 +6106,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_1__N_137"  />
         <nitem  name = "tmr_r/q_1__N_136"  />
         </nets>
@@ -5876,7 +6214,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_2__N_133"  />
         <nitem  name = "tmr_r/q_2__N_132"  />
         </nets>
@@ -5984,7 +6322,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_3__N_129"  />
         <nitem  name = "tmr_r/q_3__N_128"  />
         </nets>
@@ -6092,7 +6430,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_4__N_125"  />
         <nitem  name = "tmr_r/q_4__N_124"  />
         </nets>
@@ -6200,7 +6538,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_5__N_121"  />
         <nitem  name = "tmr_r/q_5__N_120"  />
         </nets>
@@ -6308,7 +6646,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_6__N_117"  />
         <nitem  name = "tmr_r/q_6__N_116"  />
         </nets>
@@ -6416,7 +6754,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_7__N_113"  />
         <nitem  name = "tmr_r/q_7__N_112"  />
         </nets>
@@ -6524,7 +6862,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_8__N_109"  />
         <nitem  name = "tmr_r/q_8__N_108"  />
         </nets>
@@ -6632,7 +6970,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_9__N_105"  />
         <nitem  name = "tmr_r/q_9__N_104"  />
         </nets>
@@ -6740,7 +7078,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_10__N_101"  />
         <nitem  name = "tmr_r/q_10__N_100"  />
         </nets>
@@ -6848,7 +7186,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_11__N_97"  />
         <nitem  name = "tmr_r/q_11__N_96"  />
         </nets>
@@ -6956,7 +7294,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_12__N_93"  />
         <nitem  name = "tmr_r/q_12__N_92"  />
         </nets>
@@ -7064,7 +7402,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_13__N_89"  />
         <nitem  name = "tmr_r/q_13__N_88"  />
         </nets>
@@ -7172,7 +7510,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_14__N_85"  />
         <nitem  name = "tmr_r/q_14__N_84"  />
         </nets>
@@ -7219,7 +7557,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/up_N_54"  />
         </nets>
     </instance>
@@ -7292,7 +7630,7 @@
 
         <nets>
         <nitem  name = "tmr_r/gnd"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tmr_r/q_15__N_49"  />
         <nitem  name = "tmr_r/q_15__N_48"  />
         </nets>
@@ -7368,7 +7706,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n5"  />
         </nets>
@@ -7382,7 +7720,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n6"  />
         </nets>
@@ -7428,7 +7766,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n9"  />
         </nets>
@@ -7442,7 +7780,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n10"  />
         </nets>
@@ -7488,7 +7826,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n13"  />
         </nets>
@@ -7502,7 +7840,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n14"  />
         </nets>
@@ -7548,7 +7886,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n17"  />
         </nets>
@@ -7562,7 +7900,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n18"  />
         </nets>
@@ -7608,7 +7946,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n21"  />
         </nets>
@@ -7622,7 +7960,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n22"  />
         </nets>
@@ -7668,7 +8006,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n25"  />
         </nets>
@@ -7682,7 +8020,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n26"  />
         </nets>
@@ -7728,7 +8066,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n29"  />
         </nets>
@@ -7742,7 +8080,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n30"  />
         </nets>
@@ -7788,7 +8126,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n33"  />
         </nets>
@@ -7802,7 +8140,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n34"  />
         </nets>
@@ -7848,7 +8186,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n37"  />
         </nets>
@@ -7862,7 +8200,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n38"  />
         </nets>
@@ -7908,7 +8246,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n41"  />
         </nets>
@@ -7922,7 +8260,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n42"  />
         </nets>
@@ -7968,7 +8306,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n45"  />
         </nets>
@@ -7982,7 +8320,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n46"  />
         </nets>
@@ -8028,7 +8366,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n49"  />
         </nets>
@@ -8042,7 +8380,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n50"  />
         </nets>
@@ -8088,7 +8426,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n53"  />
         </nets>
@@ -8102,7 +8440,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n54"  />
         </nets>
@@ -8148,7 +8486,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n57"  />
         </nets>
@@ -8162,7 +8500,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n58"  />
         </nets>
@@ -8208,7 +8546,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n61"  />
         </nets>
@@ -8222,7 +8560,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n62"  />
         </nets>
@@ -8268,7 +8606,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n65"  />
         </nets>
@@ -8282,7 +8620,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "r3/n66"  />
         </nets>
@@ -8648,7 +8986,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n5"  />
         </nets>
@@ -8662,7 +9000,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n6"  />
         </nets>
@@ -8708,7 +9046,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n9"  />
         </nets>
@@ -8722,7 +9060,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n10"  />
         </nets>
@@ -8768,7 +9106,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n13"  />
         </nets>
@@ -8782,7 +9120,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n14"  />
         </nets>
@@ -8828,7 +9166,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n17"  />
         </nets>
@@ -8842,7 +9180,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n18"  />
         </nets>
@@ -8888,7 +9226,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n21"  />
         </nets>
@@ -8902,7 +9240,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n22"  />
         </nets>
@@ -8948,7 +9286,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n25"  />
         </nets>
@@ -8962,7 +9300,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n26"  />
         </nets>
@@ -9008,7 +9346,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n29"  />
         </nets>
@@ -9022,7 +9360,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n30"  />
         </nets>
@@ -9068,7 +9406,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n33"  />
         </nets>
@@ -9082,7 +9420,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n34"  />
         </nets>
@@ -9128,7 +9466,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n37"  />
         </nets>
@@ -9142,7 +9480,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n38"  />
         </nets>
@@ -9188,7 +9526,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n41"  />
         </nets>
@@ -9202,7 +9540,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n42"  />
         </nets>
@@ -9248,7 +9586,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n45"  />
         </nets>
@@ -9262,7 +9600,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n46"  />
         </nets>
@@ -9308,7 +9646,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n49"  />
         </nets>
@@ -9322,7 +9660,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_wr_addr/n50"  />
         </nets>
@@ -9414,7 +9752,7 @@
         <nitem  name = "s_mem_addr[3]"  />
         <nitem  name = "s_mem_addr[2]"  />
         <nitem  name = "s_mem_addr[1]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "mem_wr_addr/n8"  />
         <nitem  name = "mem_wr_addr/n12"  />
         <nitem  name = "mem_wr_addr/n16"  />
@@ -9616,7 +9954,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n5"  />
         </nets>
@@ -9630,7 +9968,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n6"  />
         </nets>
@@ -9676,7 +10014,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n9"  />
         </nets>
@@ -9690,7 +10028,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n10"  />
         </nets>
@@ -9736,7 +10074,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n13"  />
         </nets>
@@ -9750,7 +10088,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n14"  />
         </nets>
@@ -9796,7 +10134,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n17"  />
         </nets>
@@ -9810,7 +10148,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n18"  />
         </nets>
@@ -9856,7 +10194,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n21"  />
         </nets>
@@ -9870,7 +10208,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n22"  />
         </nets>
@@ -9916,7 +10254,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n25"  />
         </nets>
@@ -9930,7 +10268,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n26"  />
         </nets>
@@ -9976,7 +10314,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n29"  />
         </nets>
@@ -9990,7 +10328,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n30"  />
         </nets>
@@ -10036,7 +10374,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n33"  />
         </nets>
@@ -10050,7 +10388,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n34"  />
         </nets>
@@ -10096,7 +10434,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n37"  />
         </nets>
@@ -10110,7 +10448,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n38"  />
         </nets>
@@ -10156,7 +10494,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n41"  />
         </nets>
@@ -10170,7 +10508,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n42"  />
         </nets>
@@ -10216,7 +10554,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n45"  />
         </nets>
@@ -10230,7 +10568,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n46"  />
         </nets>
@@ -10276,7 +10614,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n49"  />
         </nets>
@@ -10290,7 +10628,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "mem_rd_addr/n50"  />
         </nets>
@@ -10382,7 +10720,7 @@
         <nitem  name = "s_mem_addr[3]"  />
         <nitem  name = "s_mem_addr[2]"  />
         <nitem  name = "s_mem_addr[1]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "mem_rd_addr/n8"  />
         <nitem  name = "mem_rd_addr/n12"  />
         <nitem  name = "mem_rd_addr/n16"  />
@@ -10584,7 +10922,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n5"  />
         </nets>
@@ -10598,7 +10936,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n6"  />
         </nets>
@@ -10644,7 +10982,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n9"  />
         </nets>
@@ -10658,7 +10996,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n10"  />
         </nets>
@@ -10704,7 +11042,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n13"  />
         </nets>
@@ -10718,7 +11056,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n14"  />
         </nets>
@@ -10764,7 +11102,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n17"  />
         </nets>
@@ -10778,7 +11116,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n18"  />
         </nets>
@@ -10824,7 +11162,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n21"  />
         </nets>
@@ -10838,7 +11176,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n22"  />
         </nets>
@@ -10884,7 +11222,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n25"  />
         </nets>
@@ -10898,7 +11236,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n26"  />
         </nets>
@@ -10944,7 +11282,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n29"  />
         </nets>
@@ -10958,7 +11296,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n30"  />
         </nets>
@@ -11004,7 +11342,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n33"  />
         </nets>
@@ -11018,7 +11356,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n34"  />
         </nets>
@@ -11064,7 +11402,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n37"  />
         </nets>
@@ -11078,7 +11416,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n38"  />
         </nets>
@@ -11124,7 +11462,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n41"  />
         </nets>
@@ -11138,7 +11476,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n42"  />
         </nets>
@@ -11184,7 +11522,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n45"  />
         </nets>
@@ -11198,7 +11536,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n46"  />
         </nets>
@@ -11244,7 +11582,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n49"  />
         </nets>
@@ -11258,7 +11596,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n50"  />
         </nets>
@@ -11304,7 +11642,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n53"  />
         </nets>
@@ -11318,7 +11656,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n54"  />
         </nets>
@@ -11364,7 +11702,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n57"  />
         </nets>
@@ -11378,7 +11716,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n58"  />
         </nets>
@@ -11424,7 +11762,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n61"  />
         </nets>
@@ -11438,7 +11776,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n62"  />
         </nets>
@@ -11484,7 +11822,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n65"  />
         </nets>
@@ -11498,7 +11836,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_lo/n66"  />
         </nets>
@@ -11864,7 +12202,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n5"  />
         </nets>
@@ -11878,7 +12216,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n6"  />
         </nets>
@@ -11924,7 +12262,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n9"  />
         </nets>
@@ -11938,7 +12276,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n10"  />
         </nets>
@@ -11984,7 +12322,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n13"  />
         </nets>
@@ -11998,7 +12336,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n14"  />
         </nets>
@@ -12044,7 +12382,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n17"  />
         </nets>
@@ -12058,7 +12396,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n18"  />
         </nets>
@@ -12104,7 +12442,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n21"  />
         </nets>
@@ -12118,7 +12456,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n22"  />
         </nets>
@@ -12164,7 +12502,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n25"  />
         </nets>
@@ -12178,7 +12516,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n26"  />
         </nets>
@@ -12224,7 +12562,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n29"  />
         </nets>
@@ -12238,7 +12576,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n30"  />
         </nets>
@@ -12284,7 +12622,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n33"  />
         </nets>
@@ -12298,7 +12636,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n34"  />
         </nets>
@@ -12344,7 +12682,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n37"  />
         </nets>
@@ -12358,7 +12696,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n38"  />
         </nets>
@@ -12404,7 +12742,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n41"  />
         </nets>
@@ -12418,7 +12756,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n42"  />
         </nets>
@@ -12464,7 +12802,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n45"  />
         </nets>
@@ -12478,7 +12816,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n46"  />
         </nets>
@@ -12524,7 +12862,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n49"  />
         </nets>
@@ -12538,7 +12876,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n50"  />
         </nets>
@@ -12584,7 +12922,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n53"  />
         </nets>
@@ -12598,7 +12936,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n54"  />
         </nets>
@@ -12644,7 +12982,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n57"  />
         </nets>
@@ -12658,7 +12996,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n58"  />
         </nets>
@@ -12704,7 +13042,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n61"  />
         </nets>
@@ -12718,7 +13056,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n62"  />
         </nets>
@@ -12764,7 +13102,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n65"  />
         </nets>
@@ -12778,7 +13116,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "desc_hi/n66"  />
         </nets>
@@ -13144,7 +13482,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n5"  />
         </nets>
@@ -13158,7 +13496,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n6"  />
         </nets>
@@ -13204,7 +13542,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n9"  />
         </nets>
@@ -13218,7 +13556,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n10"  />
         </nets>
@@ -13264,7 +13602,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n13"  />
         </nets>
@@ -13278,7 +13616,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n14"  />
         </nets>
@@ -13324,7 +13662,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n17"  />
         </nets>
@@ -13338,7 +13676,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n18"  />
         </nets>
@@ -13384,7 +13722,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n21"  />
         </nets>
@@ -13398,7 +13736,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n22"  />
         </nets>
@@ -13444,7 +13782,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n25"  />
         </nets>
@@ -13458,7 +13796,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n26"  />
         </nets>
@@ -13504,7 +13842,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n29"  />
         </nets>
@@ -13518,7 +13856,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n30"  />
         </nets>
@@ -13564,7 +13902,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n33"  />
         </nets>
@@ -13578,7 +13916,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n34"  />
         </nets>
@@ -13624,7 +13962,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n37"  />
         </nets>
@@ -13638,7 +13976,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n38"  />
         </nets>
@@ -13684,7 +14022,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n41"  />
         </nets>
@@ -13698,7 +14036,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n42"  />
         </nets>
@@ -13744,7 +14082,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n45"  />
         </nets>
@@ -13758,7 +14096,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n46"  />
         </nets>
@@ -13804,7 +14142,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n49"  />
         </nets>
@@ -13818,7 +14156,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n50"  />
         </nets>
@@ -13864,7 +14202,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n53"  />
         </nets>
@@ -13878,7 +14216,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n54"  />
         </nets>
@@ -13924,7 +14262,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n57"  />
         </nets>
@@ -13938,7 +14276,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n58"  />
         </nets>
@@ -13984,7 +14322,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n61"  />
         </nets>
@@ -13998,7 +14336,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n62"  />
         </nets>
@@ -14044,7 +14382,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n65"  />
         </nets>
@@ -14058,7 +14396,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_div_r/n66"  />
         </nets>
@@ -14424,7 +14762,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n5"  />
         </nets>
@@ -14438,7 +14776,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n6"  />
         </nets>
@@ -14484,7 +14822,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n9"  />
         </nets>
@@ -14498,7 +14836,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n10"  />
         </nets>
@@ -14544,7 +14882,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n13"  />
         </nets>
@@ -14558,7 +14896,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n14"  />
         </nets>
@@ -14604,7 +14942,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n17"  />
         </nets>
@@ -14618,7 +14956,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n18"  />
         </nets>
@@ -14664,7 +15002,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n21"  />
         </nets>
@@ -14678,7 +15016,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n22"  />
         </nets>
@@ -14724,7 +15062,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n25"  />
         </nets>
@@ -14738,7 +15076,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n26"  />
         </nets>
@@ -14784,7 +15122,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n29"  />
         </nets>
@@ -14798,7 +15136,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n30"  />
         </nets>
@@ -14844,7 +15182,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n33"  />
         </nets>
@@ -14858,7 +15196,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n34"  />
         </nets>
@@ -14904,7 +15242,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n37"  />
         </nets>
@@ -14918,7 +15256,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n38"  />
         </nets>
@@ -14964,7 +15302,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n41"  />
         </nets>
@@ -14978,7 +15316,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n42"  />
         </nets>
@@ -15024,7 +15362,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n45"  />
         </nets>
@@ -15038,7 +15376,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n46"  />
         </nets>
@@ -15084,7 +15422,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n49"  />
         </nets>
@@ -15098,7 +15436,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n50"  />
         </nets>
@@ -15144,7 +15482,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n53"  />
         </nets>
@@ -15158,7 +15496,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n54"  />
         </nets>
@@ -15204,7 +15542,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n57"  />
         </nets>
@@ -15218,7 +15556,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n58"  />
         </nets>
@@ -15264,7 +15602,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n61"  />
         </nets>
@@ -15278,7 +15616,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n62"  />
         </nets>
@@ -15324,7 +15662,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n65"  />
         </nets>
@@ -15338,7 +15676,7 @@
         </pins>
 
         <nets>
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "pwr"  />
         <nitem  name = "ckgen_rtdiv_r/n66"  />
         </nets>
@@ -16472,7 +16810,7 @@
         <nitem  name = "s_ptr_addr[3]"  />
         <nitem  name = "s_ptr_addr[2]"  />
         <nitem  name = "s_ptr_addr[1]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "ptr_mem/mem"  />
         </nets>
     </instance>
@@ -16926,7 +17264,7 @@
         <nitem  name = "s_mem_addr[3]"  />
         <nitem  name = "s_mem_addr[2]"  />
         <nitem  name = "s_mem_addr[1]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "rx_mem/mem"  />
         </nets>
     </instance>
@@ -17384,7 +17722,7 @@
         <nitem  name = "s_tx_mem_addr[2]"  />
         <nitem  name = "s_tx_mem_addr[1]"  />
         <nitem  name = "s_tx_mem_addr[0]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "tx_mem/mem"  />
         </nets>
     </instance>
@@ -17830,7 +18168,7 @@
         <nitem  name = "s_mem_addr[3]"  />
         <nitem  name = "s_mem_addr[2]"  />
         <nitem  name = "s_mem_addr[1]"  />
-        <nitem  name = "n344"  />
+        <nitem  name = "n345"  />
         <nitem  name = "aux_mem/mem"  />
         </nets>
     </instance>
@@ -19503,6 +19841,1826 @@
         <nitem  name = "led_con_drv/s_count_4__N_1560[2]"  />
         <nitem  name = "led_con_drv/s_count_4__N_1560[1]"  />
         <nitem  name = "led_con_drv/s_count_4__N_1560[0]"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst24_OFS1P3DX0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_cke"  />
+        <nitem  name = "ddr_phy/buf_ckeo0"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst23_OB1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_csn1"  />
+        <nitem  name = "ddr_phy/buf_csno1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst23_OB0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_csn0"  />
+        <nitem  name = "ddr_phy/buf_csno0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst22_OFS1P3DX1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_csn[1]"  />
+        <nitem  name = "ddr_phy/buf_csno1"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst22_OFS1P3DX0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_csn[0]"  />
+        <nitem  name = "ddr_phy/buf_csno0"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst21_OB"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_wen"  />
+        <nitem  name = "ddr_phy/buf_weno"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst20_OFS1P3DX"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_wen"  />
+        <nitem  name = "ddr_phy/buf_weno"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst19_OB"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_casn"  />
+        <nitem  name = "ddr_phy/buf_casno"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst18_OFS1P3DX"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_casn"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/buf_casno"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst17_OB"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_rasn"  />
+        <nitem  name = "ddr_phy/buf_rasno"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst16_OFS1P3DX"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_rasn"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/buf_rasno"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst15_OB1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_ba[1]"  />
+        <nitem  name = "ddr_phy/buf_bao1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst15_OB0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_ba[0]"  />
+        <nitem  name = "ddr_phy/buf_bao0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst14_OFS1P3DX1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_ba[1]"  />
+        <nitem  name = "ddr_phy/buf_bao1"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst14_OFS1P3DX0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_ba[0]"  />
+        <nitem  name = "ddr_phy/buf_bao0"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB12"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[12]"  />
+        <nitem  name = "ddr_phy/buf_addro12"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB11"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[11]"  />
+        <nitem  name = "ddr_phy/buf_addro11"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB10"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[10]"  />
+        <nitem  name = "ddr_phy/buf_addro10"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB9"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[9]"  />
+        <nitem  name = "ddr_phy/buf_addro9"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB8"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[8]"  />
+        <nitem  name = "ddr_phy/buf_addro8"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[7]"  />
+        <nitem  name = "ddr_phy/buf_addro7"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[6]"  />
+        <nitem  name = "ddr_phy/buf_addro6"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[5]"  />
+        <nitem  name = "ddr_phy/buf_addro5"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[4]"  />
+        <nitem  name = "ddr_phy/buf_addro4"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[3]"  />
+        <nitem  name = "ddr_phy/buf_addro3"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[2]"  />
+        <nitem  name = "ddr_phy/buf_addro2"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[1]"  />
+        <nitem  name = "ddr_phy/buf_addro1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst13_OB0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_addr[0]"  />
+        <nitem  name = "ddr_phy/buf_addro0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX12"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[12]"  />
+        <nitem  name = "ddr_phy/buf_addro12"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX11"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[11]"  />
+        <nitem  name = "ddr_phy/buf_addro11"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX10"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[10]"  />
+        <nitem  name = "ddr_phy/buf_addro10"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX9"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[9]"  />
+        <nitem  name = "ddr_phy/buf_addro9"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX8"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[8]"  />
+        <nitem  name = "ddr_phy/buf_addro8"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[7]"  />
+        <nitem  name = "ddr_phy/buf_addro7"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[6]"  />
+        <nitem  name = "ddr_phy/buf_addro6"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[5]"  />
+        <nitem  name = "ddr_phy/buf_addro5"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[4]"  />
+        <nitem  name = "ddr_phy/buf_addro4"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[3]"  />
+        <nitem  name = "ddr_phy/buf_addro3"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[2]"  />
+        <nitem  name = "ddr_phy/buf_addro2"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[1]"  />
+        <nitem  name = "ddr_phy/buf_addro1"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst12_OFS1P3DX0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "CD"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "SP"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_addr[0]"  />
+        <nitem  name = "ddr_phy/buf_addro0"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst11_OB0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_clk"  />
+        <nitem  name = "ddr_phy/buf_clkout0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/scuba_vhi_inst"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "Z"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst10_ODDRXE0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/buf_clkout0"  />
+        <nitem  name = "ddr_phy/scuba_vhi"  />
+        <nitem  name = "ddr_phy/scuba_vlo"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst9_TDDRA1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "TD"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "TQ"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_dqstri1"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/dqstrio1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst9_TDDRA0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "TD"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "TQ"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_dqstri0"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/dqstrio0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst8_ODDRDQSX1A1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_dqs1"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/scuba_vlo"  />
+        <nitem  name = "ddr_phy/dqsout1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/scuba_vlo_inst"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "Z"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_phy/scuba_vlo"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst8_ODDRDQSX1A0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_dqs0"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/scuba_vlo"  />
+        <nitem  name = "ddr_phy/dqsout0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst7_TDDRA1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "TD"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "TQ"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_dtri1"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst7_TDDRA0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "TD"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "TQ"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_dtri0"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[15]"  />
+        <nitem  name = "s_ddr_dataout0[7]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo15"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[14]"  />
+        <nitem  name = "s_ddr_dataout0[6]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo14"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[13]"  />
+        <nitem  name = "s_ddr_dataout0[5]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo13"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[12]"  />
+        <nitem  name = "s_ddr_dataout0[4]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo12"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[11]"  />
+        <nitem  name = "s_ddr_dataout0[3]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo11"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[10]"  />
+        <nitem  name = "s_ddr_dataout0[2]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo10"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[9]"  />
+        <nitem  name = "s_ddr_dataout0[1]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo9"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_1_0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[8]"  />
+        <nitem  name = "s_ddr_dataout0[0]"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqo8"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[15]"  />
+        <nitem  name = "s_ddr_dataout0[7]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo7"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[14]"  />
+        <nitem  name = "s_ddr_dataout0[6]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo6"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[13]"  />
+        <nitem  name = "s_ddr_dataout0[5]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo5"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[12]"  />
+        <nitem  name = "s_ddr_dataout0[4]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo4"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[11]"  />
+        <nitem  name = "s_ddr_dataout0[3]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo3"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[10]"  />
+        <nitem  name = "s_ddr_dataout0[2]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo2"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[9]"  />
+        <nitem  name = "s_ddr_dataout0[1]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_ODDRDQSX1A_0_0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "D1"  direction = "in"  />
+        <pitem  name = "D0"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "in"  />
+        <pitem  name = "Q"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_dataout0[8]"  />
+        <nitem  name = "s_ddr_dataout0[0]"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqo0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[15]"  />
+        <nitem  name = "s_ddr_datain1[7]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t15"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[14]"  />
+        <nitem  name = "s_ddr_datain1[6]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t14"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[13]"  />
+        <nitem  name = "s_ddr_datain1[5]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t13"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[12]"  />
+        <nitem  name = "s_ddr_datain1[4]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t12"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[11]"  />
+        <nitem  name = "s_ddr_datain1[3]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t11"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[10]"  />
+        <nitem  name = "s_ddr_datain1[2]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t10"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[9]"  />
+        <nitem  name = "s_ddr_datain1[1]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t9"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_1_0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain1[8]"  />
+        <nitem  name = "s_ddr_datain1[0]"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/datain_t8"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[15]"  />
+        <nitem  name = "s_ddr_datain0[7]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t7"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[14]"  />
+        <nitem  name = "s_ddr_datain0[6]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t6"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[13]"  />
+        <nitem  name = "s_ddr_datain0[5]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t5"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[12]"  />
+        <nitem  name = "s_ddr_datain0[4]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t4"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[11]"  />
+        <nitem  name = "s_ddr_datain0[3]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t3"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[10]"  />
+        <nitem  name = "s_ddr_datain0[2]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t2"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[9]"  />
+        <nitem  name = "s_ddr_datain0[1]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst_IDDRDQSX1A_0_0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "Q1"  direction = "out"  />
+        <pitem  name = "Q0"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "in"  />
+        <pitem  name = "DDRCLKPOL"  direction = "in"  />
+        <pitem  name = "D"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_datain0[8]"  />
+        <nitem  name = "s_ddr_datain0[0]"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/datain_t0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst6_DQSBUFH1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "BURSTDET"  direction = "out"  />
+        <pitem  name = "DATAVALID"  direction = "out"  />
+        <pitem  name = "READ"  direction = "in"  />
+        <pitem  name = "READCLKSEL0"  direction = "in"  />
+        <pitem  name = "READCLKSEL1"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "out"  />
+        <pitem  name = "DDRCLKPOL"  direction = "out"  />
+        <pitem  name = "DQSDEL"  direction = "in"  />
+        <pitem  name = "DQSI"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_burstdet1"  />
+        <nitem  name = "ddr_phy/datavalid_1"  />
+        <nitem  name = "s_ddr_read1"  />
+        <nitem  name = "s_ddr_readclksel01"  />
+        <nitem  name = "s_ddr_readclksel11"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/dqsw90_1"  />
+        <nitem  name = "ddr_phy/dqsr90_1"  />
+        <nitem  name = "ddr_phy/ddrclkpol1"  />
+        <nitem  name = "ddr_phy/dqsdel"  />
+        <nitem  name = "ddr_phy/dqsin1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst6_DQSBUFH0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "BURSTDET"  direction = "out"  />
+        <pitem  name = "DATAVALID"  direction = "out"  />
+        <pitem  name = "READ"  direction = "in"  />
+        <pitem  name = "READCLKSEL0"  direction = "in"  />
+        <pitem  name = "READCLKSEL1"  direction = "in"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "SCLK"  direction = "in"  />
+        <pitem  name = "DQSW90"  direction = "out"  />
+        <pitem  name = "DQSR90"  direction = "out"  />
+        <pitem  name = "DDRCLKPOL"  direction = "out"  />
+        <pitem  name = "DQSDEL"  direction = "in"  />
+        <pitem  name = "DQSI"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_burstdet0"  />
+        <nitem  name = "ddr_phy/datavalid_0"  />
+        <nitem  name = "s_ddr_read0"  />
+        <nitem  name = "s_ddr_readclksel00"  />
+        <nitem  name = "s_ddr_readclksel10"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "ddr_phy/dqsw90_0"  />
+        <nitem  name = "ddr_phy/dqsr90_0"  />
+        <nitem  name = "ddr_phy/ddrclkpol0"  />
+        <nitem  name = "ddr_phy/dqsdel"  />
+        <nitem  name = "ddr_phy/dqsin0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst5_DQSDLLC"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "FREEZE"  direction = "in"  />
+        <pitem  name = "LOCK"  direction = "out"  />
+        <pitem  name = "RST"  direction = "in"  />
+        <pitem  name = "CLK"  direction = "in"  />
+        <pitem  name = "UDDCNTLN"  direction = "in"  />
+        <pitem  name = "DQSDEL"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "s_ddr_freeze"  />
+        <nitem  name = "s_ddr_lock"  />
+        <nitem  name = "s_cfg[6]"  />
+        <nitem  name = "mclk"  />
+        <nitem  name = "s_ddr_uddcntln"  />
+        <nitem  name = "ddr_phy/dqsdel"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[15]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo15"  />
+        <nitem  name = "ddr_phy/datain_t15"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[14]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo14"  />
+        <nitem  name = "ddr_phy/datain_t14"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[13]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo13"  />
+        <nitem  name = "ddr_phy/datain_t13"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[12]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo12"  />
+        <nitem  name = "ddr_phy/datain_t12"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[11]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo11"  />
+        <nitem  name = "ddr_phy/datain_t11"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[10]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo10"  />
+        <nitem  name = "ddr_phy/datain_t10"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[9]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo9"  />
+        <nitem  name = "ddr_phy/datain_t9"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst4_BB0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[8]"  />
+        <nitem  name = "ddr_phy/dqtri1"  />
+        <nitem  name = "ddr_phy/dqo8"  />
+        <nitem  name = "ddr_phy/datain_t8"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst3_BB"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "T"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_udqs"  />
+        <nitem  name = "ddr_phy/dqsin1"  />
+        <nitem  name = "ddr_phy/dqsout1"  />
+        <nitem  name = "ddr_phy/dqstrio1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB7"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[7]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo7"  />
+        <nitem  name = "ddr_phy/datain_t7"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB6"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[6]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo6"  />
+        <nitem  name = "ddr_phy/datain_t6"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB5"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[5]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo5"  />
+        <nitem  name = "ddr_phy/datain_t5"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB4"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[4]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo4"  />
+        <nitem  name = "ddr_phy/datain_t4"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB3"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[3]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo3"  />
+        <nitem  name = "ddr_phy/datain_t3"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB2"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[2]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo2"  />
+        <nitem  name = "ddr_phy/datain_t2"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB1"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[1]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo1"  />
+        <nitem  name = "ddr_phy/datain_t1"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst2_BB0"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "T"  direction = "in"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "O"  direction = "out"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_dq[0]"  />
+        <nitem  name = "ddr_phy/dqtri0"  />
+        <nitem  name = "ddr_phy/dqo0"  />
+        <nitem  name = "ddr_phy/datain_t0"  />
+        </nets>
+    </instance>
+
+    <instance  name = "ddr_phy/Inst1_BB"  library = "work"  arch = "RTL"  type = "comb">
+        <pins>
+        <pitem  name = "B"  direction = "inout"  />
+        <pitem  name = "O"  direction = "out"  />
+        <pitem  name = "I"  direction = "in"  />
+        <pitem  name = "T"  direction = "in"  />
+        </pins>
+
+        <nets>
+        <nitem  name = "ddr_ldqs"  />
+        <nitem  name = "ddr_phy/dqsin0"  />
+        <nitem  name = "ddr_phy/dqsout0"  />
+        <nitem  name = "ddr_phy/dqstrio0"  />
         </nets>
     </instance>
 
@@ -42706,6 +44864,7 @@
         </nets>
     </instance>
 
+    <instance  name = "Inst5_DQSDLLC"  />
     <instance  name = "addr_r"  />
     <instance  name = "aux_mem"  />
     <instance  name = "cfg_r"  />
@@ -42715,6 +44874,7 @@
     <instance  name = "cklgen_1khz"  />
     <instance  name = "cklgen_1mhz"  />
     <instance  name = "cram_bus"  />
+    <instance  name = "ddr_phy"  />
     <instance  name = "desc_hi"  />
     <instance  name = "desc_lo"  />
     <instance  name = "desc_mem"  />
@@ -42741,8 +44901,8 @@
 
     <regs>
         <reg  name = "cram_bus/s_op_mem_rd_133"  />
-        <reg  name = "s_irq_out_65"  />
-        <reg  name = "s_tmr_cnt_en_66"  />
+        <reg  name = "s_irq_out_66"  />
+        <reg  name = "s_tmr_cnt_en_67"  />
         <reg  name = "cram_bus/s_op_mem_wr_132"  />
         <reg  name = "s_irq_reg"  />
         <reg  name = "cram_bus/s_op_reg_wr_134"  />
@@ -42959,21 +45119,22 @@
     -->
 
     <ramnets>
-        <ramnet  name = "desc_mem/ram_hi"  />
-        <ramnet  name = "rx_mem/mem"  />
-        <ramnet  name = "tx_mem/mem"  />
-        <ramnet  name = "desc_mem/ram_lo"  />
         <ramnet  name = "aux_mem/mem"  />
+        <ramnet  name = "rx_mem/mem"  />
+        <ramnet  name = "desc_mem/ram_lo"  />
+        <ramnet  name = "tx_mem/mem"  />
         <ramnet  name = "ptr_mem/mem"  />
+        <ramnet  name = "desc_mem/ram_hi"  />
     </ramnets>
 
     <!--
-        Views in design "yard_ice": 19
+        Views in design "yard_ice": 20
     -->
 
     <views>
         <view  name = "counter(16,16)"  />
         <view  name = "cram_adaptor(2,12,4)"  />
+        <view  name = "ddr_phy"  />
         <view  name = "dpram(16,10)"  />
         <view  name = "dpram(16,8)"  />
         <view  name = "jtag_clk_scaler(1000)"  />

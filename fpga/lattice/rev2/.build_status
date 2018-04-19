@@ -5,41 +5,41 @@
             <Task name="IBIS" build_result="0" update_result="3" update_time="0"/>
             <Task name="TimingSimFileVlg" build_result="0" update_result="3" update_time="0"/>
             <Task name="TimingSimFileVHD" build_result="0" update_result="3" update_time="0"/>
-            <Task name="Bitgen" build_result="0" update_result="2" update_time="1523472516"/>
+            <Task name="Bitgen" build_result="0" update_result="3" update_time="0"/>
             <Task name="Jedecgen" build_result="0" update_result="3" update_time="0"/>
         </Milestone>
-        <Milestone name="Map" build_result="0" build_time="1523472506">
-            <Task name="Map" build_result="0" update_result="2" update_time="1523472506"/>
-            <Task name="MapTrace" build_result="0" update_result="2" update_time="1523472460"/>
-            <Task name="MapVerilogSimFile" build_result="0" update_result="2" update_time="1523472462"/>
-            <Task name="MapVHDLSimFile" build_result="0" update_result="2" update_time="1523472466"/>
+        <Milestone name="Map" build_result="0" build_time="1523987965">
+            <Task name="Map" build_result="0" update_result="2" update_time="1523987965"/>
+            <Task name="MapTrace" build_result="0" update_result="2" update_time="1523985183"/>
+            <Task name="MapVerilogSimFile" build_result="0" update_result="3" update_time="0"/>
+            <Task name="MapVHDLSimFile" build_result="0" update_result="3" update_time="0"/>
         </Milestone>
-        <Milestone name="PAR" build_result="0" build_time="1523472513">
-            <Task name="PAR" build_result="0" update_result="2" update_time="1523472513"/>
-            <Task name="PARTrace" build_result="0" update_result="2" update_time="1523472485"/>
-            <Task name="IOTiming" build_result="0" update_result="2" update_time="1523472488"/>
+        <Milestone name="PAR" build_result="0" build_time="1523987983">
+            <Task name="PAR" build_result="0" update_result="2" update_time="1523987983"/>
+            <Task name="PARTrace" build_result="0" update_result="3" update_time="0"/>
+            <Task name="IOTiming" build_result="0" update_result="3" update_time="0"/>
         </Milestone>
-        <Milestone name="Synthesis" build_result="0" build_time="1523472505">
-            <Task name="Lattice_Synthesis" build_result="0" update_result="2" update_time="1523472505"/>
-            <Task name="LSE_Compile" build_result="0" update_result="2" update_time="1523472503"/>
+        <Milestone name="Synthesis" build_result="1" build_time="1524151355">
+            <Task name="Lattice_Synthesis" build_result="1" update_result="2" update_time="1524151355"/>
+            <Task name="LSE_Compile" build_result="0" update_result="2" update_time="1524151355"/>
         </Milestone>
         <Milestone name="TOOL_Report" build_result="0" build_time="0">
-            <Task name="HDLE" build_result="2" update_result="0" update_time="1523473367"/>
+            <Task name="HDLE" build_result="0" update_result="2" update_time="1524151272"/>
+            <Task name="SSO" build_result="0" update_result="2" update_time="1523987530"/>
             <Task name="BKM" build_result="0" update_result="2" update_time="0"/>
-            <Task name="SSO" build_result="0" update_result="2" update_time="0"/>
             <Task name="PIODRC" build_result="0" update_result="2" update_time="0"/>
             <Task name="DEC" build_result="0" update_result="2" update_time="0"/>
         </Milestone>
-        <Report name=".vdbs/yardice2_rev2_map.vdb" last_build_time="1523472506" last_build_size="317710"/>
+        <Report name=".vdbs/yardice2_rev2_map.vdb" last_build_time="1523987965" last_build_size="332612"/>
         <Report name="yardice2_rev2.bgn" last_build_time="1523472515" last_build_size="3897"/>
         <Report name="yardice2_rev2.bit" last_build_time="1523472515" last_build_size="31043"/>
         <Report name="yardice2_rev2.ior" last_build_time="1523472488" last_build_size="4496"/>
-        <Report name="yardice2_rev2.lsedata" last_build_time="1523472503" last_build_size="1889187"/>
-        <Report name="yardice2_rev2.ncd" last_build_time="1523472513" last_build_size="1293873"/>
-        <Report name="yardice2_rev2.ngd" last_build_time="1523472505" last_build_size="1081077"/>
-        <Report name="yardice2_rev2.tw1" last_build_time="1523472460" last_build_size="23833"/>
+        <Report name="yardice2_rev2.lsedata" last_build_time="1524151353" last_build_size="1974447"/>
+        <Report name="yardice2_rev2.ncd" last_build_time="1523987983" last_build_size="1363734"/>
+        <Report name="yardice2_rev2.ngd" last_build_time="1524150954" last_build_size="1095471"/>
+        <Report name="yardice2_rev2.tw1" last_build_time="1523985183" last_build_size="25876"/>
         <Report name="yardice2_rev2.twr" last_build_time="1523472485" last_build_size="122735"/>
-        <Report name="yardice2_rev2_map.ncd" last_build_time="1523472506" last_build_size="871835"/>
+        <Report name="yardice2_rev2_map.ncd" last_build_time="1523987965" last_build_size="929899"/>
         <Report name="yardice2_rev2_mapvho.sdf" last_build_time="1523472466" last_build_size="934815"/>
         <Report name="yardice2_rev2_mapvho.vho" last_build_time="1523472465" last_build_size="6679430"/>
         <Report name="yardice2_rev2_mapvo.sdf" last_build_time="1523472462" last_build_size="939475"/>

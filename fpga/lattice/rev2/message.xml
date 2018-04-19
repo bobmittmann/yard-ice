@@ -349,18 +349,66 @@
         <Message>
             <ID>35921012</ID>
             <Severity>Info</Severity>
-            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(33): </Dynamic>
-            <Dynamic>yard_ice</Dynamic>
-            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
-            <Navigation>33</Navigation>
+            <Dynamic>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(14): </Dynamic>
+            <Dynamic>ddr_phy</Dynamic>
+            <Navigation>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd</Navigation>
+            <Navigation>14</Navigation>
         </Message>
         <Message>
             <ID>35921010</ID>
             <Severity>Info</Severity>
-            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(75): </Dynamic>
+            <Dynamic>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(62): </Dynamic>
+            <Dynamic>structure</Dynamic>
+            <Navigation>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd</Navigation>
+            <Navigation>62</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(14): </Dynamic>
+            <Dynamic>ddr_phy</Dynamic>
+            <Navigation>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd</Navigation>
+            <Navigation>14</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(62): </Dynamic>
+            <Dynamic>structure</Dynamic>
+            <Navigation>c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd</Navigation>
+            <Navigation>62</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl(67): </Dynamic>
+            <Dynamic>ddr_sdram_dual</Dynamic>
+            <Navigation>c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl</Navigation>
+            <Navigation>67</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl(131): </Dynamic>
+            <Dynamic>rtl</Dynamic>
+            <Navigation>c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl</Navigation>
+            <Navigation>131</Navigation>
+        </Message>
+        <Message>
+            <ID>35921012</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(66): </Dynamic>
+            <Dynamic>yard_ice</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>66</Navigation>
+        </Message>
+        <Message>
+            <ID>35921010</ID>
+            <Severity>Info</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(123): </Dynamic>
             <Dynamic>structure</Dynamic>
             <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
-            <Navigation>75</Navigation>
+            <Navigation>123</Navigation>
         </Message>
         <Message>
             <ID>35928037</ID>
@@ -377,13 +425,266 @@
             <Navigation>84</Navigation>
         </Message>
         <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(362): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_cmd_stb</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>362</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(365): </Dynamic>
+            <Dynamic>&quot;UUUUUUUUUUUUUUUU&quot;</Dynamic>
+            <Dynamic>s_ddr_cmd_dat</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>365</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(367): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mwr_cyc</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>367</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(368): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mwe_bst</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>368</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(369): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mwr_stb</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>369</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(372): </Dynamic>
+            <Dynamic>&quot;UUUUUUUUUUUUUUUUUUUUU&quot;</Dynamic>
+            <Dynamic>s_ddr_mwr_adr</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>372</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(373): </Dynamic>
+            <Dynamic>&quot;UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU&quot;</Dynamic>
+            <Dynamic>s_ddr_mwr_dat</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>373</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(374): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mwr_bst</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>374</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(376): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mrd_cyc</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>376</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(377): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mrd_we</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>377</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(378): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mrd_stb</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>378</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(381): </Dynamic>
+            <Dynamic>&quot;UUUUUUUUUUUUUUUUUUUUU&quot;</Dynamic>
+            <Dynamic>s_ddr_mrd_adr</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>381</Navigation>
+        </Message>
+        <Message>
+            <ID>35921303</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(383): </Dynamic>
+            <Dynamic>'U'</Dynamic>
+            <Dynamic>s_ddr_mrd_bst</Dynamic>
+            <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
+            <Navigation>383</Navigation>
+        </Message>
+        <Message>
             <ID>35921205</ID>
             <Severity>Warning</Severity>
-            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(73): </Dynamic>
+            <Dynamic>c:/devel/yard-ice/src/fpga/yard_ice.vhdl(121): </Dynamic>
             <Dynamic>yard_ice</Dynamic>
             <Dynamic>structure</Dynamic>
             <Navigation>c:/devel/yard-ice/src/fpga/yard_ice.vhdl</Navigation>
-            <Navigation>73</Navigation>
+            <Navigation>121</Navigation>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35002005</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_ldqm</Dynamic>
+        </Message>
+        <Message>
+            <ID>35002005</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_udqm</Dynamic>
         </Message>
         <Message>
             <ID>35002005</ID>
@@ -421,31 +722,359 @@
             <Dynamic>\mem_rd_addr/s_reg</Dynamic>
         </Message>
         <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001537</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>OB</Dynamic>
+            <Dynamic>O</Dynamic>
+        </Message>
+        <Message>
             <ID>35002005</ID>
             <Severity>Warning</Severity>
             <Dynamic>clk_aux</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[15]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[14]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[13]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[12]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[11]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[10]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[9]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[8]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[7]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[6]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[5]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[4]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[3]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[2]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[1]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_dq[0]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_ldqs</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_udqs</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[12]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[11]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[10]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[9]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[8]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[7]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[6]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[5]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[4]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[3]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[2]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[1]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_addr[0]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_cke</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_clk</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_casn</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_rasn</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_wen</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_csn0</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_csn1</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_ba[1]</Dynamic>
+        </Message>
+        <Message>
+            <ID>35001263</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_ba[0]</Dynamic>
         </Message>
         <Message>
             <ID>35001611</ID>
             <Severity>Warning</Severity>
         </Message>
         <Message>
-            <ID>1166052</ID>
-            <Severity>Warning</Severity>
+            <ID>1166315</ID>
+            <Severity>Error</Severity>
             <Dynamic>logical</Dynamic>
-            <Dynamic>clk_aux</Dynamic>
-            <Navigation>clk_aux</Navigation>
+            <Dynamic>ddr_ctl</Dynamic>
+            <Dynamic>ddr_sdram_dual</Dynamic>
         </Message>
+    </Task>
+    <Task name="MapTrace">
         <Message>
-            <ID>1166064</ID>
+            <ID>70061003</ID>
             <Severity>Warning</Severity>
-            <Dynamic>input</Dynamic>
-            <Dynamic>clk_aux</Dynamic>
-        </Message>
-        <Message>
-            <ID>1163101</ID>
-            <Severity>Warning</Severity>
-            <Dynamic>2</Dynamic>
+            <Dynamic>ddr_phy/Inst5_DQSDLLC</Dynamic>
         </Message>
     </Task>
     <Task name="PAR">
@@ -453,13 +1082,18 @@
             <ID>66011008</ID>
             <Severity>Warning</Severity>
             <Dynamic>
-   Signal=mclk_c_enable_115 loads=4 clock_loads=1</Dynamic>
+   Signal=mclk_c_enable_95 loads=4 clock_loads=1</Dynamic>
         </Message>
         <Message>
             <ID>66011008</ID>
             <Severity>Warning</Severity>
             <Dynamic>
-   Signal=mclk_c_enable_115 loads=4 clock_loads=1</Dynamic>
+   Signal=mclk_c_enable_95 loads=4 clock_loads=1</Dynamic>
+        </Message>
+        <Message>
+            <ID>70061003</ID>
+            <Severity>Warning</Severity>
+            <Dynamic>ddr_phy/Inst5_DQSDLLC</Dynamic>
         </Message>
     </Task>
 </BaliMessageLog>

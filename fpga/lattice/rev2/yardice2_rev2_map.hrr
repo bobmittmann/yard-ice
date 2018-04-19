@@ -3,35 +3,38 @@ Report for cell yard_ice
    Instance path: yard_ice
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	     550.00        100.0
-                                  LUT4	     854.00        100.0
-                                 IOBUF	         35        100.0
-                                PFUREG	        749        100.0
+                                  SLIC	     552.00        100.0
+                                 IOLGC	      18.00        100.0
+                                  LUT4	     861.00        100.0
+                                 IOREG	         18        100.0
+                                 IOBUF	         74        100.0
+                                PFUREG	        750        100.0
                                 RIPPLE	         84        100.0
                                    EBR	          8        100.0
 SUB MODULES
                                   cell	      count    SLC Usage(%)
-    jtag_led_drv(31,false,false,false)	          1         1.0
+                                 sdram	          1         0.0
                     jtag_reg(16,16)_U4	          1         0.7
                     jtag_reg(16,16)_U7	          1         0.7
-                    jtag_reg(16,16)_U8	          1         0.7
+                    jtag_reg(16,16)_U8	          1         0.8
                         jtag_reg(16,4)	          1         0.2
-                    jtag_reg(16,16)_U5	          1         1.0
+                    jtag_reg(16,16)_U5	          1         0.9
                     jtag_reg(16,16)_U6	          1         0.7
+              jtag_desc_ram(16,9,32,8)	          1         0.0
+    jtag_led_drv(31,false,false,false)	          1         1.0
                     jtag_reg(16,12)_U2	          1         0.5
                        jtag_reg(16,16)	          1         0.7
                        jtag_reg(16,12)	          1         0.5
  jtag_led_drv(31,false,false,false)_U3	          1         1.0
-              jtag_desc_ram(16,9,32,8)	          1         0.0
 jtag_enh_shifter(16,10,10,16,8,32,8,16,16)	          1        57.9
                  jtag_clk_scaler(1000)	          1         1.5
-                   jtag_clk_scaler(60)	          1         0.9
-                       dpram(16,10)_U1	          1         0.2
-                        dpram(16,8)_U9	          1         0.0
+                   jtag_clk_scaler(60)	          1         1.0
                            dpram(16,8)	          1         0.0
+                        dpram(16,8)_U9	          1         0.0
                           dpram(16,10)	          1         0.0
+                       dpram(16,10)_U1	          1         0.2
                      counter(16,16)_U0	          1         2.1
-                  cram_adaptor(2,12,4)	          1        14.0
+                  cram_adaptor(2,12,4)	          1        14.1
 ---------------------------------------------------
 Report for cell jtag_led_drv(31,false,false,false)
    Instance path: yard_ice/led_run_drv
@@ -45,7 +48,7 @@ Report for cell jtag_reg(16,16)_U5
    Instance path: yard_ice/desc_hi
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	       5.33         1.0
+                                  SLIC	       4.83         0.9
                                 PFUREG	         16         2.1
 ---------------------------------------------------
 Report for cell jtag_reg(16,12)
@@ -62,27 +65,12 @@ Report for cell jtag_reg(16,16)_U4
                                   SLIC	       4.00         0.7
                                 PFUREG	         16         2.1
 ---------------------------------------------------
-Report for cell jtag_reg(16,12)_U2
-   Instance path: yard_ice/mem_rd_addr
-                     Cell usage:
-                                  cell	      count    Res Usage(%)
-                                  SLIC	       2.83         0.5
-                                PFUREG	         11         1.5
----------------------------------------------------
-Report for cell counter(16,16)_U0
-   Instance path: yard_ice/tmr_r
-                     Cell usage:
-                                  cell	      count    Res Usage(%)
-                                  SLIC	      11.50         2.1
-                                  LUT4	      29.00         3.4
-                                PFUREG	         16         2.1
----------------------------------------------------
 Report for cell cram_adaptor(2,12,4)
    Instance path: yard_ice/cram_bus
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	      76.83        14.0
-                                  LUT4	     129.00        15.1
+                                  SLIC	      77.58        14.1
+                                  LUT4	     129.00        15.0
                                 PFUREG	        138        18.4
 SUB MODULES
                                   cell	      count    SLC Usage(%)
@@ -105,12 +93,34 @@ Report for cell counter(16,16)
                                   LUT4	      41.33         4.8
                                 PFUREG	         22         2.9
 ---------------------------------------------------
+Report for cell counter(16,16)_U0
+   Instance path: yard_ice/tmr_r
+                     Cell usage:
+                                  cell	      count    Res Usage(%)
+                                  SLIC	      11.50         2.1
+                                  LUT4	      29.00         3.4
+                                PFUREG	         16         2.1
+---------------------------------------------------
+Report for cell jtag_reg(16,12)_U2
+   Instance path: yard_ice/mem_rd_addr
+                     Cell usage:
+                                  cell	      count    Res Usage(%)
+                                  SLIC	       2.83         0.5
+                                PFUREG	         11         1.5
+---------------------------------------------------
+Report for cell sdram
+   Instance path: yard_ice/ddr_phy
+                     Cell usage:
+                                  cell	      count    Res Usage(%)
+                                 IOLGC	      18.00        100.0
+                                 IOREG	         18        100.0
+---------------------------------------------------
 Report for cell jtag_reg(16,16)_U8
    Instance path: yard_ice/cfg_r
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	       4.00         0.7
-                                PFUREG	         16         2.1
+                                  SLIC	       4.33         0.8
+                                PFUREG	         17         2.3
 ---------------------------------------------------
 Report for cell jtag_reg(16,16)_U7
    Instance path: yard_ice/ckgen_div_r
@@ -129,17 +139,8 @@ Report for cell jtag_reg(16,16)
    Instance path: yard_ice/r3
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	       3.90         0.7
+                                  SLIC	       4.00         0.7
                                 PFUREG	         16         2.1
----------------------------------------------------
-Report for cell jtag_clk_scaler(1000)
-   Instance path: yard_ice/cklgen_1khz
-                     Cell usage:
-                                  cell	      count    Res Usage(%)
-                                  SLIC	       8.25         1.5
-                                  LUT4	       8.00         0.9
-                                PFUREG	         11         1.5
-                                RIPPLE	          6         7.1
 ---------------------------------------------------
 Report for cell dpram(16,8)
    Instance path: yard_ice/ptr_mem
@@ -147,11 +148,34 @@ Report for cell dpram(16,8)
                                   cell	      count    Res Usage(%)
                                    EBR	          1        12.5
 ---------------------------------------------------
+Report for cell jtag_clk_scaler(1000)
+   Instance path: yard_ice/cklgen_1khz
+                     Cell usage:
+                                  cell	      count    Res Usage(%)
+                                  SLIC	       8.42         1.5
+                                  LUT4	       8.00         0.9
+                                PFUREG	         11         1.5
+                                RIPPLE	          6         7.1
+---------------------------------------------------
 Report for cell dpram(16,8)_U9
    Instance path: yard_ice/aux_mem
                      Cell usage:
                                   cell	      count    Res Usage(%)
                                    EBR	          1        12.5
+---------------------------------------------------
+Report for cell jtag_reg(16,16)_U6
+   Instance path: yard_ice/ckgen_rtdiv_r
+                     Cell usage:
+                                  cell	      count    Res Usage(%)
+                                  SLIC	       4.00         0.7
+                                PFUREG	         16         2.1
+---------------------------------------------------
+Report for cell jtag_reg(16,4)
+   Instance path: yard_ice/int_en_r
+                     Cell usage:
+                                  cell	      count    Res Usage(%)
+                                  SLIC	       1.00         0.2
+                                PFUREG	          4         0.5
 ---------------------------------------------------
 Report for cell jtag_led_drv(31,false,false,false)_U3
    Instance path: yard_ice/led_con_drv
@@ -161,51 +185,36 @@ Report for cell jtag_led_drv(31,false,false,false)_U3
                                   LUT4	      12.00         1.4
                                 PFUREG	          8         1.1
 ---------------------------------------------------
-Report for cell jtag_reg(16,4)
-   Instance path: yard_ice/int_en_r
+Report for cell dpram(16,10)
+   Instance path: yard_ice/tx_mem
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	       1.00         0.2
-                                PFUREG	          4         0.5
----------------------------------------------------
-Report for cell jtag_reg(16,16)_U6
-   Instance path: yard_ice/ckgen_rtdiv_r
-                     Cell usage:
-                                  cell	      count    Res Usage(%)
-                                  SLIC	       4.00         0.7
-                                PFUREG	         16         2.1
----------------------------------------------------
-Report for cell jtag_clk_scaler(60)
-   Instance path: yard_ice/cklgen_1mhz
-                     Cell usage:
-                                  cell	      count    Res Usage(%)
-                                  SLIC	       5.17         0.9
-                                  LUT4	       3.00         0.4
-                                PFUREG	          7         0.9
-                                RIPPLE	          4         4.8
+                                  SLIC	       0.25         0.0
+                                PFUREG	          1         0.1
+                                   EBR	          2        25.0
 ---------------------------------------------------
 Report for cell jtag_enh_shifter(16,10,10,16,8,32,8,16,16)
    Instance path: yard_ice/shifter
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	     318.43        57.9
-                                  LUT4	     459.33        53.8
+                                  SLIC	     319.67        57.9
+                                  LUT4	     461.67        53.6
                                 PFUREG	        431        57.5
                                 RIPPLE	         74        88.1
 SUB MODULES
                                   cell	      count    SLC Usage(%)
-               jtag_enh_rx(16,10,10,4)	          1        20.5
+               jtag_enh_rx(16,10,10,4)	          1        20.4
                jtag_enh_tx(16,10,10,4)	          1         4.5
              jtag_enh_shift_ctrl(10,8)	          1         4.5
-                  jtag_enh_ecu(16,8,8)	          1        10.4
-                           jtag_enh_io	          1         0.3
-                    jtag_enh_ckgen(16)	          1        17.7
+                  jtag_enh_ecu(16,8,8)	          1        10.5
+                           jtag_enh_io	          1         0.4
+                    jtag_enh_ckgen(16)	          1        17.6
 ---------------------------------------------------
 Report for cell jtag_enh_tx(16,10,10,4)
    Instance path: yard_ice/shifter/tx
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	      24.67         4.5
+                                  SLIC	      24.83         4.5
                                   LUT4	      53.00         6.2
                                 PFUREG	         15         2.0
                                 RIPPLE	          6         7.1
@@ -214,7 +223,7 @@ Report for cell jtag_enh_shift_ctrl(10,8)
    Instance path: yard_ice/shifter/shift_ctrl
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	      24.67         4.5
+                                  SLIC	      24.83         4.5
                                   LUT4	      54.00         6.3
                                 PFUREG	         22         2.9
                                 RIPPLE	         12        14.3
@@ -223,8 +232,8 @@ Report for cell jtag_enh_rx(16,10,10,4)
    Instance path: yard_ice/shifter/rx
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	     112.50        20.5
-                                  LUT4	     166.00        19.4
+                                  SLIC	     112.75        20.4
+                                  LUT4	     166.00        19.3
                                 PFUREG	        161        21.5
                                 RIPPLE	          6         7.1
 ---------------------------------------------------
@@ -232,15 +241,15 @@ Report for cell jtag_enh_io
    Instance path: yard_ice/shifter/io
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	       1.92         0.3
+                                  SLIC	       2.42         0.4
                                 PFUREG	          5         0.7
 ---------------------------------------------------
 Report for cell jtag_enh_ecu(16,8,8)
    Instance path: yard_ice/shifter/exec_ctrl
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	      57.27        10.4
-                                  LUT4	     139.33        16.3
+                                  SLIC	      57.75        10.5
+                                  LUT4	     141.67        16.5
                                 PFUREG	         34         4.5
                                 RIPPLE	          8         9.5
 ---------------------------------------------------
@@ -248,24 +257,25 @@ Report for cell jtag_enh_ckgen(16)
    Instance path: yard_ice/shifter/ckgen
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	      97.42        17.7
+                                  SLIC	      97.08        17.6
                                   LUT4	      47.00         5.5
                                 PFUREG	        194        25.9
                                 RIPPLE	         42        50.0
+---------------------------------------------------
+Report for cell jtag_clk_scaler(60)
+   Instance path: yard_ice/cklgen_1mhz
+                     Cell usage:
+                                  cell	      count    Res Usage(%)
+                                  SLIC	       5.25         1.0
+                                  LUT4	       3.00         0.3
+                                PFUREG	          7         0.9
+                                RIPPLE	          4         4.8
 ---------------------------------------------------
 Report for cell dpram(16,10)_U1
    Instance path: yard_ice/rx_mem
                      Cell usage:
                                   cell	      count    Res Usage(%)
-                                  SLIC	       0.83         0.2
+                                  SLIC	       1.00         0.2
                                   LUT4	       2.00         0.2
-                                PFUREG	          1         0.1
-                                   EBR	          2        25.0
----------------------------------------------------
-Report for cell dpram(16,10)
-   Instance path: yard_ice/tx_mem
-                     Cell usage:
-                                  cell	      count    Res Usage(%)
-                                  SLIC	       0.25         0.0
                                 PFUREG	          1         0.1
                                    EBR	          2        25.0

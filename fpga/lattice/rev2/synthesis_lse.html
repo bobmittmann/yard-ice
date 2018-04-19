@@ -7,18 +7,6 @@
 </STYLE>
 </HEAD>
 <PRE><A name="Syn"></A><B><U><big>Synthesis and Ngdbuild  Report</big></U></B>
-synthesis:  version Diamond (64-bit) 3.10.0.111.2
-
-Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
-Copyright (c) 1995 AT&T Corp.   All rights reserved.
-Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
-Copyright (c) 2001 Agere Systems   All rights reserved.
-Copyright (c) 2002-2017 Lattice Semiconductor Corporation,  All rights reserved.
-Wed Apr 11 14:48:23 2018
-
-
-Command Line:  synthesis -f yardice2_rev2_lattice.synproj -gui 
-
 Synthesis options:
 The -a option is MachXO2.
 The -s option is 5.
@@ -93,6 +81,9 @@ VHDL design file = C:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl
 VHDL design file = C:/devel/yard-ice/src/fpga/jtag_reg.vhdl
 VHDL design file = C:/devel/yard-ice/src/fpga/sram.vhdl
 VHDL design file = C:/devel/yard-ice/src/fpga/syncfifo.vhdl
+VHDL design file = C:/devel/yard-ice/fpga/lattice/ddr_phy.vhd
+VHDL design file = C:/devel/yard-ice/fpga/lattice/ddr_phy.vhd
+VHDL design file = C:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl
 VHDL design file = C:/devel/yard-ice/src/fpga/yard_ice.vhdl
 NGD file = yardice2_rev2.ngd
 -sdc option: SDC file input not used.
@@ -181,16 +172,41 @@ Analyzing VHDL file c:/devel/yard-ice/src/fpga/sram.vhdl. VHDL-1481
 INFO - synthesis: c:/devel/yard-ice/src/fpga/sram.vhdl(30): analyzing entity sram. VHDL-1012
 INFO - synthesis: c:/devel/yard-ice/src/fpga/sram.vhdl(46): analyzing architecture rtl. VHDL-1010
 unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(14): analyzing entity ddr_phy. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(62): analyzing architecture structure. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(14): analyzing entity ddr_phy. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(62): analyzing architecture structure. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl(67): analyzing entity ddr_sdram_dual. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl(131): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
 Analyzing VHDL file c:/devel/yard-ice/src/fpga/yard_ice.vhdl. VHDL-1481
-INFO - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(33): analyzing entity yard_ice. VHDL-1012
-INFO - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(75): analyzing architecture structure. VHDL-1010
+INFO - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(66): analyzing entity yard_ice. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(123): analyzing architecture structure. VHDL-1010
 unit yard_ice is not yet analyzed. VHDL-1485
 WARNING - synthesis: c:/devel/yard-ice/src/fpga/syncfifo.vhdl(78): case statement does not cover all choices. 'others' clause is needed. VHDL-1037
 WARNING - synthesis: c:/devel/yard-ice/src/fpga/syncfifo.vhdl(84): case statement does not cover all choices. 'others' clause is needed. VHDL-1037
 unit yard_ice is not yet analyzed. VHDL-1485
-c:/devel/yard-ice/src/fpga/yard_ice.vhdl(33): executing yard_ice(structure)
+c:/devel/yard-ice/src/fpga/yard_ice.vhdl(66): executing yard_ice(structure)
 
-WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(73): replacing existing netlist yard_ice(structure). VHDL-1205
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(362): using initial value 'U' for s_ddr_cmd_stb since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(365): using initial value "UUUUUUUUUUUUUUUU" for s_ddr_cmd_dat since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(367): using initial value 'U' for s_ddr_mwr_cyc since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(368): using initial value 'U' for s_ddr_mwe_bst since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(369): using initial value 'U' for s_ddr_mwr_stb since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(372): using initial value "UUUUUUUUUUUUUUUUUUUUU" for s_ddr_mwr_adr since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(373): using initial value "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU" for s_ddr_mwr_dat since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(374): using initial value 'U' for s_ddr_mwr_bst since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(376): using initial value 'U' for s_ddr_mrd_cyc since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(377): using initial value 'U' for s_ddr_mrd_we since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(378): using initial value 'U' for s_ddr_mrd_stb since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(381): using initial value "UUUUUUUUUUUUUUUUUUUUU" for s_ddr_mrd_adr since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(383): using initial value 'U' for s_ddr_mrd_bst since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(121): replacing existing netlist yard_ice(structure). VHDL-1205
 Top module name (VHDL): yard_ice
 Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00a/data/xo2alib.ngl'...
 Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00/data/xo2clib.ngl'...
@@ -199,7 +215,32 @@ Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/or5g00/data/orc5glib.ngl'.
 Loading device for application map from file 'xo2c4000.nph' in environment: C:/lscc/diamond/3.10_x64/ispfpga.
 Package Status:                     Final          Version 1.44.
 Top-level module name = yard_ice.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: I/O Port ddr_ldqm 's net has no driver and is unused.
+WARNING - synthesis: I/O Port ddr_udqm 's net has no driver and is unused.
 WARNING - synthesis: I/O Port clk_aux 's net has no driver and is unused.
+######## Missing driver on net ddr_ldqm. Patching with GND.
+######## Missing driver on net ddr_udqm. Patching with GND.
 Constant propagated thru Write Port :\ptr_mem/clk_write_port_12.
 
 Constant propagated thru Write Port :\rx_mem/clk_write_port_12.
@@ -289,15 +330,77 @@ WARNING - synthesis: Bit 11 of Register \mem_rd_addr/s_reg is stuck at Zero
 
 ######## Mapping RTL RAM \tx_mem/mem to 2 EBR blocks in PSEUDO_DUAL_PORT Mode
 
-######## Mapping RTL RAM n2537 to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
+######## Mapping RTL RAM n2932 to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
 
-######## Mapping RTL RAM n2538 to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
+######## Mapping RTL RAM n2933 to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
 
 ######## Mapping RTL RAM \ptr_mem/mem to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
 
 ######## Mapping RTL RAM \aux_mem/mem to 1 EBR blocks in SINGLE_PORT Mode
 
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
 WARNING - synthesis: I/O Port clk_aux 's net has no driver and is unused.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[15] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[14] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[13] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[12] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[11] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[10] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[9] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[8] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[7] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[6] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[5] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[4] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[3] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[2] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[1] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[0] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_ldqs due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_udqs due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[12] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[11] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[10] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[9] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[8] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[7] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[6] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[5] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[4] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[3] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[2] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[1] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[0] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_cke due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_clk due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_casn due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_rasn due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_wen due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_csn0 due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_csn1 due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_ba[1] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_ba[0] due to black_box_pad_pin attribute.
 Optimized async. reset : s_cfg[6] on data cone feeding flop : 
 
 
@@ -394,7 +497,9 @@ Optimized async. reset : s_cfg[6] on data cone feeding flop :
  \cfg_r/s_reg_i15
 
 
-GSR instance connected to net n1754.
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neoprims.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neomacro.ngl'...
+GSR instance connected to net n2149.
 Applying 200.000000 MHz constraint to all clocks
 
 WARNING - synthesis: No user .sdc file.
@@ -403,102 +508,9 @@ Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00a/data/xo2alib.ngl'.
 Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00/data/xo2clib.ngl'...
 Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/mg5g00/data/mg5glib.ngl'...
 Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/or5g00/data/orc5glib.ngl'...
-WARNING - synthesis: logical net 'clk_aux' has no load.
-WARNING - synthesis: input pad net 'clk_aux' has no legal load.
-WARNING - synthesis: DRC complete with 2 warnings.
-All blocks are expanded and NGD expansion is successful.
-Writing NGD file yardice2_rev2.ngd.
-
-################### Begin Area Report (yard_ice)######################
-Number of register bits => 749 of 4665 (16 % )
-BB => 16
-CCU2D => 84
-DP8KC => 1
-FD1P3AX => 392
-FD1P3AY => 6
-FD1P3IX => 64
-FD1P3JX => 9
-FD1S3AX => 240
-FD1S3AY => 16
-FD1S3BX => 1
-FD1S3DX => 4
-FD1S3IX => 15
-FD1S3JX => 2
-GSR => 1
-IB => 9
-L6MUX21 => 11
-LUT4 => 822
-OB => 9
-OBZ => 1
-PDPW8KC => 7
-PFUMX => 149
-ROM256X1A => 3
-################### End Area Report ##################
-
-################### Begin BlackBox Report ######################
-TSALL => 1
-################### End BlackBox Report ##################
-
-################### Begin Clock Report ######################
-Clock Nets
-Number of Clocks: 3
-  Net : mclk_c, loads : 602
-  Net : fsmc_clk_c, loads : 162
-  Net : shifter/ckgen/mclk_c_enable_115, loads : 4
-Clock Enable Nets
-Number of Clock Enables: 63
-Top 10 highest fanout Clock Enables:
-  Net : shifter/ckgen/mclk_c_enable_261, loads : 31
-  Net : shifter/rx/fifo_get, loads : 28
-  Net : shifter/exec_ctrl/busy_N_1509, loads : 26
-  Net : cram_bus/reg_wr_fifo/fsmc_clk_c_enable_82, loads : 20
-  Net : cram_bus/reg_wr_fifo/fsmc_clk_c_enable_67, loads : 20
-  Net : cram_bus/reg_wr_fifo/fsmc_clk_c_enable_52, loads : 20
-  Net : cram_bus/reg_wr_fifo/fsmc_clk_c_enable_37, loads : 20
-  Net : shifter/ckgen/mclk_c_enable_135, loads : 16
-  Net : shifter/ckgen/mclk_c_enable_159, loads : 16
-  Net : shifter/exec_ctrl/mclk_c_enable_114, loads : 8
-Highest fanout non-clock nets
-Top 10 highest fanout non-clock nets:
-  Net : cram_bus/addr_r/q_15__N_82, loads : 83
-  Net : shifter/rx/s_op_fifo.tail_0, loads : 53
-  Net : cram_bus/addr_r/q_15__N_80, loads : 46
-  Net : cram_bus/addr_r/q_15__N_78, loads : 46
-  Net : shifter/exec_ctrl/s_status_2, loads : 36
-  Net : shifter/shift_ctrl/mclk_c_enable_118, loads : 36
-  Net : shifter/shift_ctrl/mclk_c_enable_204, loads : 36
-  Net : shifter/exec_ctrl/s_status_3, loads : 35
-  Net : shifter/exec_ctrl/s_status_1, loads : 35
-  Net : cram_bus/addr_r/q_15__N_76, loads : 34
-################### End Clock Report ##################
-
-<A name="lse_trs"></A><B><U><big>Timing Report Summary</big></U></B>
---------------
---------------------------------------------------------------------------------
-Constraint                              |   Constraint|       Actual|Levels
---------------------------------------------------------------------------------
-                                        |             |             |
-create_clock -period 5.000000 -name     |             |             |
-clk2 [get_nets                          |             |             |
-\shifter/mclk_c_enable_115]             |            -|            -|     0  
-                                        |             |             |
-create_clock -period 5.000000 -name     |             |             |
-clk1 [get_nets fsmc_clk_c]              |  200.000 MHz|   93.171 MHz|     7 *
-                                        |             |             |
-create_clock -period 5.000000 -name     |             |             |
-clk0 [get_nets mclk_c]                  |  200.000 MHz|   52.662 MHz|    15 *
-                                        |             |             |
---------------------------------------------------------------------------------
-
-
-2 constraints not met.
-
-
-Peak Memory Usage: 103.887  MB
-
---------------------------------------------------------------
-Elapsed CPU time for LSE flow : 2.371  secs
---------------------------------------------------------------
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neoprims.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neomacro.ngl'...
+ERROR - synthesis: logical block 'ddr_ctl' with type 'ddr_sdram_dual' is unexpanded.
 
 
 

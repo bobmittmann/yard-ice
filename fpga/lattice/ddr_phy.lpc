@@ -13,11 +13,11 @@ CoreType=LPM
 CoreStatus=Demo
 CoreName=DDR_MEM
 CoreRevision=6.0
-ModuleName=sdram
+ModuleName=ddr_phy
 SourceFormat=VHDL
 ParameterFileVersion=1.0
-Date=04/11/2018
-Time=15:02:45
+Date=04/19/2018
+Time=10:11:02
 
 [Parameters]
 Verilog=0
@@ -30,21 +30,21 @@ IO=0
 Mode=DDR
 IO_buffer=SSTL25_I
 Frequency=100
-Number=1
+Number=2
 dqs1=8
 dqs2=8
 DQSBuffer=Single-ended
-Width=8
-cac=DISABLED
+Width=16
+cac=ENABLED
 data_mask=DISABLED
 Sensitivity=LOW
 val=BYPASS
-num_clk=
-num_ce=
-addr_width=
-bank_width=
+num_clk=1
+num_ce=1
+addr_width=13
+bank_width=2
 num_odt=
-num_cs=
+num_cs=2
 
 [Command]
-cmd_line= -w -n sdram -lang vhdl -synth lse -bus_exp 7 -bb -arch xo2c00 -type iol -mode mem -io_type SSTL25_I -freq_in 100 -dqs 1 8 -sensitivity low
+cmd_line= -w -n ddr_phy -lang vhdl -synth lse -bus_exp 7 -bb -arch xo2c00 -type iol -mode mem -io_type SSTL25_I -freq_in 100 -dqs 1 8 -dqs 2 8 -sensitivity low -num_clk 1 -num_ce 1 -addr_width 13 -bank_width 2 -num_cs 2

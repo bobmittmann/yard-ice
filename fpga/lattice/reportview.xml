@@ -5,6 +5,6 @@
         <ToolReport id="tooldec" path="" status="0"/>
         <ToolReport id="toolhle_genhierarchy" path="C:/devel/yard-ice/fpga/lattice/rev2/hdla_gen_hierarchy.html" status="1"/>
         <ToolReport id="toolpio" path="" status="0"/>
-        <ToolReport id="toolsso" path="" status="0"/>
+        <ToolReport id="toolsso" path="C:/devel/yard-ice/fpga/lattice/sso_rpt.htm" status="1"/>
     </Implement>
 </ReportView>

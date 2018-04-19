@@ -49,6 +49,9 @@
 "C:/devel/yard-ice/src/fpga/jtag_reg.vhdl"
 "C:/devel/yard-ice/src/fpga/sram.vhdl"
 "C:/devel/yard-ice/src/fpga/syncfifo.vhdl"
+"C:/devel/yard-ice/fpga/lattice/ddr_phy.vhd"
+"C:/devel/yard-ice/fpga/lattice/ddr_phy.vhd"
+"C:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl"
 "C:/devel/yard-ice/src/fpga/yard_ice.vhdl"
 -top yard_ice
 

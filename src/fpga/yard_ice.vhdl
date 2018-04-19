@@ -98,17 +98,20 @@ port(
 	led_1 : out std_logic;
 	led_2 : out std_logic;
 	-- DDR memory	
-	ddr_addr : out  std_logic_vector(11 downto 0); 
+	ddr_addr : out  std_logic_vector(12 downto 0); 
 	ddr_cke : out  std_logic;
 	ddr_clk : out  std_logic;
-	ddr_cas : out  std_logic;
-	ddr_ras : out  std_logic;
-	ddr_we : out  std_logic;
-	ddr_cs : out  std_logic;
+	ddr_casn : out  std_logic;
+	ddr_rasn : out  std_logic;
+	ddr_wen : out  std_logic;
+	ddr_csn0 : out  std_logic;
+	ddr_csn1 : out  std_logic;
 	ddr_ba : out  std_logic_vector(1 downto 0); 
-	ddr_dqm : out  std_logic;
+	ddr_ldqm : out  std_logic;
+	ddr_udqm : out  std_logic;
 	ddr_dq : inout  std_logic_vector(15 downto 0);
-	ddr_dqs : inout  std_logic_vector(1 downto 0);
+	ddr_ldqs : inout  std_logic;
+	ddr_udqs : inout  std_logic;
 	--
 	clk_aux : in std_logic
 	
@@ -274,6 +277,8 @@ architecture structure of yard_ice is
 	signal s_cfg_wr_stb : std_logic; 
 	-- global reset
 	signal s_rst : std_logic;
+	-- global reset active low
+	signal s_rst_n : std_logic;
 	-- TAP output selection: NORMAL/LOOPBACK
 	signal s_loopback_en : std_logic;
 	-- Clock generator RTCK enable
@@ -351,6 +356,63 @@ architecture structure of yard_ice is
 --	signal s_dbg_reg_rd : std_logic
 --	signal s_dbg_reg_wr : std_logic
 
+
+
+	-- SDRAM Wishbone Pipelined Controll/Command Interface
+	signal s_ddr_cmd_stb : std_logic;
+	signal s_ddr_cmd_ack : std_logic;
+	signal s_ddr_cmd_stall : std_logic;
+	signal s_ddr_cmd_dat : std_logic_vector(15 downto 0);
+	-- Wishbone Pipelined Slave Write Memory Interface
+	signal s_ddr_mwr_cyc : std_logic;
+	signal s_ddr_mwe_bst : std_logic;
+	signal s_ddr_mwr_stb : std_logic;
+	signal s_ddr_mwr_ack : std_logic;
+	signal s_ddr_mwr_stall : std_logic;
+	signal s_ddr_mwr_adr : std_logic_vector(20 downto 0);
+	signal s_ddr_mwr_dat : std_logic_vector(31 downto 0);
+	signal s_ddr_mwr_bst : std_logic;
+	-- Wishbone Pipelined Slave Read Memory Interface
+	signal s_ddr_mrd_cyc : std_logic;
+	signal s_ddr_mrd_we : std_logic;
+	signal s_ddr_mrd_stb : std_logic;
+	signal s_ddr_mrd_ack : std_logic;
+	signal s_ddr_mrd_stall : std_logic;
+	signal s_ddr_mrd_adr : std_logic_vector(20 downto 0);
+	signal s_ddr_mrd_dat : std_logic_vector(31 downto 0);
+	signal s_ddr_mrd_bst : std_logic;
+	-- SDRAM DDR Phy Interface
+	signal s_ddr_burstdet0 : std_logic;
+	signal s_ddr_burstdet1 : std_logic;
+	signal s_ddr_casn : std_logic;
+	signal s_ddr_dtri0 : std_logic;
+	signal s_ddr_dtri1 : std_logic;
+	signal s_ddr_dvalid0 : std_logic;
+	signal s_ddr_dvalid1 : std_logic;
+	signal s_ddr_dqs0 : std_logic;
+	signal s_ddr_dqs1 : std_logic;
+	signal s_ddr_dqstri0 : std_logic;
+	signal s_ddr_dqstri1 : std_logic;
+	signal s_ddr_freeze : std_logic;
+	signal s_ddr_lock : std_logic;
+	signal s_ddr_rasn : std_logic;
+	signal s_ddr_read0 : std_logic;
+	signal s_ddr_read1 : std_logic;
+	signal s_ddr_readclksel00 : std_logic;
+	signal s_ddr_readclksel01 : std_logic;
+	signal s_ddr_readclksel10 : std_logic;
+	signal s_ddr_readclksel11 : std_logic;
+	signal s_ddr_uddcntln : std_logic;
+	signal s_ddr_wen : std_logic;
+	signal s_ddr_addr : std_logic_vector(12 downto 0);
+	signal s_ddr_ba : std_logic_vector(1 downto 0);
+	signal s_ddr_cke : std_logic;
+	signal s_ddr_csn : std_logic_vector(1 downto 0);
+	signal s_ddr_datain0 : std_logic_vector(15 downto 0);
+	signal s_ddr_datain1 : std_logic_vector(15 downto 0);
+	signal s_ddr_dataout0 : std_logic_vector(15 downto 0);
+	signal s_ddr_dataout1 : std_logic_vector(15 downto 0);
+
 	function is_zero(x : std_logic_vector) return std_logic is
 		variable y : std_logic := '0';
 	begin
@@ -368,6 +430,7 @@ architecture structure of yard_ice is
 begin
 	-- main clock (60MHz)
 	s_clk_main <= mclk;
+	s_rst_n <= not s_rst;
 
 --	pll : cyc_pll port map(
 --		inclk0  => s_clk_main,
@@ -997,7 +1060,7 @@ begin
 	led_con_drv : entity jtag_led_drv
 		generic map (PULSE_CNT => 31, OUT_INV => false)
 		port map (
-			clk=> s_clk_main, 
+			clk => s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
 			trip => s_mem_wr_stb, 
@@ -1040,58 +1103,113 @@ begin
 	tp_rst <= s_tap_nrst;
 	
 --	tap_state <= s_tap_state;
-
-	s_ddr_dqs <= s_tap_tck;
-
-	ddr_phy : entity sdram
+	
+	ddr_ctl : entity ddr_sdram_dual
 		port map (
---        burstdet0 = >,
---        burstdet1 = >, 
-        casn => ddr_cas, 
-        casn_din => '1', 
-        datatri_0 => '0', 
-        datatri_1 => '0', 
---        datavalid_0: out  std_logic,
---        datavalid_1: out  std_logic, 
-        dqs_0 => ddr_dqs(0),
-        dqs_1 => ddr_dqs(1), 
-        dqso_0 => s_ddr_dqs,
-        dqso_1 => s_ddr_dqs, 
-        dqstri_0 => '0',
-        dqstri_1 => '0', 
-        freeze => '0',
---        lock: out  std_logic,
-        rasn => ddr_ras,
-        rasn_din => '0', 
-        read_0 => '0',
-        read_1 => '0',
-        readclksel0_0 => '1',
-        readclksel0_1 => '1', 
-        readclksel1_0 => '1', 
-        readclksel1_1 => '1', 
-        reset =>  s_rst,
+		clk_i => s_clk_main,
+		rst_i => s_rst,		
+		-- Wishbone Pipelined Controll/Command Interface
+		cmd_stb_i => s_ddr_cmd_stb,
+		cmd_ack_o => s_ddr_cmd_ack,
+		cmd_stall_o => s_ddr_cmd_stall,
+		cmd_dat_i => s_ddr_cmd_dat,
+		-- Wishbone Pipelined Slave Write Memory Interface
+		mwr_cyc_i => s_ddr_mwr_cyc,
+		mwr_we_i => s_ddr_mwe_bst,
+		mwr_stb_i => s_ddr_mwr_stb,
+		mwr_ack_o => s_ddr_mwr_ack,
+		mwr_stall_o => s_ddr_mwr_stall,
+		mwr_adr_i => s_ddr_mwr_adr,
+		mwr_dat_i => s_ddr_mwr_dat,
+		mwr_bst_i => s_ddr_mwr_bst,		-- Wishbone Pipelined Slave Read Memory Interface
+		mrd_cyc_i => s_ddr_mrd_cyc,
+		mrd_we_i => s_ddr_mrd_we,
+		mrd_stb_i => s_ddr_mrd_stb,
+		mrd_ack_o => s_ddr_mrd_ack,
+		mrd_stall_o => s_ddr_mrd_stall,
+		mrd_adr_i => s_ddr_mrd_adr,
+		mrd_dat_o => s_ddr_mrd_dat,
+		mrd_bst_i => s_ddr_mrd_bst,
+		-- SDRAM DDR Phy Interface
+		phy_burstdet0_i => s_ddr_burstdet0,
+		phy_burstdet1_i => s_ddr_burstdet1,
+		phy_casn_o => s_ddr_casn,		
+		phy_dtri0_o => s_ddr_dtri0,
+		phy_dtri1_o => s_ddr_dtri1,
+		phy_dvalid0_o => s_ddr_dvalid0,
+		phy_dvalid1_o => s_ddr_dvalid1,
+		phy_dqs0_o => s_ddr_dqs0,
+		phy_dqs1_o => s_ddr_dqs1,
+		phy_dqstri0_o => s_ddr_dqstri0,
+		phy_dqstri1_o => s_ddr_dqstri1,
+		phy_freeze_o => s_ddr_freeze,
+		phy_lock_i => s_ddr_lock,		
+		phy_rasn_o => s_ddr_rasn,		
+		phy_read0_o => s_ddr_read0,
+		phy_read1_o => s_ddr_read1,		
+		phy_readclksel00_o => s_ddr_readclksel00,
+		phy_readclksel01_o => s_ddr_readclksel01,
+		phy_readclksel10_o => s_ddr_readclksel10,
+		phy_readclksel11_o => s_ddr_readclksel11,		
+		phy_uddcntln_o => s_ddr_uddcntln,
+		phy_wen_o => s_ddr_wen,
+		phy_addr_o => s_ddr_addr,
+		phy_ba_o => s_ddr_ba,		
+		phy_cke_o => s_ddr_cke,
+		phy_csn0_o => s_ddr_csn(0),
+		phy_csn1_o => s_ddr_csn(1),		
+		phy_dat0_i => s_ddr_datain0,
+		phy_dat1_i => s_ddr_datain1,
+		phy_dat0_o => s_ddr_dataout0,
+		phy_dat1_o => s_ddr_dataout1
+	);
+
+	ddr_phy : entity ddr_phy port map (
+		burstdet0 => s_ddr_burstdet0,
+		burstdet1 => s_ddr_burstdet1,
+        casn => ddr_casn,
+        casn_din => s_ddr_casn,
+        datatri_0 => s_ddr_dtri0,
+        datatri_1 => s_ddr_dtri1,
+        datavalid_0 => s_ddr_dvalid0,
+        datavalid_1 => s_ddr_dvalid1,
+        dqs_0 => ddr_ldqs,
+        dqs_1 => ddr_udqs, 
+        dqso_0 => s_ddr_dqs0,
+        dqso_1 => s_ddr_dqs1, 
+        dqstri_0 => s_ddr_dqstri0,
+        dqstri_1 => s_ddr_dqstri1, 
+		freeze => s_ddr_freeze,
+        lock => s_ddr_lock,
+        rasn => ddr_rasn,
+        rasn_din => s_ddr_rasn, 		
+        read_0 => s_ddr_read0,
+        read_1 => s_ddr_read1,
+        readclksel0_0 => s_ddr_readclksel00,
+        readclksel0_1 => s_ddr_readclksel01, 
+        readclksel1_0 => s_ddr_readclksel10, 
+        readclksel1_1 => s_ddr_readclksel11, 
+        reset => s_rst,
         sclk => s_clk_main,
-        uddcntln => '0',
-        wen => ddr_we, 
-        wen_din => '0', 
+        uddcntln => s_ddr_uddcntln,
+        wen => ddr_wen,
+        wen_din => s_ddr_wen,
         addr => ddr_addr, 
-        addr_din => (others => '0'),
+        addr_din => s_ddr_addr,
         ba => ddr_ba,
-        ba_din => "00",
+        ba_din => s_ddr_ba,
         cke(0) => ddr_cke,
-        cke_din => "0",
---        csn(0) => ddr_cs, 
-        csn_din => "0",
---        datain0 => ..,
---        datain1 => .., 
-        dataout0 => (others => '0'),
-        dataout1 => (others => '0'), 
+        cke_din(0) => s_ddr_cke,
+        csn(0) => ddr_csn0,
+		csn(1) => ddr_csn1,
+        csn_din => s_ddr_csn,
+        datain0 => s_ddr_datain0,
+        datain1 => s_ddr_datain1, 
+        dataout0 => s_ddr_dataout0,
+        dataout1 => s_ddr_dataout0, 
         ddrclk(0) => ddr_clk,
         dq_0 => ddr_dq(7 downto 0),
         dq_1 => ddr_dq(15 downto 8)
 	);
 
-
-
 end structure;
-
