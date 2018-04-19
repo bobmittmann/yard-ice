@@ -1,0 +1,569 @@
+<HTML>
+<HEAD><TITLE>Synthesis and Ngdbuild Report</TITLE>
+<STYLE TYPE="text/css">
+<!--
+ body,pre{    font-family:'Courier New', monospace;    color: #000000;    font-size:88%;    background-color: #ffffff;}h1 {    font-weight: bold;    margin-top: 24px;    margin-bottom: 10px;    border-bottom: 3px solid #000;    font-size: 1em;}h2 {    font-weight: bold;    margin-top: 18px;    margin-bottom: 5px;    font-size: 0.90em;}h3 {    font-weight: bold;    margin-top: 12px;    margin-bottom: 5px;    font-size: 0.80em;}p {    font-size:78%;}P.Table {    margin-top: 4px;    margin-bottom: 4px;    margin-right: 4px;    margin-left: 4px;}table{    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    border-collapse: collapse;}th {    font-weight:bold;    padding: 4px;    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    vertical-align:top;    text-align:left;    font-size:78%;}td {    padding: 4px;    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    vertical-align:top;    font-size:78%;}a {    color:#013C9A;    text-decoration:none;}a:visited {    color:#013C9A;}a:hover, a:active {    text-decoration:underline;    color:#5BAFD4;}.pass{background-color: #00ff00;}.fail{background-color: #ff0000;}.comment{    font-size: 90%;    font-style: italic;}
+-->
+</STYLE>
+</HEAD>
+<PRE><A name="Syn"></A><B><U><big>Synthesis and Ngdbuild  Report</big></U></B>
+Synthesis options:
+The -a option is MachXO2.
+The -s option is 5.
+The -t option is TQFP144.
+The -d option is LCMXO2-4000HE.
+Using package TQFP144.
+Using performance grade 5.
+                                                          
+
+##########################################################
+
+### Lattice Family : MachXO2
+
+### Device  : LCMXO2-4000HE
+
+### Package : TQFP144
+
+### Speed   : 5
+
+##########################################################
+
+                                                          
+
+INFO - synthesis: User-Selected Strategy Settings
+Optimization goal = Balanced
+Top-level module name = yard_ice.
+Target frequency = 200.000000 MHz.
+Maximum fanout = 1000.
+Timing path count = 3
+BRAM utilization = 100.000000 %
+DSP usage = true
+DSP utilization = 100.000000 %
+fsm_encoding_style = auto
+resolve_mixed_drivers = 0
+fix_gated_clocks = 1
+
+Mux style = Auto
+Use Carry Chain = true
+carry_chain_length = 0
+Loop Limit = 1950.
+Use IO Insertion = TRUE
+Use IO Reg = AUTO
+
+Resource Sharing = TRUE
+Propagate Constants = TRUE
+Remove Duplicate Registers = TRUE
+force_gsr = auto
+ROM style = auto
+RAM style = auto
+The -comp option is FALSE.
+The -syn option is FALSE.
+-p C:/lscc/diamond/3.10_x64/ispfpga/xo2c00/data (searchpath added)
+-p C:/devel/yard-ice/fpga/lattice/rev2 (searchpath added)
+-p C:/devel/yard-ice/fpga/lattice (searchpath added)
+VHDL library = work
+VHDL design file = C:/devel/yard-ice/src/fpga/counter.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/cram_adaptor.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/dpram.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_cmem.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_counter.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/jtag_reg.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/sram.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/syncfifo.vhdl
+VHDL design file = C:/devel/yard-ice/fpga/lattice/ddr_phy.vhd
+VHDL design file = C:/devel/yard-ice/fpga/lattice/ddr_phy.vhd
+VHDL design file = C:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl
+VHDL design file = C:/devel/yard-ice/src/fpga/yard_ice.vhdl
+NGD file = yardice2_rev2.ngd
+-sdc option: SDC file input not used.
+-lpf option: Output file option is ON.
+Hardtimer checking is enabled (default). The -dt option is not used.
+The -r option is OFF. [ Remove LOC Properties is OFF. ]
+Technology check ok...
+
+Analyzing Verilog file C:/lscc/diamond/3.10_x64/ispfpga/userware/NT/SYNTHESIS_HEADERS/machxo2.v. VERI-1482
+Compile design.
+Compile Design Begin
+INFO - synthesis: The default VHDL library search path is now "C:/devel/yard-ice/fpga/lattice/rev2". VHDL-1504
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/counter.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/counter.vhdl(30): analyzing entity counter. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/counter.vhdl(59): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/syncfifo.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/syncfifo.vhdl(31): analyzing entity syncfifo. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/syncfifo.vhdl(53): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/cram_adaptor.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/cram_adaptor.vhdl(35): analyzing entity cram_adaptor. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/cram_adaptor.vhdl(74): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/dpram.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/dpram.vhdl(30): analyzing entity dpram. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/dpram.vhdl(50): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl(31): analyzing entity jtag_clk_scaler. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_clk_scaler.vhdl(51): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_counter.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_counter.vhdl(30): analyzing entity jtag_counter. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_counter.vhdl(59): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_cmem.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_cmem.vhdl(33): analyzing entity jtag_cram16. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_cmem.vhdl(57): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl(6): analyzing entity jtag_desc_ram. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_desc_ram.vhdl(27): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl(30): analyzing entity jtag_enh_ckgen. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_ckgen.vhdl(61): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl(69): analyzing entity jtag_enh_ecu. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_ecu.vhdl(125): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl(30): analyzing entity jtag_enh_io. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_io.vhdl(59): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl(31): analyzing entity jtag_enh_rx. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_rx.vhdl(86): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl(31): analyzing entity jtag_enh_shift_ctrl. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_shift_ctrl.vhdl(72): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl(31): analyzing entity jtag_enh_tx. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_tx.vhdl(70): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl(35): analyzing entity jtag_enh_shifter. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_enh_shifter.vhdl(130): analyzing architecture structure. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl(30): analyzing entity jtag_io_dpram. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_io_dpram.vhdl(50): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl(31): analyzing entity jtag_led_drv. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_led_drv.vhdl(56): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/jtag_reg.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_reg.vhdl(30): analyzing entity jtag_reg. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/jtag_reg.vhdl(59): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/sram.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/sram.vhdl(30): analyzing entity sram. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/sram.vhdl(46): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(14): analyzing entity ddr_phy. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(62): analyzing architecture structure. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(14): analyzing entity ddr_phy. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/ddr_phy.vhd(62): analyzing architecture structure. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl(67): analyzing entity ddr_sdram_dual. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/fpga/lattice/vhdl/ddr_sdram_dual.vhdl(131): analyzing architecture rtl. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+Analyzing VHDL file c:/devel/yard-ice/src/fpga/yard_ice.vhdl. VHDL-1481
+INFO - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(66): analyzing entity yard_ice. VHDL-1012
+INFO - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(123): analyzing architecture structure. VHDL-1010
+unit yard_ice is not yet analyzed. VHDL-1485
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/syncfifo.vhdl(78): case statement does not cover all choices. 'others' clause is needed. VHDL-1037
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/syncfifo.vhdl(84): case statement does not cover all choices. 'others' clause is needed. VHDL-1037
+unit yard_ice is not yet analyzed. VHDL-1485
+c:/devel/yard-ice/src/fpga/yard_ice.vhdl(66): executing yard_ice(structure)
+
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(362): using initial value 'U' for s_ddr_cmd_stb since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(365): using initial value "UUUUUUUUUUUUUUUU" for s_ddr_cmd_dat since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(367): using initial value 'U' for s_ddr_mwr_cyc since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(368): using initial value 'U' for s_ddr_mwe_bst since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(369): using initial value 'U' for s_ddr_mwr_stb since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(372): using initial value "UUUUUUUUUUUUUUUUUUUUU" for s_ddr_mwr_adr since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(373): using initial value "UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU" for s_ddr_mwr_dat since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(374): using initial value 'U' for s_ddr_mwr_bst since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(376): using initial value 'U' for s_ddr_mrd_cyc since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(377): using initial value 'U' for s_ddr_mrd_we since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(378): using initial value 'U' for s_ddr_mrd_stb since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(381): using initial value "UUUUUUUUUUUUUUUUUUUUU" for s_ddr_mrd_adr since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(383): using initial value 'U' for s_ddr_mrd_bst since it is never assigned. VHDL-1303
+WARNING - synthesis: c:/devel/yard-ice/src/fpga/yard_ice.vhdl(121): replacing existing netlist yard_ice(structure). VHDL-1205
+Top module name (VHDL): yard_ice
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00a/data/xo2alib.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00/data/xo2clib.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/mg5g00/data/mg5glib.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/or5g00/data/orc5glib.ngl'...
+Loading device for application map from file 'xo2c4000.nph' in environment: C:/lscc/diamond/3.10_x64/ispfpga.
+Package Status:                     Final          Version 1.44.
+Top-level module name = yard_ice.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: I/O Port ddr_ldqm 's net has no driver and is unused.
+WARNING - synthesis: I/O Port ddr_udqm 's net has no driver and is unused.
+WARNING - synthesis: I/O Port clk_aux 's net has no driver and is unused.
+######## Missing driver on net ddr_ldqm. Patching with GND.
+######## Missing driver on net ddr_udqm. Patching with GND.
+Constant propagated thru Write Port :\ptr_mem/clk_write_port_12.
+
+Constant propagated thru Write Port :\rx_mem/clk_write_port_12.
+
+Constant propagated thru Write Port :\tx_mem/clk_write_port_12.
+
+Constant propagated thru Write Port :\aux_mem/clk_write_port_12.
+
+INFO - synthesis: Extracted state machine for register '\cram_bus/s_cram_st' with one-hot encoding
+State machine has 4 reachable states with original encodings of:
+
+ 00 
+
+ 01 
+
+ 10 
+
+ 11 
+
+original encoding -> new encoding (one-hot encoding)
+
+ 00 -> 0001
+
+ 01 -> 0010
+
+ 10 -> 0100
+
+ 11 -> 1000
+
+INFO - synthesis: Extracted state machine for register '\shifter/rx/s_op_fifo.head' with one-hot encoding
+State machine has 4 reachable states with original encodings of:
+
+ 00 
+
+ 01 
+
+ 10 
+
+ 11 
+
+original encoding -> new encoding (one-hot encoding)
+
+ 00 -> 0001
+
+ 01 -> 0010
+
+ 10 -> 0100
+
+ 11 -> 1000
+
+INFO - synthesis: Extracted state machine for register '\cram_bus/reg_wr_fifo/s_sel_out' with one-hot encoding
+State machine has 4 reachable states with original encodings of:
+
+ 00 
+
+ 01 
+
+ 10 
+
+ 11 
+
+original encoding -> new encoding (one-hot encoding)
+
+ 00 -> 0001
+
+ 01 -> 0010
+
+ 10 -> 0100
+
+ 11 -> 1000
+
+
+
+
+WARNING - synthesis: Bit 11 of Register \mem_wr_addr/s_reg is stuck at Zero
+WARNING - synthesis: Bit 11 of Register \mem_rd_addr/s_reg is stuck at Zero
+######## Pruned 1 high address bits on RAM Instance : \desc_mem/io_clk_I_0_22 on net : \desc_mem/ram_lo
+
+######## Pruned 1 high address bits on RAM Instance : \desc_mem/addr_7__I_0_21 on net : \desc_mem/ram_lo
+
+######## Pruned 1 high address bits on RAM Instance : \desc_mem/io_clk_I_0 on net : \desc_mem/ram_hi
+
+######## Pruned 1 high address bits on RAM Instance : \desc_mem/addr_7__I_0 on net : \desc_mem/ram_hi
+
+######## Found 6 RTL RAMs in the design.
+######## Mapping RTL RAM \rx_mem/mem to 2 EBR blocks in PSEUDO_DUAL_PORT Mode
+
+######## Mapping RTL RAM \tx_mem/mem to 2 EBR blocks in PSEUDO_DUAL_PORT Mode
+
+######## Mapping RTL RAM n2932 to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
+
+######## Mapping RTL RAM n2933 to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
+
+######## Mapping RTL RAM \ptr_mem/mem to 1 EBR blocks in PSEUDO_DUAL_PORT Mode
+
+######## Mapping RTL RAM \aux_mem/mem to 1 EBR blocks in SINGLE_PORT Mode
+
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: Cell OB already has the black_box_pad_pin attribute on O.
+WARNING - synthesis: I/O Port clk_aux 's net has no driver and is unused.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[15] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[14] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[13] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[12] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[11] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[10] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[9] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[8] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[7] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[6] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[5] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[4] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[3] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[2] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[1] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_dq[0] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_ldqs due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_udqs due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[12] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[11] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[10] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[9] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[8] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[7] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[6] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[5] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[4] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[3] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[2] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[1] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_addr[0] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_cke due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_clk due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_casn due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_rasn due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_wen due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_csn0 due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_csn1 due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_ba[1] due to black_box_pad_pin attribute.
+WARNING - synthesis: Skipping pad insertion on ddr_ba[0] due to black_box_pad_pin attribute.
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cram_bus/s_reg_rd_data_i6
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i0
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i1
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i2
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i3
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i4
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i5
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i7
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i8
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i9
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i10
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i11
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i12
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i13
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i14
+
+
+Optimized async. reset : s_cfg[6] on data cone feeding flop : 
+
+
+ \cfg_r/s_reg_i15
+
+
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neoprims.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neomacro.ngl'...
+GSR instance connected to net n2149.
+Applying 200.000000 MHz constraint to all clocks
+
+WARNING - synthesis: No user .sdc file.
+Results of NGD DRC are available in yard_ice_drc.log.
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00a/data/xo2alib.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/xo2c00/data/xo2clib.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/mg5g00/data/mg5glib.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/or5g00/data/orc5glib.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neoprims.ngl'...
+Loading NGL library 'C:/lscc/diamond/3.10_x64/ispfpga/data/neomacro.ngl'...
+ERROR - synthesis: logical block 'ddr_ctl' with type 'ddr_sdram_dual' is unexpanded.
+
+
+
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+</PRE></FONT>
+</BODY>
+</HTML>

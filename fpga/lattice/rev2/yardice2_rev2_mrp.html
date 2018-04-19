@@ -1,0 +1,1057 @@
+<HTML>
+<HEAD><TITLE>Project Summary</TITLE>
+<STYLE TYPE="text/css">
+<!--
+ body,pre{    font-family:'Courier New', monospace;    color: #000000;    font-size:88%;    background-color: #ffffff;}h1 {    font-weight: bold;    margin-top: 24px;    margin-bottom: 10px;    border-bottom: 3px solid #000;    font-size: 1em;}h2 {    font-weight: bold;    margin-top: 18px;    margin-bottom: 5px;    font-size: 0.90em;}h3 {    font-weight: bold;    margin-top: 12px;    margin-bottom: 5px;    font-size: 0.80em;}p {    font-size:78%;}P.Table {    margin-top: 4px;    margin-bottom: 4px;    margin-right: 4px;    margin-left: 4px;}table{    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    border-collapse: collapse;}th {    font-weight:bold;    padding: 4px;    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    vertical-align:top;    text-align:left;    font-size:78%;}td {    padding: 4px;    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    vertical-align:top;    font-size:78%;}a {    color:#013C9A;    text-decoration:none;}a:visited {    color:#013C9A;}a:hover, a:active {    text-decoration:underline;    color:#5BAFD4;}.pass{background-color: #00ff00;}.fail{background-color: #ff0000;}.comment{    font-size: 90%;    font-style: italic;}
+-->
+</STYLE>
+</HEAD>
+<PRE><A name="Mrp"></A>
+           Lattice Mapping Report File for Design Module 'yard_ice'
+
+
+
+<A name="mrp_di"></A><B><U><big>Design Information</big></U></B>
+
+Command line:   map -a MachXO2 -p LCMXO2-4000HE -t TQFP144 -s 5 -oc Commercial
+     yardice2_rev2.ngd -o yardice2_rev2_map.ncd -pr yardice2_rev2.prf -mp
+     yardice2_rev2.mrp -lpf
+     C:/devel/yard-ice/fpga/lattice/rev2/yardice2_rev2.lpf -lpf
+     C:/devel/yard-ice/fpga/lattice/yardice2.lpf -c 0 -gui -msgset
+     C:/devel/yard-ice/fpga/lattice/promote.xml 
+Target Vendor:  LATTICE
+Target Device:  LCMXO2-4000HETQFP144
+Target Performance:   5
+Mapper:  xo2c00,  version:  Diamond (64-bit) 3.10.1.112
+Mapped on:  04/17/18  13:59:24
+
+
+<A name="mrp_ds"></A><B><U><big>Design Summary</big></U></B>
+   Number of registers:    768 out of  4665 (16%)
+      PFU registers:          750 out of  4320 (17%)
+      PIO registers:           18 out of   345 (5%)
+   Number of SLICEs:       552 out of  2160 (26%)
+      SLICEs as Logic/ROM:    552 out of  2160 (26%)
+      SLICEs as RAM:            0 out of  1620 (0%)
+      SLICEs as Carry:         84 out of  2160 (4%)
+   Number of LUT4s:        1029 out of  4320 (24%)
+      Number used as logic LUTs:        861
+      Number used as distributed RAM:     0
+      Number used as ripple logic:      168
+      Number used as shift registers:     0
+   Number of PIO sites used: 75 + 4(JTAG) out of 115 (69%)
+      Number of PIO sites used for single ended IOs: 77
+      Number of PIO sites used for differential IOs: 2 (represented by 1 PIO
+     comps in NCD)
+   Number of IDDR/ODDR/TDDR cells used: 37 out of 345 (11%)
+      Number of IDDR cells:   0
+      Number of ODDR cells:  19
+      Number of TDDR cells:  18
+   Number of PIO using at least one IDDR/ODDR/TDDR: 19 (1 differential)
+      Number of PIO using IDDR only:        0 (0 differential)
+      Number of PIO using ODDR only:        1 (1 differential)
+      Number of PIO using TDDR only:        0 (0 differential)
+      Number of PIO using IDDR/ODDR:        0 (0 differential)
+      Number of PIO using IDDR/TDDR:        0 (0 differential)
+      Number of PIO using ODDR/TDDR:       18 (0 differential)
+      Number of PIO using IDDR/ODDR/TDDR:   0 (0 differential)
+   Number of block RAMs:  8 out of 10 (80%)
+   Number of GSRs:  1 out of 1 (100%)
+   EFB used :       No
+   JTAG used :      No
+   Readback used :  No
+   Oscillator used :  No
+   Startup used :   No
+   POR :            On
+   Bandgap :        On
+   Number of Power Controller:  0 out of 1 (0%)
+   Number of Dynamic Bank Controller (BCINRD):  0 out of 6 (0%)
+   Number of Dynamic Bank Controller (BCLVDSO):  0 out of 1 (0%)
+
+   Number of DCCA:  0 out of 8 (0%)
+   Number of DCMA:  0 out of 2 (0%)
+   Number of PLLs:  0 out of 2 (0%)
+   Number of DQSDLLs:  1 out of 2 (50%)
+   Number of CLKDIVC:  0 out of 4 (0%)
+   Number of ECLKSYNCA:  0 out of 4 (0%)
+   Number of ECLKBRIDGECS:  0 out of 2 (0%)
+   Notes:-
+      1. Total number of LUT4s = (Number of logic LUT4s) + 2*(Number of
+     distributed RAMs) + 2*(Number of ripple logic)
+      2. Number of logic LUT4s does not include count of distributed RAM and
+     ripple logic.
+   Number of clocks:  5
+     Net mclk_c: 395 loads, 395 rising, 0 falling (Driver: PIO mclk )
+     Net fsmc_clk_c: 95 loads, 95 rising, 0 falling (Driver: PIO fsmc_clk )
+     Net ddr_phy/dqsw90_1: 8 loads, 8 rising, 0 falling (Driver:
+     ddr_phy/Inst6_DQSBUFH1 )
+     Net ddr_phy/dqsw90_0: 8 loads, 8 rising, 0 falling (Driver:
+     ddr_phy/Inst6_DQSBUFH0 )
+     Net mclk_c_enable_95: 1 loads, 1 rising, 0 falling (Driver:
+     shifter/ckgen/i2_3_lut_rep_197 )
+   Number of Clock Enables:  64
+     Net out_get_N_312: 2 loads, 2 LSLICEs
+     Net led_run_drv/mclk_c_enable_69: 2 loads, 2 LSLICEs
+     Net mclk_c_enable_257: 19 loads, 19 LSLICEs
+     Net s_dbg_mem_wr: 6 loads, 6 LSLICEs
+     Net cram_bus/s_cram_adv: 2 loads, 2 LSLICEs
+     Net s_dbg_mem_rd: 6 loads, 6 LSLICEs
+     Net cram_bus/fsmc_clk_c_enable_11: 1 loads, 1 LSLICEs
+     Net s_ptr_mem_wr_stb: 1 loads, 0 LSLICEs
+     Net n8814: 1 loads, 1 LSLICEs
+     Net cram_bus/s_fifo_wr_stb: 1 loads, 1 LSLICEs
+     Net cram_bus/reg_wr_fifo/fsmc_clk_c_enable_38: 10 loads, 10 LSLICEs
+     Net cram_bus/reg_wr_fifo/fsmc_clk_c_enable_53: 10 loads, 10 LSLICEs
+     Net cram_bus/reg_wr_fifo/fsmc_clk_c_enable_68: 10 loads, 10 LSLICEs
+     Net cram_bus/reg_wr_fifo/fsmc_clk_c_enable_83: 10 loads, 10 LSLICEs
+     Net s_we_hi: 1 loads, 0 LSLICEs
+     Net s_we_lo: 1 loads, 0 LSLICEs
+     Net fsmc_clk_c_enable_1: 1 loads, 0 LSLICEs
+     Net s_cfg_wr_stb: 15 loads, 15 LSLICEs
+     Net fsmc_clk_c_enable_2: 1 loads, 0 LSLICEs
+     Net s_ckgen_div_wr_stb: 8 loads, 8 LSLICEs
+     Net s_ckgen_rtdiv_wr_stb: 8 loads, 8 LSLICEs
+     Net s_r3_wr_stb: 8 loads, 8 LSLICEs
+     Net s_irq_en_wr_stb: 2 loads, 2 LSLICEs
+     Net s_1mhz_stb: 6 loads, 6 LSLICEs
+     Net led_con_drv/mclk_c_enable_41: 2 loads, 2 LSLICEs
+     Net shifter/mclk_c_enable_138: 5 loads, 5 LSLICEs
+     Net shifter/tckn_stb: 5 loads, 5 LSLICEs
+     Net shifter/mclk_c_enable_203: 14 loads, 14 LSLICEs
+     Net shifter/mclk_c_enable_215: 13 loads, 13 LSLICEs
+     Net shifter/mclk_c_enable_239: 13 loads, 13 LSLICEs
+     Net shifter/mclk_c_enable_227: 13 loads, 13 LSLICEs
+     Net shifter/shift_ctrl/mclk_c_enable_71: 1 loads, 1 LSLICEs
+     Net shifter/mclk_c_enable_200: 5 loads, 5 LSLICEs
+     Net shifter/rx/fifo_get: 2 loads, 2 LSLICEs
+
+     Net shifter/rx/mclk_c_enable_75: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_254: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_250: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_246: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_253: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_249: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_245: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_252: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_248: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_244: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_242: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_241: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_240: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_251: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_243: 1 loads, 1 LSLICEs
+     Net shifter/rx/mclk_c_enable_247: 1 loads, 1 LSLICEs
+     Net mclk_c_enable_95: 3 loads, 3 LSLICEs
+     Net shifter/exec_ctrl/mclk_c_enable_99: 5 loads, 5 LSLICEs
+     Net busy_N_1509: 8 loads, 8 LSLICEs
+     Net shifter/exec_ctrl/mclk_c_enable_24: 1 loads, 1 LSLICEs
+     Net shifter/exec_ctrl/tdi_en_N_1474: 1 loads, 1 LSLICEs
+     Net shifter/exec_ctrl/mclk_c_enable_82: 1 loads, 1 LSLICEs
+     Net shifter/ckgen/mclk_c_enable_261: 16 loads, 16 LSLICEs
+     Net shifter/ckgen/mclk_c_enable_67: 2 loads, 2 LSLICEs
+     Net shifter/ckgen/mclk_c_enable_44: 1 loads, 1 LSLICEs
+     Net shifter/ckgen/mclk_c_enable_137: 8 loads, 8 LSLICEs
+     Net shifter/ckgen/mclk_c_enable_155: 8 loads, 8 LSLICEs
+     Net shifter/ckgen/mclk_c_enable_87: 1 loads, 1 LSLICEs
+     Net rx_mem/mclk_c_enable_31: 1 loads, 0 LSLICEs
+     Net rx_mem/mclk_c_enable_32: 1 loads, 0 LSLICEs
+   Number of local set/reset loads for net n8814 merged into GSR:  23
+   Number of LSRs:  23
+     Net led_run_drv/s_cnt_ld: 3 loads, 3 LSLICEs
+     Net fsmc_nce_c: 3 loads, 3 LSLICEs
+     Net n4166: 2 loads, 2 LSLICEs
+     Net cram_bus/n2531: 2 loads, 2 LSLICEs
+     Net n8814: 3 loads, 0 LSLICEs
+     Net s_cfg_6: 18 loads, 0 LSLICEs
+     Net cklgen_1khz/n4149: 6 loads, 6 LSLICEs
+     Net led_con_drv/s_cnt_ld: 3 loads, 3 LSLICEs
+     Net shifter/n8163: 6 loads, 6 LSLICEs
+     Net shifter/tckn_stb: 1 loads, 1 LSLICEs
+     Net shifter/shift_ctrl/n4181: 1 loads, 1 LSLICEs
+     Net shifter/rx/busy: 2 loads, 2 LSLICEs
+     Net shifter/rx/n6548: 1 loads, 1 LSLICEs
+     Net shifter/n7020: 1 loads, 1 LSLICEs
+     Net busy_N_1509: 5 loads, 5 LSLICEs
+     Net shifter/exec_ctrl/n2569: 1 loads, 1 LSLICEs
+     Net shifter/exec_ctrl/n3217: 1 loads, 1 LSLICEs
+     Net shifter/ckgen/n4130: 8 loads, 8 LSLICEs
+     Net shifter/ckgen/s_rtck_r1: 1 loads, 1 LSLICEs
+     Net shifter/ckgen/s_enabled: 3 loads, 3 LSLICEs
+     Net shifter/ckgen/n4157: 8 loads, 8 LSLICEs
+     Net shifter/ckgen/s_rtck_r1_N_655: 1 loads, 1 LSLICEs
+     Net cklgen_1mhz/n4184: 4 loads, 4 LSLICEs
+   Number of nets driven by tri-state buffers:  0
+
+   Top 10 highest fanout non-clock nets:
+     Net q_15__N_82: 85 loads
+     Net s_status_1: 61 loads
+     Net s_status_2: 60 loads
+     Net s_status_3: 59 loads
+     Net shifter/rx/s_op_fifo.tail_0: 53 loads
+     Net q_15__N_78: 48 loads
+     Net q_15__N_80: 48 loads
+     Net q_15__N_76: 36 loads
+     Net s_status_0: 36 loads
+     Net shifter/ckgen/s_rtcken_reg: 34 loads
+
+
+
+
+   Number of warnings:  2
+   Number of errors:    0
+     
+
+
+
+
+<A name="mrp_dwe"></A><B><U><big>Design Errors/Warnings</big></U></B>
+
+WARNING - map: input pad net 'clk_aux' has no legal load.
+WARNING - map: IO buffer missing for top level port clk_aux...logic will be
+     discarded.
+
+
+
+<A name="mrp_ioa"></A><B><U><big>IO (PIO) Attributes</big></U></B>
+
++---------------------+-----------+-----------+------------+
+| IO Name             | Direction | Levelmode | IO         |
+|                     |           |  IO_TYPE  | Register   |
++---------------------+-----------+-----------+------------+
+| tp_rtck             | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_tdo              | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_dbgack           | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| uart_tx             | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_nce            | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_nwe            | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_noe            | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_clk            | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| mclk                | INPUT     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dqm             | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| ddr_cs              | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| led_2               | OUTPUT    | LVCMOS25  |            |
+
++---------------------+-----------+-----------+------------+
+| led_1               | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_rst              | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_trst             | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_tms              | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_tdi              | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_tck              | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| tp_dbgrq            | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| uart_rx             | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| irq                 | OUTPUT    | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[0]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[1]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[2]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[3]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[4]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[5]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[6]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[7]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[8]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[9]           | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[10]          | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[11]          | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[12]          | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| ddr_we              | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_cas             | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_ras             | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_ba[1]           | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_ba[0]           | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[11]        | OUTPUT    | SSTL25_I  | OUT        |
+
++---------------------+-----------+-----------+------------+
+| ddr_addr[10]        | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[9]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[8]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[7]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[6]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[5]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[4]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[3]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[2]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[1]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_addr[0]         | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_clk             | OUTPUT    | SSTL25D_I |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[15]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[14]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_cke             | OUTPUT    | SSTL25_I  | OUT        |
++---------------------+-----------+-----------+------------+
+| ddr_dq[13]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[12]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[11]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[10]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[9]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[8]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dqs[1]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[7]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[6]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[5]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[4]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[3]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[2]           | BIDIR     | SSTL25_I  |            |
+
++---------------------+-----------+-----------+------------+
+| ddr_dq[1]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dq[0]           | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| ddr_dqs[0]          | BIDIR     | SSTL25_I  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[13]          | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[14]          | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+| fsmc_d[15]          | BIDIR     | LVCMOS25  |            |
++---------------------+-----------+-----------+------------+
+
+
+
+<A name="mrp_rm"></A><B><U><big>Removed logic</big></U></B>
+
+Signal shifter/ckgen/n8248 was merged into signal shifter/ckgen/s_enabled
+Signal shifter/ckgen/s_rtck_r1_N_660 was merged into signal
+     shifter/ckgen/s_rtck_r1
+Signal shifter/exec_ctrl/n8284 was merged into signal s_status_3
+Signal shifter/rx/n8243 was merged into signal shifter/rx/busy
+Signal mclk_c_enable_84 was merged into signal n8814
+Signal n2947 was merged into signal s_cfg_11
+Signal cklgen_1mhz/s_count_752_add_4_1/S0 undriven or does not drive anything -
+     clipped.
+Signal cklgen_1mhz/s_count_752_add_4_1/CI undriven or does not drive anything -
+     clipped.
+Signal cklgen_1mhz/s_count_752_add_4_7/S1 undriven or does not drive anything -
+     clipped.
+Signal cklgen_1mhz/s_count_752_add_4_7/CO undriven or does not drive anything -
+     clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_0/S1 undriven or does not drive anything
+     - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_0/S0 undriven or does not drive anything
+     - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_0/CI undriven or does not drive anything
+     - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_11/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_11/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_13/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_13/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_15_4623/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_15_4623/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_755_add_4_15/CO undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_756_add_4_1/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_756_add_4_1/CI undriven or does not drive
+     anything - clipped.
+
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_0/S1 undriven or does not drive anything
+     - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_0/S0 undriven or does not drive anything
+     - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_0/CI undriven or does not drive anything
+     - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_13/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_13/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_15_4622/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_15_4622/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_756_add_4_15/CO undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/sub_91_add_2_1/S0 undriven or does not drive anything -
+     clipped.
+Signal shifter/ckgen/sub_91_add_2_1/CI undriven or does not drive anything -
+     clipped.
+Signal shifter/ckgen/sub_91_add_2_15/CO undriven or does not drive anything -
+     clipped.
+Signal shifter/ckgen/sub_92_add_2_1/S0 undriven or does not drive anything -
+     clipped.
+Signal shifter/ckgen/sub_92_add_2_1/CI undriven or does not drive anything -
+     clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_11/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_11/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_15/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_hi_r_14__I_0_15/CO undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_755_add_4_1/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_755_add_4_1/CI undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_15/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/s_cnt_lo_r_14__I_0_15/CO undriven or does not drive
+     anything - clipped.
+Signal shifter/ckgen/sub_92_add_2_15/CO undriven or does not drive anything -
+     clipped.
+Signal shifter/exec_ctrl/s_cnt_reg_7__I_0_0/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/exec_ctrl/s_cnt_reg_7__I_0_0/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/exec_ctrl/s_cnt_reg_7__I_0_0/CI undriven or does not drive
+     anything - clipped.
+Signal shifter/exec_ctrl/s_cnt_reg_7__I_0_7/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/exec_ctrl/s_cnt_reg_7__I_0_7/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/exec_ctrl/s_cnt_reg_7__I_0_8/S0 undriven or does not drive
+     anything - clipped.
+
+Signal shifter/exec_ctrl/s_cnt_reg_7__I_0_8/CO undriven or does not drive
+     anything - clipped.
+Signal shifter/exec_ctrl/add_108_1/S0 undriven or does not drive anything -
+     clipped.
+Signal shifter/exec_ctrl/add_108_1/CI undriven or does not drive anything -
+     clipped.
+Signal shifter/exec_ctrl/add_108_9/S1 undriven or does not drive anything -
+     clipped.
+Signal shifter/exec_ctrl/add_108_9/CO undriven or does not drive anything -
+     clipped.
+Signal shifter/rx/add_518_11/S1 undriven or does not drive anything - clipped.
+Signal shifter/rx/add_518_11/CO undriven or does not drive anything - clipped.
+Signal shifter/rx/add_518_1/S0 undriven or does not drive anything - clipped.
+Signal shifter/rx/add_518_1/CI undriven or does not drive anything - clipped.
+Signal shifter/shift_ctrl/s_offs_r_7__I_0_7/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/s_offs_r_7__I_0_7/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/add_191_1/S0 undriven or does not drive anything -
+     clipped.
+Signal shifter/shift_ctrl/add_191_1/CI undriven or does not drive anything -
+     clipped.
+Signal shifter/shift_ctrl/s_offs_r_7__I_0_8/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/s_offs_r_7__I_0_8/CO undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/add_191_9/S1 undriven or does not drive anything -
+     clipped.
+Signal shifter/shift_ctrl/add_191_9/CO undriven or does not drive anything -
+     clipped.
+Signal shifter/shift_ctrl/desc_base_7__I_0_2/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/desc_base_7__I_0_2/CI undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/desc_base_7__I_0_8/CO undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/s_offs_r_7__I_0_0/S1 undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/s_offs_r_7__I_0_0/S0 undriven or does not drive
+     anything - clipped.
+Signal shifter/shift_ctrl/s_offs_r_7__I_0_0/CI undriven or does not drive
+     anything - clipped.
+Signal shifter/tx/add_516_1/S1 undriven or does not drive anything - clipped.
+Signal shifter/tx/add_516_1/S0 undriven or does not drive anything - clipped.
+Signal shifter/tx/add_516_1/CI undriven or does not drive anything - clipped.
+Signal shifter/tx/add_516_11/CO undriven or does not drive anything - clipped.
+Signal cklgen_1khz/s_count_753_add_4_1/S0 undriven or does not drive anything -
+     clipped.
+Signal cklgen_1khz/s_count_753_add_4_1/CI undriven or does not drive anything -
+     clipped.
+Signal cklgen_1khz/s_count_753_add_4_11/S1 undriven or does not drive anything -
+     clipped.
+Signal cklgen_1khz/s_count_753_add_4_11/CO undriven or does not drive anything -
+     clipped.
+Signal datain_t0 undriven or does not drive anything - clipped.
+Signal datain_t1 undriven or does not drive anything - clipped.
+
+Signal datain_t2 undriven or does not drive anything - clipped.
+Signal datain_t3 undriven or does not drive anything - clipped.
+Signal datain_t4 undriven or does not drive anything - clipped.
+Signal datain_t5 undriven or does not drive anything - clipped.
+Signal datain_t6 undriven or does not drive anything - clipped.
+Signal datain_t7 undriven or does not drive anything - clipped.
+Signal datain_t8 undriven or does not drive anything - clipped.
+Signal datain_t9 undriven or does not drive anything - clipped.
+Signal datain_t10 undriven or does not drive anything - clipped.
+Signal datain_t11 undriven or does not drive anything - clipped.
+Signal datain_t12 undriven or does not drive anything - clipped.
+Signal datain_t13 undriven or does not drive anything - clipped.
+Signal datain_t14 undriven or does not drive anything - clipped.
+Signal datain_t15 undriven or does not drive anything - clipped.
+Block shifter/ckgen/i285_1_lut_rep_200 was optimized away.
+Block shifter/ckgen/i9_1_lut was optimized away.
+Block shifter/exec_ctrl/mux_177_Mux_3_i221_4_lut_then_1_lut was optimized away.
+Block shifter/rx/i2371_1_lut_rep_195 was optimized away.
+Block cfg_r/i277_1_lut was optimized away.
+Block i1143_1_lut was optimized away.
+
+
+
+<A name="mrp_mem"></A><B><U><big>Memory Usage</big></U></B>
+
+/aux_mem:
+    EBRs: 1
+    RAM SLICEs: 0
+    Logic SLICEs: 0
+    PFU Registers: 0
+    -Contains EBR mem0:  TYPE= DP8KC,  Width_A= 9,  Width_B= 7,  Depth_A= 256,
+         Depth_B= 256,  REGMODE_A= NOREG,  REGMODE_B= NOREG,  RESETMODE= SYNC,
+         ASYNC_RESET_RELEASE= SYNC,  WRITEMODE_A= READBEFOREWRITE,  WRITEMODE_B=
+         READBEFOREWRITE,  GSR= DISABLED
+/desc_mem:
+    EBRs: 2
+    RAM SLICEs: 0
+    Logic SLICEs: 0
+    PFU Registers: 0
+    -Contains EBR n26440:  TYPE= PDPW8KC,  Width= 16,  Depth_R= 256,  Depth_W=
+         256,  REGMODE= NOREG,  RESETMODE= SYNC,  ASYNC_RESET_RELEASE= SYNC,
+         GSR= DISABLED
+    -Contains EBR n26430:  TYPE= PDPW8KC,  Width= 16,  Depth_R= 256,  Depth_W=
+         256,  REGMODE= NOREG,  RESETMODE= SYNC,  ASYNC_RESET_RELEASE= SYNC,
+         GSR= DISABLED
+/ptr_mem:
+    EBRs: 1
+    RAM SLICEs: 0
+    Logic SLICEs: 0
+    PFU Registers: 0
+    -Contains EBR mem0:  TYPE= PDPW8KC,  Width= 16,  Depth_R= 256,  Depth_W=
+         256,  REGMODE= NOREG,  RESETMODE= SYNC,  ASYNC_RESET_RELEASE= SYNC,
+         GSR= DISABLED
+/rx_mem:
+    EBRs: 2
+    RAM SLICEs: 0
+    Logic SLICEs: 0
+
+    PFU Registers: 0
+    -Contains EBR mem1:  TYPE= PDPW8KC,  Width= 16,  Depth_R= 512,  Depth_W=
+         512,  REGMODE= NOREG,  RESETMODE= SYNC,  ASYNC_RESET_RELEASE= SYNC,
+         GSR= DISABLED
+    -Contains EBR mem0:  TYPE= PDPW8KC,  Width= 16,  Depth_R= 512,  Depth_W=
+         512,  REGMODE= NOREG,  RESETMODE= SYNC,  ASYNC_RESET_RELEASE= SYNC,
+         GSR= DISABLED
+/tx_mem:
+    EBRs: 2
+    RAM SLICEs: 0
+    Logic SLICEs: 0
+    PFU Registers: 0
+    -Contains EBR mem0:  TYPE= PDPW8KC,  Width= 16,  Depth_R= 512,  Depth_W=
+         512,  REGMODE= NOREG,  RESETMODE= SYNC,  ASYNC_RESET_RELEASE= SYNC,
+         GSR= DISABLED
+    -Contains EBR mem1:  TYPE= PDPW8KC,  Width= 16,  Depth_R= 512,  Depth_W=
+         512,  REGMODE= NOREG,  RESETMODE= SYNC,  ASYNC_RESET_RELEASE= SYNC,
+         GSR= DISABLED
+
+     
+
+
+
+<A name="mrp_asic"></A><B><U><big>ASIC Components</big></U></B>
+---------------
+
+Instance Name: ddr_phy/Inst6_DQSBUFH1
+         Type: DQSBUFH
+Instance Name: ddr_phy/Inst6_DQSBUFH0
+         Type: DQSBUFH
+Instance Name: ddr_phy/Inst5_DQSDLLC
+         Type: DQSDLLC
+Instance Name: desc_mem/n26440
+         Type: PDPW8KC
+Instance Name: desc_mem/n26430
+         Type: PDPW8KC
+Instance Name: ptr_mem/mem0
+         Type: PDPW8KC
+Instance Name: aux_mem/mem0
+         Type: DP8KC
+Instance Name: tx_mem/mem0
+         Type: PDPW8KC
+Instance Name: tx_mem/mem1
+         Type: PDPW8KC
+Instance Name: rx_mem/mem1
+         Type: PDPW8KC
+Instance Name: rx_mem/mem0
+         Type: PDPW8KC
+
+
+
+<A name="mrp_gsr"></A><B><U><big>GSR Usage</big></U></B>
+---------
+
+GSR Component:
+   The Global Set Reset (GSR) resource has been used to implement a global reset
+        of the design. The reset signal used for GSR control is 'n8814'.
+        
+
+     GSR Property:
+
+   The design components with GSR property set to ENABLED will respond to global
+        set reset while the components with GSR property set to DISABLED will
+        not.
+        
+
+     Components with disabled GSR Property
+-------------------------------------
+
+     These components have the GSR property set to DISABLED. The components will
+     not respond to the reset signal 'n8814' via the GSR component.
+
+     Type and number of components of the type: 
+   Register = 195 
+   PDPW8KC = 7, DP8KC = 1 
+
+     Type and instance name of component: 
+   Register : s_irq_out_65
+   Register : s_irq_reg_i4
+   Register : s_irq_reg_i3
+   Register : s_irq_reg_i2
+   Register : cram_bus/s_cram_st_FSM_i0
+   Register : cram_bus/s_cram_st_FSM_i1
+   Register : cram_bus/s_cram_st_FSM_i2
+   Register : cram_bus/s_cram_st_FSM_i3
+   Register : cram_bus/reg_wr_fifo/s_addr0_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_addr1_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_addr2_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_addr3_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i0
+   Register : cram_bus/reg_wr_fifo/s_addr0_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_addr0_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_addr0_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_addr1_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_addr1_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_addr1_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_addr2_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_addr2_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_addr2_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_addr3_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_addr3_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_addr3_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i4
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i5
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i6
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i7
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i8
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i9
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i10
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i11
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i12
+
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i13
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i14
+   Register : cram_bus/reg_wr_fifo/s_data0_i0_i15
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i4
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i5
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i6
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i7
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i8
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i9
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i10
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i11
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i12
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i13
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i14
+   Register : cram_bus/reg_wr_fifo/s_data1_i0_i15
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i4
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i5
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i6
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i7
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i8
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i9
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i10
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i11
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i12
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i13
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i14
+   Register : cram_bus/reg_wr_fifo/s_data2_i0_i15
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i1
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i2
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i3
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i4
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i5
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i6
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i7
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i8
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i9
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i10
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i11
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i12
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i13
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i14
+   Register : cram_bus/reg_wr_fifo/s_data3_i0_i15
+   Register : s_irq_reg_i1
+   Register : tx_mem/_1103
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_0..msbf_410
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_1..msbf_406
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i0
+
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_3..pos_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_2..msbf_402
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_2..pos_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_1..pos_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_0..pos_i0_i0
+   Register : shifter/rx/s_op_fifo.buf_3..msbf_398
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_3..len_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_3..addr_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_2..len_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_1..len_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_0..len_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_3..pos_i0_i1
+
+   Register : shifter/rx/s_op_fifo.buf_3..pos_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_3..pos_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_2..addr_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_2..pos_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_2..pos_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_2..pos_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_1..addr_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_1..pos_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_1..pos_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_1..pos_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i3
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i4
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i5
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i6
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i7
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i8
+   Register : shifter/rx/s_op_fifo.buf_0..addr_i0_i9
+   Register : shifter/rx/s_op_fifo.buf_0..pos_i0_i1
+   Register : shifter/rx/s_op_fifo.buf_0..pos_i0_i2
+   Register : shifter/rx/s_op_fifo.buf_0..pos_i0_i3
+   Register : shifter/io/s_tckn_r0_36
+   Register : shifter/io/s_tckn_r1_37
+   Register : shifter/exec_ctrl/s_tck_en_194
+   Register : shifter/exec_ctrl/s_tdi_en_195
+   Register : rx_mem/_931
+   PDPW8KC : desc_mem/n26440
+   PDPW8KC : desc_mem/n26430
+   PDPW8KC : ptr_mem/mem0
+   DP8KC : aux_mem/mem0
+   PDPW8KC : tx_mem/mem0
+   PDPW8KC : tx_mem/mem1
+   PDPW8KC : rx_mem/mem1
+   PDPW8KC : rx_mem/mem0
+
+     Components with synchronous local reset also reset by asynchronous GSR
+----------------------------------------------------------------------
+
+     These components have the GSR property set to ENABLED and the local reset
+
+     is synchronous. The components will respond to the synchronous local reset
+     and to the unrelated asynchronous reset signal 'n8814' via the GSR
+     component.
+
+     Type and number of components of the type: 
+   Register = 90 
+   XO2TDDR = 1
+
+     Type and instance name of component: 
+   Register : led_run_drv/s_count_i0_i0
+   Register : led_run_drv/s_count_i0_i4
+   Register : led_run_drv/s_count_i0_i3
+   Register : led_run_drv/s_count_i0_i2
+   Register : led_run_drv/s_count_i0_i1
+   Register : cram_bus/s_op_mem_rd_133
+   Register : cram_bus/s_op_mem_wr_132
+   Register : cfg_r/s_reg_i6_rep_234
+   Register : cfg_r/s_reg_i6
+   Register : cklgen_1khz/s_count_753__i1
+   Register : cklgen_1khz/s_count_753__i2
+   Register : cklgen_1khz/s_count_753__i3
+   Register : cklgen_1khz/s_count_753__i4
+   Register : cklgen_1khz/s_count_753__i5
+   Register : cklgen_1khz/s_count_753__i6
+   Register : cklgen_1khz/s_count_753__i7
+   Register : cklgen_1khz/s_count_753__i8
+   Register : cklgen_1khz/s_count_753__i9
+   Register : cklgen_1khz/s_count_753__i0
+   Register : led_con_drv/s_count_i0_i0
+   Register : led_con_drv/s_count_i0_i4
+   Register : led_con_drv/s_count_i0_i3
+   Register : led_con_drv/s_count_i0_i2
+   Register : led_con_drv/s_count_i0_i1
+   Register : shifter/shift_ctrl/s_cnt_r_5__219
+   Register : shifter/shift_ctrl/s_cnt_r_4__218
+   Register : shifter/shift_ctrl/s_cnt_r_3__217
+   Register : shifter/shift_ctrl/s_cnt_r_2__216
+   Register : shifter/shift_ctrl/s_cnt_r_0__214
+   Register : shifter/shift_ctrl/s_cnt_r_9__223
+   Register : shifter/shift_ctrl/s_en_r0_211
+   Register : shifter/shift_ctrl/s_cnt_r_8__222
+   Register : shifter/shift_ctrl/s_cnt_r_7__221
+   Register : shifter/shift_ctrl/s_cnt_r_6__220
+   Register : shifter/shift_ctrl/s_cnt_r_1__215
+   Register : shifter/rx/s_start_r_394
+   Register : shifter/rx/s_store_stb_441
+   Register : shifter/rx/s_op_fifo.empty_414
+   Register : shifter/io/s_tdi_r0_40
+   Register : shifter/exec_ctrl/s_cnt_reg__i0
+   Register : shifter/exec_ctrl/s_cnt_reg__i3
+   Register : shifter/exec_ctrl/s_cnt_reg__i2
+   Register : shifter/exec_ctrl/s_cnt_reg__i1
+   Register : shifter/exec_ctrl/s_pos_goto_en_193
+   Register : shifter/exec_ctrl/s_cnt_reg__i7
+   Register : shifter/exec_ctrl/s_cnt_reg__i6
+   Register : shifter/exec_ctrl/s_cnt_reg__i5
+
+   Register : shifter/exec_ctrl/s_cnt_reg__i4
+   Register : shifter/ckgen/s_cnt_lo_r_755__i9
+   Register : shifter/ckgen/s_cnt_lo_r_755__i10
+   Register : shifter/ckgen/s_cnt_lo_r_755__i11
+   Register : shifter/ckgen/s_cnt_lo_r_755__i12
+   Register : shifter/ckgen/s_cnt_lo_r_755__i8
+   Register : shifter/ckgen/s_rtck_tmo_117
+   Register : shifter/ckgen/s_cnt_hi_r_756__i1
+   Register : shifter/ckgen/s_cnt_hi_r_756__i2
+   Register : shifter/ckgen/s_cnt_hi_r_756__i3
+   Register : shifter/ckgen/s_cnt_hi_r_756__i4
+   Register : shifter/ckgen/s_rtck_r1_111
+   Register : shifter/ckgen/s_rtck_r2_112
+   Register : shifter/ckgen/s_cnt_lo_r_755__i13
+   Register : shifter/ckgen/s_cnt_lo_r_755__i14
+   Register : shifter/ckgen/s_cnt_hi_r_756__i5
+   Register : shifter/ckgen/s_cnt_hi_r_756__i6
+   Register : shifter/ckgen/s_cnt_hi_r_756__i7
+   Register : shifter/ckgen/s_cnt_hi_r_756__i8
+   Register : shifter/ckgen/s_cnt_hi_r_756__i9
+   Register : shifter/ckgen/s_cnt_hi_r_756__i10
+   Register : shifter/ckgen/s_cnt_hi_r_756__i11
+   Register : shifter/ckgen/s_cnt_hi_r_756__i12
+   Register : shifter/ckgen/s_cnt_hi_r_756__i13
+   Register : shifter/ckgen/s_cnt_hi_r_756__i14
+   Register : shifter/ckgen/s_tck_r1_114
+   Register : shifter/ckgen/s_rtcken_reg_116
+   Register : shifter/ckgen/s_tcki_r1_119
+   Register : shifter/ckgen/s_cnt_hi_r_756__i0
+   Register : shifter/ckgen/s_cnt_lo_r_755__i0
+   Register : shifter/ckgen/s_cnt_lo_r_755__i1
+   Register : shifter/ckgen/s_cnt_lo_r_755__i2
+   Register : shifter/ckgen/s_cnt_lo_r_755__i3
+   Register : shifter/ckgen/s_cnt_lo_r_755__i4
+   Register : shifter/ckgen/s_cnt_lo_r_755__i5
+   Register : shifter/ckgen/s_cnt_lo_r_755__i6
+   Register : shifter/ckgen/s_cnt_lo_r_755__i7
+   Register : cklgen_1mhz/s_count_752__i0
+   Register : cklgen_1mhz/s_count_752__i1
+   Register : cklgen_1mhz/s_count_752__i2
+   Register : cklgen_1mhz/s_count_752__i3
+   Register : cklgen_1mhz/s_count_752__i4
+   Register : cklgen_1mhz/s_count_752__i5
+   XO2TDDR : ddr_phy/Inst7_TDDRA1$r0
+
+
+
+<A name="mrp_runtime"></A><B><U><big>Run Time and Memory Usage</big></U></B>
+-------------------------
+
+   Total CPU Time: 0 secs  
+   Total REAL Time: 0 secs  
+   Peak Memory Usage: 48 MB
+        
+
+
+
+
+
+
+
+Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
+     Copyright (c) 1995 AT&T Corp.   All rights reserved.
+     Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
+     Copyright (c) 2001 Agere Systems   All rights reserved.
+     Copyright (c) 2002-2017 Lattice Semiconductor Corporation,  All rights
+     reserved.
+
+
+
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+</PRE></FONT>
+</BODY>
+</HTML>

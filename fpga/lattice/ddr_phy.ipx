@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DiamondModule name="ddr_phy" module="ddr_phy" VendorName="Lattice Semiconductor Corporation" generator="IPexpress" date="2018 04 19 10:11:04.654" version="6.0" type="Module" synthesis="lse" source_format="VHDL">
+  <Package>
+		<File name="ddr_phy.lpc" type="lpc" modified="2018 04 19 10:11:02.500"/>
+		<File name="ddr_phy.vhd" type="top_level_vhdl" modified="2018 04 19 10:11:02.606"/>
+		<File name="ddr_phy_tmpl.vhd" type="template_vhdl" modified="2018 04 19 10:11:02.606"/>
+  </Package>
+</DiamondModule>

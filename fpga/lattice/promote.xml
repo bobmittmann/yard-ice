@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<userSetting name="C:/devel/yard-ice/fpga/lattice/promote.xml" version="Diamond (64-bit) 3.10.1.112" date="Thu Apr 19 11:24:26 2018" vendor="Lattice Semiconductor Corporation" >
+  <msg mid="35921504" type="Info" />
+  <msg mid="35921205" type="Warning" />
+  <msg mid="35921119" type="Error" />
+  <msg mid="35921272" type="Error" />
+  <msg mid="35921549" type="Error" />
+  <msg mid="35921303" type="Warning" />
+</userSetting>

@@ -1,0 +1,477 @@
+<HTML>
+<HEAD><TITLE>Lattice Synthesis Timing Report</TITLE>
+<STYLE TYPE="text/css">
+<!--
+ body,pre{    font-family:'Courier New', monospace;    color: #000000;    font-size:88%;    background-color: #ffffff;}h1 {    font-weight: bold;    margin-top: 24px;    margin-bottom: 10px;    border-bottom: 3px solid #000;    font-size: 1em;}h2 {    font-weight: bold;    margin-top: 18px;    margin-bottom: 5px;    font-size: 0.90em;}h3 {    font-weight: bold;    margin-top: 12px;    margin-bottom: 5px;    font-size: 0.80em;}p {    font-size:78%;}P.Table {    margin-top: 4px;    margin-bottom: 4px;    margin-right: 4px;    margin-left: 4px;}table{    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    border-collapse: collapse;}th {    font-weight:bold;    padding: 4px;    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    vertical-align:top;    text-align:left;    font-size:78%;}td {    padding: 4px;    border-width: 1px 1px 1px 1px;    border-style: solid solid solid solid;    border-color: black black black black;    vertical-align:top;    font-size:78%;}a {    color:#013C9A;    text-decoration:none;}a:visited {    color:#013C9A;}a:hover, a:active {    text-decoration:underline;    color:#5BAFD4;}.pass{background-color: #00ff00;}.fail{background-color: #ff0000;}.comment{    font-size: 90%;    font-style: italic;}
+-->
+</STYLE>
+</HEAD>
+<PRE><A name="Map_Twr"></A><B><U><big>Lattice Synthesis Timing Report</big></U></B>
+--------------------------------------------------------------------------------
+Lattice Synthesis Timing Report, Version  
+Thu Apr 19 11:22:34 2018
+
+Copyright (c) 1991-1994 by NeoCAD Inc. All rights reserved.
+Copyright (c) 1995 AT&T Corp.   All rights reserved.
+Copyright (c) 1995-2001 Lucent Technologies Inc.  All rights reserved.
+Copyright (c) 2001 Agere Systems   All rights reserved.
+Copyright (c) 2002-2017 Lattice Semiconductor Corporation,  All rights reserved.
+
+<A name="mtw1_ri"></A><B><U><big>Report Information</big></U></B>
+------------------
+Design:     yard_ice
+Constraint file:  
+Report level:    verbose report, limited to 3 items per constraint
+--------------------------------------------------------------------------------
+
+
+
+================================================================================
+Constraint: create_clock -period 5.000000 -name clk2 [get_nets \shifter/mclk_c_enable_104]
+            0 items scored, 0 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+Constraint: create_clock -period 5.000000 -name clk1 [get_nets fsmc_clk_c]
+            916 items scored, 353 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+Error:  The following path violates requirements by 5.733ns
+
+ Logical Details:  Cell type  Pin type       Cell name  (clock net +/-)
+
+   Source:         FD1S3AX    CK             \cram_bus/addr_r/s_count_reg[0]_180  (from fsmc_clk_c +)
+   Destination:    FD1S3AX    D              \cram_bus/addr_r/s_count_reg[13]_193  (to fsmc_clk_c +)
+
+   Delay:                  10.587ns  (29.2% logic, 70.8% route), 7 logic levels.
+
+ Constraint Details:
+
+     10.587ns data_path \cram_bus/addr_r/s_count_reg[0]_180 to \cram_bus/addr_r/s_count_reg[13]_193 violates
+      5.000ns delay constraint less
+      0.146ns L_S requirement (totaling 4.854ns) by 5.733ns
+
+ Path Details: \cram_bus/addr_r/s_count_reg[0]_180 to \cram_bus/addr_r/s_count_reg[13]_193
+
+   Name    Fanout   Delay (ns)          Pins               Resource(Cell.Net)
+L_CO        ---     0.403             CK to Q              \cram_bus/addr_r/s_count_reg[0]_180 (from fsmc_clk_c)
+Route        85   e 2.104                                  q_15__N_82
+LUT4        ---     0.448              A to Z              \cram_bus/addr_r/q_15__I_21_2_lut_rep_197
+Route         2   e 0.954                                  \cram_bus/addr_r/n8864
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_18_2_lut_rep_146_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8813
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_15_2_lut_rep_121_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8788
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_12_2_lut_rep_103_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8770
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_9_2_lut_rep_91_3_lut_4_lut
+Route         1   e 0.788                                  \cram_bus/addr_r/n8758
+LUT4        ---     0.448              D to Z              \cram_bus/addr_r/q_13__I_25_4_lut
+Route         1   e 0.788                                  \cram_bus/addr_r/q_13__N_89
+                  --------
+                   10.587  (29.2% logic, 70.8% route), 7 logic levels.
+
+
+Error:  The following path violates requirements by 5.733ns
+
+ Logical Details:  Cell type  Pin type       Cell name  (clock net +/-)
+
+   Source:         FD1S3AX    CK             \cram_bus/addr_r/s_count_reg[0]_180  (from fsmc_clk_c +)
+   Destination:    FD1S3AX    D              \cram_bus/addr_r/s_count_reg[14]_194  (to fsmc_clk_c +)
+
+   Delay:                  10.587ns  (29.2% logic, 70.8% route), 7 logic levels.
+
+ Constraint Details:
+
+     10.587ns data_path \cram_bus/addr_r/s_count_reg[0]_180 to \cram_bus/addr_r/s_count_reg[14]_194 violates
+      5.000ns delay constraint less
+      0.146ns L_S requirement (totaling 4.854ns) by 5.733ns
+
+ Path Details: \cram_bus/addr_r/s_count_reg[0]_180 to \cram_bus/addr_r/s_count_reg[14]_194
+
+   Name    Fanout   Delay (ns)          Pins               Resource(Cell.Net)
+L_CO        ---     0.403             CK to Q              \cram_bus/addr_r/s_count_reg[0]_180 (from fsmc_clk_c)
+Route        85   e 2.104                                  q_15__N_82
+LUT4        ---     0.448              A to Z              \cram_bus/addr_r/q_15__I_20_2_lut_rep_172_3_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8839
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_17_2_lut_rep_138_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8805
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_14_2_lut_rep_116_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8783
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_11_2_lut_rep_99_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8766
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_8_2_lut_rep_87_3_lut_4_lut
+Route         1   e 0.788                                  \cram_bus/addr_r/n8754
+LUT4        ---     0.448              D to Z              \cram_bus/addr_r/q_14__I_23_4_lut
+Route         1   e 0.788                                  \cram_bus/addr_r/q_14__N_85
+                  --------
+                   10.587  (29.2% logic, 70.8% route), 7 logic levels.
+
+
+Error:  The following path violates requirements by 5.733ns
+
+ Logical Details:  Cell type  Pin type       Cell name  (clock net +/-)
+
+   Source:         FD1S3AX    CK             \cram_bus/addr_r/s_count_reg[0]_180  (from fsmc_clk_c +)
+   Destination:    FD1S3AX    D              \cram_bus/addr_r/s_count_reg[15]_195  (to fsmc_clk_c +)
+
+   Delay:                  10.587ns  (29.2% logic, 70.8% route), 7 logic levels.
+
+ Constraint Details:
+
+     10.587ns data_path \cram_bus/addr_r/s_count_reg[0]_180 to \cram_bus/addr_r/s_count_reg[15]_195 violates
+      5.000ns delay constraint less
+      0.146ns L_S requirement (totaling 4.854ns) by 5.733ns
+
+ Path Details: \cram_bus/addr_r/s_count_reg[0]_180 to \cram_bus/addr_r/s_count_reg[15]_195
+
+   Name    Fanout   Delay (ns)          Pins               Resource(Cell.Net)
+L_CO        ---     0.403             CK to Q              \cram_bus/addr_r/s_count_reg[0]_180 (from fsmc_clk_c)
+Route        85   e 2.104                                  q_15__N_82
+LUT4        ---     0.448              A to Z              \cram_bus/addr_r/q_15__I_19_2_lut_rep_157_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8824
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_16_2_lut_rep_126_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8793
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_13_2_lut_rep_109_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8776
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_10_2_lut_rep_95_3_lut_4_lut
+Route         2   e 0.954                                  \cram_bus/addr_r/n8762
+LUT4        ---     0.448              B to Z              \cram_bus/addr_r/q_15__I_7_2_lut_3_lut_4_lut
+Route         1   e 0.788                                  \cram_bus/addr_r/q_15__N_51
+LUT4        ---     0.448              D to Z              \cram_bus/addr_r/q_15__I_6_4_lut
+Route         1   e 0.788                                  \cram_bus/addr_r/q_15__N_49
+                  --------
+                   10.587  (29.2% logic, 70.8% route), 7 logic levels.
+
+Warning: 10.733 ns is the maximum delay for this constraint.
+
+
+
+================================================================================
+Constraint: create_clock -period 5.000000 -name clk0 [get_nets mclk_c]
+            4096 items scored, 4096 timing errors detected.
+--------------------------------------------------------------------------------
+
+
+Error:  The following path violates requirements by 13.989ns
+
+ Logical Details:  Cell type  Pin type       Cell name  (clock net +/-)
+
+   Source:         FD1P3AX    CK             \shifter/exec_ctrl/s_insn_r0_i0_i14  (from mclk_c +)
+   Destination:    FD1P3AX    D              \shifter/io/s_tms_r0_41  (to mclk_c +)
+
+   Delay:                  18.843ns  (31.1% logic, 68.9% route), 15 logic levels.
+
+ Constraint Details:
+
+     18.843ns data_path \shifter/exec_ctrl/s_insn_r0_i0_i14 to \shifter/io/s_tms_r0_41 violates
+      5.000ns delay constraint less
+      0.146ns L_S requirement (totaling 4.854ns) by 13.989ns
+
+ Path Details: \shifter/exec_ctrl/s_insn_r0_i0_i14 to \shifter/io/s_tms_r0_41
+
+   Name    Fanout   Delay (ns)          Pins               Resource(Cell.Net)
+L_CO        ---     0.403             CK to Q              \shifter/exec_ctrl/s_insn_r0_i0_i14 (from mclk_c)
+Route         8   e 1.335                                  \shifter/exec_ctrl/s_insn_r0[14]
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/i7_4_lut
+Route         1   e 0.788                                  \shifter/exec_ctrl/n19
+LUT4        ---     0.448              B to Z              \shifter/exec_ctrl/i6232_3_lut
+Route         7   e 1.255                                  \shifter/exec_ctrl/n182
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/mux_565_i1_3_lut_rep_165
+Route        20   e 1.526                                  n8832
+LUT4        ---     0.448              C to Z              i6008_4_lut
+Route         9   e 1.315                                  n5312
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/i3433_2_lut_3_lut
+Route         4   e 1.120                                  \shifter/exec_ctrl/n5526
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/s_end_state_3__I_151_i2_4_lut
+Route         7   e 1.255                                  s_end_state[1]
+LUT4        ---     0.448          AD[8] to DO0            mux_178_Mux_0
+Route         1   e 0.788                                  s_goto_state[0]
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/mux_159_i1_3_lut_4_lut
+Route         1   e 0.020                                  \shifter/exec_ctrl/s_tap_state_next_3__N_1461[0]
+MUXL5       ---     0.212           ALUT to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_154_i1
+Route         1   e 0.020                                  \shifter/exec_ctrl/s_tap_state_next_3__N_1438[0]
+MUXL5       ---     0.212             D1 to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_0_225_i1
+Route         5   e 1.174                                  \shifter/exec_ctrl/s_tap_state_next[0]
+MOFX0       ---     0.344             C0 to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_0_i4
+Route         1   e 0.788                                  \shifter/exec_ctrl/n4
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/n4_bdd_4_lut_6560
+Route         1   e 0.788                                  \shifter/exec_ctrl/n8601
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/n8601_bdd_3_lut
+Route         1   e 0.020                                  \shifter/exec_ctrl/n8602
+MUXL5       ---     0.212           ALUT to Z              \shifter/exec_ctrl/i6561
+Route         1   e 0.788                                  \shifter/s_mtms
+                  --------
+                   18.843  (31.1% logic, 68.9% route), 15 logic levels.
+
+
+Error:  The following path violates requirements by 13.957ns
+
+ Logical Details:  Cell type  Pin type       Cell name  (clock net +/-)
+
+   Source:         FD1P3AX    CK             \shifter/exec_ctrl/s_insn_r0_i0_i13  (from mclk_c +)
+   Destination:    FD1P3AX    D              \shifter/io/s_tms_r0_41  (to mclk_c +)
+
+   Delay:                  18.811ns  (31.2% logic, 68.8% route), 15 logic levels.
+
+ Constraint Details:
+
+     18.811ns data_path \shifter/exec_ctrl/s_insn_r0_i0_i13 to \shifter/io/s_tms_r0_41 violates
+      5.000ns delay constraint less
+      0.146ns L_S requirement (totaling 4.854ns) by 13.957ns
+
+ Path Details: \shifter/exec_ctrl/s_insn_r0_i0_i13 to \shifter/io/s_tms_r0_41
+
+   Name    Fanout   Delay (ns)          Pins               Resource(Cell.Net)
+L_CO        ---     0.403             CK to Q              \shifter/exec_ctrl/s_insn_r0_i0_i13 (from mclk_c)
+Route         7   e 1.303                                  \shifter/exec_ctrl/s_insn_r0[13]
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/i8_4_lut
+Route         1   e 0.788                                  \shifter/exec_ctrl/n20
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/i6232_3_lut
+Route         7   e 1.255                                  \shifter/exec_ctrl/n182
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/mux_565_i1_3_lut_rep_165
+Route        20   e 1.526                                  n8832
+LUT4        ---     0.448              C to Z              i6008_4_lut
+Route         9   e 1.315                                  n5312
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/i3433_2_lut_3_lut
+Route         4   e 1.120                                  \shifter/exec_ctrl/n5526
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/s_end_state_3__I_151_i2_4_lut
+Route         7   e 1.255                                  s_end_state[1]
+LUT4        ---     0.448          AD[8] to DO0            mux_178_Mux_0
+Route         1   e 0.788                                  s_goto_state[0]
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/mux_159_i1_3_lut_4_lut
+Route         1   e 0.020                                  \shifter/exec_ctrl/s_tap_state_next_3__N_1461[0]
+MUXL5       ---     0.212           ALUT to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_154_i1
+Route         1   e 0.020                                  \shifter/exec_ctrl/s_tap_state_next_3__N_1438[0]
+MUXL5       ---     0.212             D1 to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_0_225_i1
+Route         5   e 1.174                                  \shifter/exec_ctrl/s_tap_state_next[0]
+MOFX0       ---     0.344             C0 to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_0_i4
+Route         1   e 0.788                                  \shifter/exec_ctrl/n4
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/n4_bdd_4_lut_6560
+Route         1   e 0.788                                  \shifter/exec_ctrl/n8601
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/n8601_bdd_3_lut
+Route         1   e 0.020                                  \shifter/exec_ctrl/n8602
+MUXL5       ---     0.212           ALUT to Z              \shifter/exec_ctrl/i6561
+Route         1   e 0.788                                  \shifter/s_mtms
+                  --------
+                   18.811  (31.2% logic, 68.8% route), 15 logic levels.
+
+
+Error:  The following path violates requirements by 13.952ns
+
+ Logical Details:  Cell type  Pin type       Cell name  (clock net +/-)
+
+   Source:         FD1P3AX    CK             \shifter/exec_ctrl/s_insn_r0_i0_i14  (from mclk_c +)
+   Destination:    FD1P3AX    D              \shifter/io/s_tms_r0_41  (to mclk_c +)
+
+   Delay:                  18.806ns  (31.2% logic, 68.8% route), 15 logic levels.
+
+ Constraint Details:
+
+     18.806ns data_path \shifter/exec_ctrl/s_insn_r0_i0_i14 to \shifter/io/s_tms_r0_41 violates
+      5.000ns delay constraint less
+      0.146ns L_S requirement (totaling 4.854ns) by 13.952ns
+
+ Path Details: \shifter/exec_ctrl/s_insn_r0_i0_i14 to \shifter/io/s_tms_r0_41
+
+   Name    Fanout   Delay (ns)          Pins               Resource(Cell.Net)
+L_CO        ---     0.403             CK to Q              \shifter/exec_ctrl/s_insn_r0_i0_i14 (from mclk_c)
+Route         8   e 1.335                                  \shifter/exec_ctrl/s_insn_r0[14]
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/i7_4_lut
+Route         1   e 0.788                                  \shifter/exec_ctrl/n19
+LUT4        ---     0.448              B to Z              \shifter/exec_ctrl/i6232_3_lut
+Route         7   e 1.255                                  \shifter/exec_ctrl/n182
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/mux_565_i1_3_lut_rep_165
+Route        20   e 1.526                                  n8832
+LUT4        ---     0.448              C to Z              i6008_4_lut
+Route         9   e 1.315                                  n5312
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/i3433_2_lut_3_lut
+Route         4   e 1.120                                  \shifter/exec_ctrl/n5526
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/s_end_state_3__I_151_i1_4_lut
+Route         6   e 1.218                                  s_end_state[0]
+LUT4        ---     0.448          AD[8] to DO0            mux_178_Mux_0
+Route         1   e 0.788                                  s_goto_state[0]
+LUT4        ---     0.448              C to Z              \shifter/exec_ctrl/mux_159_i1_3_lut_4_lut
+Route         1   e 0.020                                  \shifter/exec_ctrl/s_tap_state_next_3__N_1461[0]
+MUXL5       ---     0.212           ALUT to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_154_i1
+Route         1   e 0.020                                  \shifter/exec_ctrl/s_tap_state_next_3__N_1438[0]
+MUXL5       ---     0.212             D1 to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_0_225_i1
+Route         5   e 1.174                                  \shifter/exec_ctrl/s_tap_state_next[0]
+MOFX0       ---     0.344             C0 to Z              \shifter/exec_ctrl/s_tap_state_next_3__I_0_i4
+Route         1   e 0.788                                  \shifter/exec_ctrl/n4
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/n4_bdd_4_lut_6560
+Route         1   e 0.788                                  \shifter/exec_ctrl/n8601
+LUT4        ---     0.448              A to Z              \shifter/exec_ctrl/n8601_bdd_3_lut
+Route         1   e 0.020                                  \shifter/exec_ctrl/n8602
+MUXL5       ---     0.212           ALUT to Z              \shifter/exec_ctrl/i6561
+Route         1   e 0.788                                  \shifter/s_mtms
+                  --------
+                   18.806  (31.2% logic, 68.8% route), 15 logic levels.
+
+Warning: 18.989 ns is the maximum delay for this constraint.
+
+
+<A name="mtw1_rs"></A><B><U><big>Timing Report Summary</big></U></B>
+--------------
+--------------------------------------------------------------------------------
+Constraint                              |   Constraint|       Actual|Levels
+--------------------------------------------------------------------------------
+                                        |             |             |
+create_clock -period 5.000000 -name     |             |             |
+clk2 [get_nets                          |             |             |
+\shifter/mclk_c_enable_104]             |            -|            -|     0  
+                                        |             |             |
+create_clock -period 5.000000 -name     |             |             |
+clk1 [get_nets fsmc_clk_c]              |     5.000 ns|    10.733 ns|     7 *
+                                        |             |             |
+create_clock -period 5.000000 -name     |             |             |
+clk0 [get_nets mclk_c]                  |     5.000 ns|    18.989 ns|    15 *
+                                        |             |             |
+--------------------------------------------------------------------------------
+
+
+2 constraints not met.
+
+--------------------------------------------------------------------------------
+Critical Nets                           |   Loads|  Errors| % of total
+--------------------------------------------------------------------------------
+\shifter/exec_ctrl/n5526                |       4|    3684|     82.81%
+                                        |        |        |
+\shifter/s_mtms                         |       1|    3550|     79.79%
+                                        |        |        |
+n5312                                   |       9|    3080|     69.23%
+                                        |        |        |
+\shifter/exec_ctrl/n182                 |       7|    2632|     59.16%
+                                        |        |        |
+\shifter/exec_ctrl/n8602                |       1|    2495|     56.08%
+                                        |        |        |
+\shifter/exec_ctrl/s_tap_state_next[0]  |       5|    1536|     34.52%
+                                        |        |        |
+\shifter/exec_ctrl/s_tap_state_next_3__N|        |        |
+_1438[0]                                |       1|    1536|     34.52%
+                                        |        |        |
+\shifter/exec_ctrl/s_tap_state_next_3__N|        |        |
+_1461[0]                                |       1|    1536|     34.52%
+                                        |        |        |
+s_goto_state[0]                         |       1|    1536|     34.52%
+                                        |        |        |
+\shifter/exec_ctrl/s_goto_state[3]      |       1|    1277|     28.70%
+                                        |        |        |
+\shifter/exec_ctrl/s_tap_state_next[3]  |       3|    1277|     28.70%
+                                        |        |        |
+\shifter/exec_ctrl/n8601                |       1|    1100|     24.72%
+                                        |        |        |
+s_end_state[1]                          |       7|    1065|     23.94%
+                                        |        |        |
+\shifter/exec_ctrl/n8603                |       1|    1055|     23.71%
+                                        |        |        |
+n8832                                   |      20|     980|     22.03%
+                                        |        |        |
+n8828                                   |       6|     970|     21.80%
+                                        |        |        |
+s_end_state[0]                          |       6|     949|     21.33%
+                                        |        |        |
+\shifter/exec_ctrl/n19                  |       1|     912|     20.50%
+                                        |        |        |
+\shifter/exec_ctrl/n20                  |       1|     894|     20.09%
+                                        |        |        |
+s_end_state[3]                          |       6|     840|     18.88%
+                                        |        |        |
+s_end_state[2]                          |       5|     830|     18.66%
+                                        |        |        |
+\shifter/exec_ctrl/n8104                |       1|     826|     18.57%
+                                        |        |        |
+\shifter/exec_ctrl/s_tap_state_next[1]  |       4|     816|     18.34%
+                                        |        |        |
+\shifter/exec_ctrl/s_tap_state_next_3__N|        |        |
+_1438[1]                                |       1|     816|     18.34%
+                                        |        |        |
+\shifter/exec_ctrl/n3364                |       1|     814|     18.30%
+                                        |        |        |
+s_goto_state[1]                         |       1|     812|     18.25%
+                                        |        |        |
+n8829                                   |       2|     806|     18.12%
+                                        |        |        |
+\shifter/exec_ctrl/n9305                |       1|     796|     17.89%
+                                        |        |        |
+\shifter/exec_ctrl/n4405                |       2|     734|     16.50%
+                                        |        |        |
+\shifter/exec_ctrl/s_insn_r0[14]        |       8|     681|     15.31%
+                                        |        |        |
+\shifter/exec_ctrl/s_insn_r0[13]        |       7|     672|     15.10%
+                                        |        |        |
+\shifter/exec_ctrl/s_insn_r0[12]        |       6|     500|     11.24%
+                                        |        |        |
+\shifter/exec_ctrl/n2554                |      12|     473|     10.63%
+                                        |        |        |
+--------------------------------------------------------------------------------
+
+
+<A name="mtw1_ts"></A><B><U><big>Timing summary:</big></U></B>
+---------------
+
+Timing errors: 4449  Score: 48022414
+
+Constraints cover  44111 paths, 1744 nets, and 5287 connections (83.1% coverage)
+
+
+Peak memory: 111878144 bytes, TRCE: 12308480 bytes, DLYMAN: 655360 bytes
+CPU_TIME_REPORT: 0 secs 
+
+
+
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+<BR>
+</PRE></FONT>
+</BODY>
+</HTML>

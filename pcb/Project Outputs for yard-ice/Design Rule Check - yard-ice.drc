@@ -1,0 +1,37 @@
+Protel Design System Design Rule Check
+PCB File : C:\devel\yard-ice\pcb\yard-ice.PcbDoc
+Date     : 4/16/2018
+Time     : 10:31:53 AM
+
+WARNING: Unplated multi-layer pad(s) detected
+   Pad CN3-10(-93.9mm,1.285mm) on Multi-Layer on Net POE-
+   Pad CN3-3(-91.36mm,10.175mm) on Multi-Layer on Net ETH_3.3A
+   Pad CN3-1(-91.36mm,12.715mm) on Multi-Layer on Net NetCN3_1
+   Pad CN3-9(-91.36mm,2.555mm) on Multi-Layer on Net POE+
+   Pad CN3-2(-93.9mm,11.445mm) on Multi-Layer on Net NetCN3_2
+   Pad CN3-6(-93.9mm,6.365mm) on Multi-Layer on Net NetCN3_6
+   Pad CN3-5(-91.36mm,7.635mm) on Multi-Layer on Net NetCN3_5
+   Pad CN3-4(-93.9mm,8.905mm) on Multi-Layer on Net ETH_3.3A
+   Pad CN3-15(-97.2mm,14.75mm) on Multi-Layer on Net GND_EARTH
+   Pad CN3-15(-97.2mm,-0.75mm) on Multi-Layer on Net GND_EARTH
+   Pad CN3-12(-104.33mm,11.09mm) on Multi-Layer on Net NetCN3_12
+   Pad CN3-11(-104.33mm,13.63mm) on Multi-Layer on Net VCC_3.3
+   Pad CN3-13(-104.33mm,2.91mm) on Multi-Layer on Net VCC_3.3
+   Pad CN3-14(-104.33mm,0.37mm) on Multi-Layer on Net NetCN3_14
+
+Processing Rule : Matched Lengths(Tolerance=10mm) (InNetClass('SRAM_A[0..12]'))
+Rule Violations :0
+
+Processing Rule : Matched Lengths(Tolerance=10mm) (InNetClass('SRAM_DQ[0..15]'))
+   Violation between Matched Net Lengths: Between Net SRAM_DQ10 And Net SRAM_DQ7 Length:15.087mm is not within 10mm tolerance of Length:26.189mm (1.102mm short) 
+   Violation between Matched Net Lengths: Between Net SRAM_DQ9 And Net SRAM_DQ7 Length:15.684mm is not within 10mm tolerance of Length:26.189mm (0.506mm short) 
+   Violation between Matched Net Lengths: Between Net SRAM_DQ15 And Net SRAM_DQ7 Length:8.18mm is not within 10mm tolerance of Length:26.189mm (8.009mm short) 
+   Violation between Matched Net Lengths: Between Net SRAM_DQ14 And Net SRAM_DQ7 Length:9.405mm is not within 10mm tolerance of Length:26.189mm (6.785mm short) 
+   Violation between Matched Net Lengths: Between Net SRAM_DQ13 And Net SRAM_DQ7 Length:10.125mm is not within 10mm tolerance of Length:26.189mm (6.064mm short) 
+   Violation between Matched Net Lengths: Between Net SRAM_DQ12 And Net SRAM_DQ7 Length:11.525mm is not within 10mm tolerance of Length:26.189mm (4.664mm short) 
+   Violation between Matched Net Lengths: Between Net SRAM_DQ11 And Net SRAM_DQ7 Length:13.719mm is not within 10mm tolerance of Length:26.189mm (2.471mm short) 
+Rule Violations :7
+
+
+Violations Detected : 7
+Time Elapsed        : 00:00:00

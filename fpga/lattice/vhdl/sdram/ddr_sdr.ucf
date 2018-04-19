@@ -1,0 +1,231 @@
+################################################################################
+##
+## PROJECT         DDR-SDRAM Controller Core
+##
+## DATE            $Date: 2003/03/19 06:43:40 $
+##
+## LANGUAGE        VHDL 93
+##
+## ABSTRACT        DDR-SDRAM Controller
+##                 User Constraints File
+##                 NOTE : Pin location constraints are only for example
+##
+## AUTHOR          Markus Lemke
+##                 markus@opencores.org
+##
+################################################################################
+##
+## Copyright (C) 2002 Markus Lemke, www.array-electronics.de
+##  
+## Everyone is permitted to copy and distribute  and  modify 
+## this  document  under  the  terms of the OpenIPCore Hardware
+## General  Public License "OHGPL" which can  be  read  in  the
+## file LICENSE.
+##  
+## The  License  grants  you  the right to copy, modify  and
+## redistribute this file,  but only under  certain  conditions 
+## described in the License.  Among other things,  the  License
+## requires that  this  copyright  notice  and  the  associated
+## disclaimer  be preserved on  all copies.  Every copy of this
+## file must include a copy of the License, normally in a plain
+## ASCII text file named LICENSE.
+##  
+## 
+## DISCLAIMER
+## 
+## THIS SOFTWARE  IS  PROVIDED  ``AS IS''  AND  WITHOUT ANY  
+## EXPRESS  OR  IMPLIED  WARRANTIES, INCLUDING, BUT NOT LIMITED 
+## TO, THE  IMPLIED  WARRANTIES OF  MERCHANTABILITY AND FITNESS
+## FOR A  PARTICULAR  PURPOSE.  IN NO EVENT SHALL THE AUTHOR OR 
+## CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+## SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES  (INCLUDING,
+## BUT NOT  LIMITED TO,  PROCUREMENT  OF  SUBSTITUTE  GOODS  OR 
+## SERVICES;  LOSS  OF  USE,  DATA,  OR  PROFITS;  OR  BUSINESS 
+## INTERRUPTION) HOWEVER CAUSED  AND ON ANY THEORY O LIABILITY,
+## WHETHER  IN CONTRACT, STRICT  LIABILITY, OR  TORT (INCLUDING 
+## NEGLIGENCE OR OTHERWISE)  ARISING IN ANY WAY OUT OF THE  USE 
+## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH 
+## DAMAGE.                              
+################################################################################
+
+
+# Specifying global clock period
+net "clk"     period = 100 MHz ;
+
+net "*sys_reset_1_q" MAXDELAY = 10 ns;
+net "*sys_reset_1_q" TIG;
+
+# The following timespec is only for demonstration of P&R,
+# All Core DDR SDRAM I/Os should use IOB-FFs !
+timespec ts_non = from FFS to PADS 10 ns; 
+
+# location constraints (this is an example !)
+NET a_q<0> LOC=B18; 
+NET a_q<1> LOC=A18;
+NET a_q<2> LOC=B17;
+NET a_q<3> LOC=A17;
+NET a_q<4> LOC=N17;
+NET a_q<5> LOC=P18;
+NET a_q<6> LOC=P17;
+NET a_q<7> LOC=M18;
+NET a_q<8> LOC=M19;
+NET a_q<9> LOC=M20;
+NET a_q<10> LOC=A19;
+NET a_q<11> LOC=N18;
+NET a_q<12> LOC=N20;
+
+NET data<0> LOC=Y21;
+NET data<1> LOC=Y22;
+NET data<2> LOC=W21;
+NET data<3> LOC=V21;
+NET data<4> LOC=V22;
+NET data<5> LOC=U21;
+NET data<6> LOC=U22;
+NET data<7> LOC=T21;
+NET data<8> LOC=R20; 
+NET data<9> LOC=R19;
+NET data<10> LOC=T20;
+NET data<11> LOC=T19;
+NET data<12> LOC=U19;
+NET data<13> LOC=V20;
+NET data<14> LOC=V19;
+NET data<15> LOC=W20;
+NET ba_q<0> LOC=M21;
+NET ba_q<1> LOC=B19;
+NET ras_qn LOC=N21;
+NET cas_qn LOC=P21;
+NET we_qn LOC=R22;
+NET dm_q<0> LOC=R21;
+NET dm_q<1> LOC=T22;
+NET cs_qn LOC=N22;
+NET cke_q LOC=N19;
+NET dqs_q<0> LOC=P20;
+NET dqs_q<1> LOC=P19;
+NET sdr_clk LOC=D12;
+NET sdr_clk_n LOC=E12;
+
+NET clk_fb LOC = "F13";
+NET clk LOC = "D11";
+
+NET "rst_n" LOC = B6; #
+
+# Defining I/O Standards
+
+NET a_q<0> IOSTANDARD = SSTL2_I;
+NET a_q<1> IOSTANDARD = SSTL2_I;
+NET a_q<2> IOSTANDARD = SSTL2_I;
+NET a_q<3> IOSTANDARD = SSTL2_I;
+NET a_q<4> IOSTANDARD = SSTL2_I;
+NET a_q<5> IOSTANDARD = SSTL2_I;
+NET a_q<6> IOSTANDARD = SSTL2_I;
+NET a_q<7> IOSTANDARD = SSTL2_I;
+NET a_q<8> IOSTANDARD = SSTL2_I;
+NET a_q<9> IOSTANDARD = SSTL2_I;
+NET a_q<10> IOSTANDARD = SSTL2_I;
+NET a_q<11> IOSTANDARD = SSTL2_I;
+NET a_q<12> IOSTANDARD = SSTL2_I;
+NET dm_q<0> IOSTANDARD = SSTL2_I; 
+NET dm_q<1> IOSTANDARD = SSTL2_I; 
+NET ba_q<0> IOSTANDARD = SSTL2_I; 
+NET ba_q<1> IOSTANDARD = SSTL2_I; 
+NET ras_qn IOSTANDARD = SSTL2_I;  
+NET cas_qn IOSTANDARD = SSTL2_I;  
+NET we_qn IOSTANDARD = SSTL2_I; 
+NET sdr_clk IOSTANDARD = SSTL2_I; 
+NET sdr_clk_n IOSTANDARD = SSTL2_I;
+NET dqs_q<0> IOSTANDARD = SSTL2_I;
+NET dqs_q<1> IOSTANDARD = SSTL2_I;
+NET cs_qn IOSTANDARD = SSTL2_I; 
+NET cke_q IOSTANDARD = SSTL2_I; 
+NET data<0> IOSTANDARD = SSTL2_I; 
+NET data<1> IOSTANDARD = SSTL2_I; 
+NET data<2> IOSTANDARD = SSTL2_I; 
+NET data<3> IOSTANDARD = SSTL2_I; 
+NET data<4> IOSTANDARD = SSTL2_I; 
+NET data<5> IOSTANDARD = SSTL2_I; 
+NET data<6> IOSTANDARD = SSTL2_I; 
+NET data<7> IOSTANDARD = SSTL2_I; 
+NET data<8> IOSTANDARD = SSTL2_I; 
+NET data<9> IOSTANDARD = SSTL2_I; 
+NET data<10> IOSTANDARD = SSTL2_I; 
+NET data<11> IOSTANDARD = SSTL2_I; 
+NET data<12> IOSTANDARD = SSTL2_I; 
+NET data<13> IOSTANDARD = SSTL2_I; 
+NET data<14> IOSTANDARD = SSTL2_I; 
+NET data<15> IOSTANDARD = SSTL2_I; 
+NET clk_fb IOSTANDARD = SSTL2_I;
+
+
+# set NODELAY attribute for input signals 
+#By default, the IBUF has a DELAY element to guarantee 0 hold time
+#By turning off the DELAY element, we save ~2ns in IBUF delay
+NET data<0> NODELAY; 
+NET data<1> NODELAY; 
+NET data<2> NODELAY; 
+NET data<3> NODELAY; 
+NET data<4> NODELAY; 
+NET data<5> NODELAY; 
+NET data<6> NODELAY; 
+NET data<7> NODELAY; 
+NET data<8> NODELAY; 
+NET data<9> NODELAY; 
+NET data<10> NODELAY; 
+NET data<11> NODELAY; 
+NET data<12> NODELAY; 
+NET data<13> NODELAY; 
+NET data<14> NODELAY; 
+NET data<15> NODELAY; 
+
+
+#Set FAST attribute for all outputs
+NET "a_q<0>" FAST;
+NET "a_q<1>" FAST;
+NET "a_q<2>" FAST;
+NET "a_q<3>" FAST;
+NET "a_q<4>" FAST;
+NET "a_q<5>" FAST;
+NET "a_q<6>" FAST;
+NET "a_q<7>" FAST;
+NET "a_q<8>" FAST;
+NET "a_q<9>" FAST;
+NET "a_q<10>" FAST;
+NET "a_q<11>" FAST;
+NET "a_q<12>" FAST;
+NET "dm_q<0>" FAST; 
+NET "dm_q<1>" FAST; 
+NET "ba_q<0>" FAST; 
+NET "ba_q<1>" FAST; 
+NET "ras_qn" FAST;  
+NET "cas_qn" FAST;  
+NET "we_qn" FAST; 
+NET "sdr_clk" FAST; 
+NET "sdr_clk_n" FAST;
+NET "dqs_q<0>" FAST;
+NET "dqs_q<1>" FAST;
+NET "cs_qn" FAST; 
+NET "cke_q" FAST; 
+NET "data<0>" FAST; 
+NET "data<1>" FAST; 
+NET "data<2>" FAST; 
+NET "data<3>" FAST; 
+NET "data<4>" FAST; 
+NET "data<5>" FAST; 
+NET "data<6>" FAST; 
+NET "data<7>" FAST; 
+NET "data<8>" FAST; 
+NET "data<9>" FAST; 
+NET "data<10>" FAST; 
+NET "data<11>" FAST; 
+NET "data<12>" FAST; 
+NET "data<13>" FAST; 
+NET "data<14>" FAST; 
+NET "data<15>" FAST; 
+
+#Set PULLUPS for some signals
+NET ras_qn PULLUP;
+NET cas_qn PULLUP;
+NET we_qn PULLUP;
+NET cs_qn PULLUP;
+
+
+
