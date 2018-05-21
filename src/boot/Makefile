@@ -22,13 +22,13 @@
 THINKOSDIR = ../../thinkos
 SDKDIR = $(THINKOSDIR)/sdk
 
-VERSION_DATE = "2017-06-09"
+VERSION_DATE = "2018-05-19"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "25"
+VERSION_MINOR = "26"
 
 PROG = thinkos-$(VERSION_MAJOR).$(VERSION_MINOR)
 
-CFILES = boot.c monitor.c board.c otg_xflash_pic.c
+CFILES = boot.c monitor.c otg_xflash_pic.c
 
 LIBDIRS = $(SDKDIR)/libstm32f $(SDKDIR)/libcm3 $(SDKDIR)/libutil\
 		  $(SDKDIR)/libthinkos $(SDKDIR)/libice-comm 

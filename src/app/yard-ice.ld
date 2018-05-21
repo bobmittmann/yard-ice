@@ -22,6 +22,7 @@
 OUTPUT_FORMAT ("elf32-littlearm")
 ENTRY(_reset)
 SEARCH_DIR(.)
+STARTUP(crt0.o)
 
 MEMORY
 {
@@ -43,13 +44,13 @@ SECTIONS
 {
 	. = 0;
 
-	.dcclog :
+	.dcclog (NOLOAD):
 	{
 		. = ALIGN(4);
 		KEEP(*(.dcclog))
 	} >dcclog
 
-	.dccdata :
+	.dccdata (NOLOAD):
 	{
 		. = ALIGN(4);
 		KEEP(*(.dccdata))

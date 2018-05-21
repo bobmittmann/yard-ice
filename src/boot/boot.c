@@ -40,11 +40,79 @@
 #include <sys/dcclog.h>
 
 #include "board.h"
+#include "version.h"
 
-void monitor_task(struct dmon_comm * comm);
-void board_init(void);
+void monitor_task(struct dmon_comm * comm, void * param);
 
-int main(int argc, char ** argv)
+void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+{
+	DCC_LOG(LOG_ERROR, "!");
+	udelay(1000000);
+	cm3_sysrst();
+}
+
+void board_init(void)
+{
+	struct stm32_rcc * rcc = STM32_RCC;
+	struct cm3_scb * scb = CM3_SCB;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* Disable exceptions */
+	scb->shcsr = 0;
+
+	/* Reset all peripherals except USB_OTG and GPIOA */
+	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
+	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
+	rcc->apb1rstr = ~(0);
+	rcc->apb2rstr = ~(0);
+	/* clear reset bits */
+	rcc->ahb1rstr = 0;
+	rcc->ahb2rstr = 0;
+	rcc->apb1rstr = 0;
+	rcc->apb2rstr = 0;
+	/* disable all peripherals clock sources except USB_OTG and GPIOA */
+	rcc->ahb1enr = (1 << RCC_GPIOA); 
+	rcc->ahb2enr = (1 << RCC_OTGFS);
+	rcc->apb1enr = 0;
+	rcc->apb2enr = 0;
+
+#if 0
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+
+	/* - Relay ------------------------------------------------------------*/
+	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_RELAY);
+
+	/* - External Power ---------------------------------------------------*/
+	stm32_gpio_mode(IO_PWR_EN, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_PWR_EN);
+	stm32_gpio_mode(IO_PWR_MON, INPUT, SPEED_LOW | PULL_UP);
+	/* - Debug UART ---------------------------------------------------*/
+	stm32_gpio_mode(IO_UART5_TX, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_UART5_TX);
+	stm32_gpio_mode(IO_UART5_TX, INPUT, SPEED_LOW | PULL_UP);
+
+#endif
+	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+
+	stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
+	stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
+	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
+
+	/* Adjust USB OTG FS interrupts priority */
+	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
+	/* Enable USB OTG FS interrupts */
+	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+}
+
+void main(int argc, char ** argv)
 {
 	struct dmon_comm * comm;
 
@@ -71,7 +139,7 @@ int main(int argc, char ** argv)
 
 	/* Wait for the other power supply and subsystems to stabilize */
 	DCC_LOG(LOG_TRACE, "5. thinkos_sleep().");
-	thinkos_sleep(64);
+	thinkos_sleep(100);
 
 	DCC_LOG(LOG_TRACE, "6. thinkos_console_init()");
 	thinkos_console_init();
@@ -79,10 +147,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "7. usb_comm_init()");
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-	thinkos_sleep(256);
-
 	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
-	thinkos_dbgmon(monitor_task, comm);
+	/* Wait for the USB attached terminal to connect ... */
+	thinkos_sleep(400);
+	thinkos_dbgmon(monitor_task, comm, NULL);
 
 #if THINKOS_ENABLE_MPU
 	DCC_LOG(LOG_TRACE, "9. thinkos_userland()");
@@ -93,7 +161,5 @@ int main(int argc, char ** argv)
 	thinkos_thread_abort(0);
 
 	DCC_LOG(LOG_ERROR, "11. unreachable code reched!!!");
-
-	return 0;
 }
 

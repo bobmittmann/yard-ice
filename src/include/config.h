@@ -138,11 +138,16 @@
 
 #define UDELAY_FACTOR 1706
 
+#define STM32_ENABLE_PLLSAI           0
+#define THINKOS_ENABLE_IRQ_CYCCNT_RET 0
+
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
 
 #define STM32_ENABLE_OTG_FS          1
+#define STM32_OTG_FS_IO_INIT         0
+#define STM32_OTG_FS_IRQ_ENABLE      0
 #define STM32_OTG_FS_EP_MAX          4
 
 #define CDC_EP_OUT_MAX_PKT_SIZE      64
