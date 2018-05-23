@@ -47,22 +47,46 @@ void monitor_task(struct dmon_comm * comm, void * param);
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	DCC_LOG(LOG_ERROR, "!");
-	udelay(1000000);
+//	udelay(1000000);
 	cm3_sysrst();
 }
 
+#if 0
+static inline void __stm32_gpio_af(struct stm32_gpio * gpio, int pin, int af)
+{
+	uint32_t tmp;
+
+	if (pin < 8) {
+		tmp = gpio->afrl;
+		tmp &= ~GPIO_AFRL_MASK(pin);
+		tmp |= GPIO_AFRL_SET(pin, af);
+		gpio->afrl = tmp;
+	} else {
+		tmp = gpio->afrh;
+		tmp &= ~GPIO_AFRH_MASK(pin);
+		tmp |= GPIO_AFRH_SET(pin, af);
+		gpio->afrh = tmp;
+	}
+
+	/* select alternate function pin mode */
+	tmp = (gpio->moder & ~GPIO_MODE_MASK(pin)) | GPIO_MODE_ALT_FUNC(pin);
+	gpio->moder = tmp;
+}
+#endif
+
 void board_init(void)
 {
+	struct stm32_gpio * gpio = STM32_GPIOA;
 	struct stm32_rcc * rcc = STM32_RCC;
-	struct cm3_scb * scb = CM3_SCB;
+//	struct cm3_scb * scb = CM3_SCB;
 
 	DCC_LOG(LOG_TRACE, "...");
 
 	/* Disable exceptions */
-	scb->shcsr = 0;
+//	scb->shcsr = 0;
 
 	/* Reset all peripherals except USB_OTG and GPIOA */
-	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
+	rcc->ahb1rstr = ~((1 << RCC_GPIOA) | (1 << RCC_GPIOC)); 
 	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
 	rcc->apb1rstr = ~(0);
 	rcc->apb2rstr = ~(0);
@@ -77,6 +101,9 @@ void board_init(void)
 	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;
 
+	/* select alternate functions to USB pins ... */
+	gpio->afrh = GPIO_AFRH_SET(11, GPIO_AF10) | GPIO_AFRH_SET(12, GPIO_AF10);
+	gpio->moder = GPIO_MODE_ALT_FUNC(11) | GPIO_MODE_ALT_FUNC(12) ;
 #if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
@@ -97,14 +124,16 @@ void board_init(void)
 	stm32_gpio_clr(IO_UART5_TX);
 	stm32_gpio_mode(IO_UART5_TX, INPUT, SPEED_LOW | PULL_UP);
 
+//#define IO_JTRST          STM32_GPIOB, 4
 #endif
-	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+//	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+//	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+//	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 
-	stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
-	stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
-	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
+
+//	__stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
+//__stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
+//	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
 
 	/* Adjust USB OTG FS interrupts priority */
 	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
@@ -112,9 +141,17 @@ void board_init(void)
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
+#define MONITOR_AUTOBOOT 1
+#define MONITOR_SHELL 2
+
+#define CTRL_C  0x03 /* ETX */
+
 void main(int argc, char ** argv)
 {
 	struct dmon_comm * comm;
+	uint32_t flags = 0;
+	char buf[1];
+	int i;
 
 	DCC_LOG_INIT();
 #if DEBUG > 2
@@ -148,14 +185,41 @@ void main(int argc, char ** argv)
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
 	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
-	/* Wait for the USB attached terminal to connect ... */
-	thinkos_sleep(400);
-	thinkos_dbgmon(monitor_task, comm, NULL);
+
+	/* starts monitor with shell enabled */
+	thinkos_dbgmon(monitor_task, comm, (void *)MONITOR_SHELL);
+	flags = MONITOR_AUTOBOOT;
+
+	for (i = 0; ; ++i) {
+		if (thinkos_console_timedread(buf, 1, 500) == 1) {
+			flags |= MONITOR_SHELL; 
+			if (CTRL_C == buf[0]) {
+				/* disable autoboot */
+				flags &= ~MONITOR_AUTOBOOT; 
+				thinkos_console_write("^C\r\n", 4);
+			} else {
+				/* echo back */
+				thinkos_console_write(buf, 1);
+			}
+		} else if (flags & MONITOR_AUTOBOOT) {
+			if (i < 9) {
+				if (dmon_comm_isconnected(comm))
+					thinkos_console_write(".", 1);
+			} else
+				break;
+		}
+		if (stm32_gpio_stat(IO_JTRST) == 0) {
+			thinkos_console_write("TRST\r\n", 6);
+		}
+	}
 
 #if THINKOS_ENABLE_MPU
 	DCC_LOG(LOG_TRACE, "9. thinkos_userland()");
 	thinkos_userland();
 #endif
+
+	/* starts/restarts monitor with autoboot enabled */
+	thinkos_dbgmon(monitor_task, comm, (void *)flags);
 
 	DCC_LOG(LOG_TRACE, "10. thinkos_thread_abort()");
 	thinkos_thread_abort(0);

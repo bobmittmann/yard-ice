@@ -24,6 +24,8 @@
  */ 
 
 
+#define TRACE_LEVEL TRACE_LVL_DBG
+#include <trace.h>
 
 #include "target/stm32f.h"
 
@@ -176,6 +178,8 @@ int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice,
 	ice_rd32(ice, STM32F_BASE_RCC + RCC_CR, &cr);
 	DCC_LOG2(LOG_TRACE, "cr=0x%08x cfg=0x%08x.", cr, cfg);
 
+	INF("STM32: cr=0x%08x cfg=0x%08x.", cr, cfg);
+
 	switch (cfg & SWS) {
 	case SWS_HSI:
 		fprintf(f, " %s: system clock is internal\n", __func__);
@@ -209,6 +213,7 @@ int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice,
 					fprintf(f, " %s: internal oscillator startup fail!\n", 
 							__func__);
 					DCC_LOG(LOG_WARNING, "internal oscillator fail!");
+					WARN("internal oscillator fail!");
 					return -1;
 				}
 			}
@@ -223,6 +228,7 @@ int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice,
 			fprintf(f, " %s: internal oscillator not ready!\n", 
 					__func__);
 			DCC_LOG(LOG_WARNING, "internal oscillator not ready!");
+			WARN("internal oscillator not ready!");
 			return -1;
 		}	
 	}
@@ -247,6 +253,7 @@ int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice,
 		if (again == 0) {
 			fprintf(f, " %s: PLL lock fail!\n", __func__);
 			DCC_LOG(LOG_WARNING, "PLL lock fail!");
+			WARN("PLL lock fail!");
 			return -1;
 		}
 	}
@@ -258,6 +265,7 @@ int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice,
 		if (again == 0) {
 			fprintf(f, " %s: flash not ready!\n", __func__);
 			DCC_LOG(LOG_WARNING, "flash not ready!");
+			WARN("flash not ready!");
 			return -1;
 		}
 	}

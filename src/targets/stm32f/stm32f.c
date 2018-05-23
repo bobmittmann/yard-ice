@@ -23,6 +23,9 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#define TRACE_LEVEL TRACE_LVL_DBG
+#include <trace.h>
+
 #include <crc.h>
 #include <stdlib.h>
 #include <sys/dcclog.h>
@@ -119,8 +122,12 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 
 	DCC_LOG1(LOG_TRACE, "target=0x%p", target);
 
+	/* Make sure we are using the internal oscillator */
+	ice_wr32(ice, STM32F_BASE_RCC + RCC_CFGR, 0);
+
 	ice_rd32(ice, 0xe0042000, &id);
 
+	INF("STM32: [0xe0042000] MCU_ID=0x%08x", id);
 	fprintf(f, " - MCU device id: 0x%08x\n", id); 
 	dev_id = id & 0x0fff;
 
@@ -172,6 +179,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 	case 0x413:
 		ice_rd16(ice, 0x1fff7a22, &memsz);
 		fprintf(f, "STM32F40X\n"); 
+		INF("STM32: [0x1fff7a22] FLASH_SIZE=0x%04x", memsz);
 		target->on_init = (target_script_t)stm32f2xx_on_init,
 		mem[FLASH].op = &flash_stm32f2_oper;
 		mem[FLASH].blk.size = MEM_KiB(16);
@@ -187,7 +195,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		target->on_init = (target_script_t)stm32f2xx_on_init,
 		mem[FLASH].op = &flash_stm32f2_oper;
 		mem[FLASH].blk.size = MEM_KiB(16);
-		mem[FLASH].blk.count = memsz / 16;
+		mem[FLASH].blk.count = (memsz & 0xffff) / 16;
 		mem[EEPROM].blk.count = 0;
 		mem[SRAM].blk.count = 112 + 16 + 64;
 		mem[CCM].blk.count = 64;
@@ -389,6 +397,11 @@ struct ice_mem_entry stm32f_mem[] = {
 	{ .name = "dbg", .flags = MEM_32_BITS,
 		.addr = { .base = 0xe0042000, .offs = 0x00000000 }, 
 		.blk = {.count = 62, .size = 0x2000},
+		.op = &cm3_ram_oper 
+	},
+	{ .name = "id", .flags = MEM_32_BITS | MEM_RO,
+		.addr = { .base = 0x1fff0000, .offs = 0x00000000 }, 
+		.blk = {.count = 64, .size = 0x400},
 		.op = &cm3_ram_oper 
 	},
 	{ .name = "", .flags = 0, .addr = { .base = 0, .offs = 0 }, 

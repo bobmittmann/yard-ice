@@ -31,9 +31,11 @@ PROG = thinkos-$(VERSION_MAJOR).$(VERSION_MINOR)
 CFILES = boot.c monitor.c otg_xflash_pic.c
 
 LIBDIRS = $(SDKDIR)/libstm32f $(SDKDIR)/libcm3 $(SDKDIR)/libutil\
-		  $(SDKDIR)/libthinkos $(SDKDIR)/libice-comm 
+		  $(SDKDIR)/libthinkos 
+		  
+# $(SDKDIR)/libice-comm ice-comm 
 
-LIBS = cm3 stm32f util thinkos ice-comm gcc 
+LIBS = cm3 stm32f util thinkos gcc 
 
 INCPATH = $(SDKDIR)/include ../include
 

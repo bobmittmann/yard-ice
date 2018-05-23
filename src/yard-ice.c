@@ -143,7 +143,7 @@ volatile bool spv_auto_flush = false;
 
 void trace_output_set(FILE * f, bool flush)
 {
-	WARN("trace output set to 0x%08x", f);
+	WARN("trace output set to 0x%08x", (uint32_t)f);
 
 	spv_fout = f;
 	spv_auto_flush = flush;
@@ -384,7 +384,7 @@ int network_config(void)
 			if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&netmask)) {
 				if (inet_aton(strtok(NULL, " ;"), (struct in_addr *)&gw_addr)) {
 					ipv4_route_add(ip_addr, netmask, gw_addr, ifn);
-					INF("* route: %s %s %s", s, 
+					INF("* route: %s %s %s",
 						inet_ntop(AF_INET, (void *)&ip_addr, s1, 16),
 						inet_ntop(AF_INET, (void *)&netmask, s2, 16),
 						inet_ntop(AF_INET, (void *)&gw_addr, s3, 16));

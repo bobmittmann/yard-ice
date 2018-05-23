@@ -49,7 +49,6 @@ const void * heap_end = &__heap_end;
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
-bool board_autoboot(void);
 void board_init(void);
 
 extern const uint8_t otg_xflash_pic[];
@@ -137,8 +136,9 @@ struct magic {
 #define CTRL_RS 0x1e /* RS  (Ctrl+^) */
 #define CTRL_US 0x1f /* US  (Ctrl+_) */
 
+static const char s_version[] = "ThinkOS " VERSION_NUM "\r\n";
+
 static const char s_help[] = 
-"ThinkOS " VERSION_NUM "\r\n"
 #if (MONITOR_OSINFO_ENABLE)
 " ^O - OS Info\r\n"
 #endif
@@ -166,7 +166,7 @@ static const char s_help[] =
 static const char s_hr[] = 
 "\r\n----\r\n";
 
-static const char s_error[] = "Error!\r\n";
+//static const char s_error[] = "Error!\r\n";
 
 #if (MONITOR_UPGRADE_ENABLE)
 static const char s_confirm[] = "Confirm [y]?";
@@ -199,40 +199,36 @@ static int yflash(uint32_t blk_offs, uint32_t blk_size,
 	return ret;
 }
 
-static void app_yflash(void)
+static const struct magic app_magic = {
+	.hdr = {
+		.pos = 0,
+		.cnt = 3
+	},
+	.rec = {
+		{  0xffffffff, 0x0a0de004 },
+		{  0xffffffff, 0x6e696854 },
+		{  0xffffffff, 0x00534f6b }
+	}
+};
+
+static int app_yflash(void)
 {
-	static const struct magic app_magic = {
-		.hdr = {
-			.pos = 0,
-			.cnt = 3
-		},
-		.rec = {
-			{  0xffffffff, 0x0a0de004 },
-			{  0xffffffff, 0x6e696854 },
-			{  0xffffffff, 0x00534f6b }
-		}
-	};
-
-	dbgmon_soft_reset();
-
-	yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
+	return yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
 }
+
+static const struct magic bootloader_magic = {
+	.hdr = {
+		.pos = 0,
+		.cnt = 2
+	},
+	.rec = {
+		{  0xfffc0000, 0x20000000 },
+		{  0xffff0000, 0x08000000 },
+	}
+};
 
 static void bootloader_yflash(void)
 {
-	static const struct magic bootloader_magic = {
-		.hdr = {
-			.pos = 0,
-			.cnt = 2
-		},
-		.rec = {
-			{  0xfffc0000, 0x20000000 },
-			{  0xffff0000, 0x08000000 },
-		}
-	};
-
-	dbgmon_soft_reset();
-
 	yflash(0, 32768, &bootloader_magic);
 }
 
@@ -337,7 +333,7 @@ static void print_osinfo(struct dmon_comm * comm)
 
 #endif /* MONITOR_OSINFO_ENABLE */
 
-static void thread_exec(void (* func)(int))
+static void __main_thread_exec(void (* func)(int))
 {
 	int thread_id = 0;
 
@@ -356,24 +352,6 @@ static void thread_exec(void (* func)(int))
 
 	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
 	__thinkos_defer_sched();
-}
-
-static bool app_exec(void)
-{
-	uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;
-
-	if ((signature[0] != 0x0a0de004) ||
-		(signature[1] != 0x6e696854) ||
-		(signature[2] != 0x00534f6b)) {
-		DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", 
-				 signature);
-
-		return false;
-	}
-
-	thread_exec((void *)(APPLICATION_START_ADDR | 1));
-
-	return true;
 }
 
 #if (MONITOR_PAUSE_ENABLE)
@@ -417,6 +395,7 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #endif
 	case CTRL_V:
 		PUTS(s_hr);
+		PUTS(s_version);
 		PUTS(s_help);
 		break;
 
@@ -430,8 +409,12 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_Y:
 		PUTS(s_confirm);
-		if (dmgetc(comm) == 'y')
+		if (dmgetc(comm) == 'y') {
 			app_yflash();
+		} else {
+			PUTS("\r\n");
+		}
+
 		break;
 #endif
 
@@ -447,16 +430,9 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #if (MONITOR_APPRESTART_ENABLE)
 	case CTRL_Z:
 		PUTS("^Z\r\n");
-		DCC_LOG(LOG_TRACE, "dbgmon_soft_reset()...");
 		dbgmon_soft_reset();
-		DCC_LOG2(LOG_TRACE, "dbgmon_wait_idle()... active=%d ready=0x%08x",
-				 thinkos_rt.active, thinkos_rt.wq_ready);
-		DCC_LOG3(LOG_TRACE, "msp=%08x psp=%08x ctrl=%02x", 
-				 cm3_msp_get(), cm3_psp_get(), cm3_control_get());
-		dbgmon_wait_idle();
-		DCC_LOG(LOG_TRACE, "app_exec()...");
-		if (!app_exec())
-			PUTS(s_error);
+		/* Request app exec */
+		dbgmon_signal(DBGMON_APP_EXEC); 
 		break;
 #endif
 	default:
@@ -469,51 +445,40 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 /*
    Dafault Monitor Task
  */
+#define MONITOR_AUTOBOOT 1
+#define MONITOR_SHELL 2
 
 void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm, void * param)
 {
-	bool monitor_shell_en = true;
 	uint32_t sigmask;
 	uint32_t sigset;
 	uint8_t buf[1];
 	uint8_t * ptr;
 	int cnt;
 	int len;
+	uint32_t flags = (uint32_t)param;
 
 	/* unmask events */
-	sigmask = (1 << DBGMON_SOFTRST) | (1 << DBGMON_STARTUP) | (1 << DBGMON_COMM_RCV) | \
-			  (1 << DBGMON_TX_PIPE) | (1 << DBGMON_RX_PIPE) | (1 << DBGMON_ALARM);
-
+	sigmask = (1 << DBGMON_SOFTRST) | 
+		(1 << DBGMON_COMM_RCV) | (1 << DBGMON_TX_PIPE) | 
+		(1 << DBGMON_RX_PIPE) | (1 << DBGMON_APP_EXEC) ;
 #if DEBUG
 	sigmask |= (1 << DBGMON_COMM_CTL);
 #endif
 
-	dbgmon_alarm(125);
+	if (!(flags & MONITOR_AUTOBOOT)) {
+		PUTS(s_hr);
+		PUTS(s_version);
+	}
+
+	if (flags & MONITOR_AUTOBOOT) {
+		dbgmon_soft_reset();
+		dbgmon_signal(DBGMON_APP_EXEC); 
+	}
 
 	for(;;) {
 		sigset = dbgmon_select(sigmask);
 		DCC_LOG1(LOG_MSG, "sigset=%08x", sigset);
-
-		if (sigset & (1 << DBGMON_STARTUP)) {
-			/* Power up event ... */
-			dbgmon_clear(DBGMON_STARTUP);
-			DCC_LOG1(LOG_TRACE, "/!\\ STARTUP signal (SP=0x%08x)...", 
-					 cm3_sp_get());
-			if (dmon_comm_isconnected(comm)) {
-				/* if the USB terminal is attached delay the autoboot */
-				dbgmon_alarm(5000);
-				PUTS("\r\n== ThinkOS ==\r\n\r\n");
-			}
-		}
-
-		if (sigset & (1 << DBGMON_ALARM)) {
-			monitor_shell_en = false;
-			/* Aclknowledge the signal */
-			dbgmon_clear(DBGMON_ALARM);
-			DCC_LOG(LOG_TRACE, "Autoboot...");
-			PUTS("Autoboot...\r\n");
-			app_exec();
-		}
 
 #if DEBUG
 		if (sigset & (1 << DBGMON_COMM_CTL)) {
@@ -525,14 +490,35 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm, void * para
 #endif
 
 		if (sigset & (1 << DBGMON_SOFTRST)) {
-			board_init();
 			dbgmon_clear(DBGMON_SOFTRST);
+			board_init();
+			PUTS("+RST\r\n");
+		}
+
+		if (sigset & (1 << DBGMON_APP_EXEC)) {
+			uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;
+			int i = app_magic.hdr.cnt;
+
+			DCC_LOG(LOG_TRACE, "/!\\ APP_EXEC signal !");
+			dbgmon_clear(DBGMON_APP_EXEC);
+
+			for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
+				if (signature[i] != app_magic.rec[i].comp) {
+					DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", 
+							 signature);
+					PUTS("!ERR: magic\r\n");
+					flags |= MONITOR_SHELL;
+					break;
+				}
+			}
+
+			if (i < 0) {
+				__main_thread_exec((void *)(APPLICATION_START_ADDR | 1));
+			}
 		}
 
 		if (sigset & (1 << DBGMON_COMM_RCV)) {
-			if (monitor_shell_en) { 
-				/* mask the timer event */
-				sigmask = ~(1 << DBGMON_ALARM);
+			if (flags & MONITOR_SHELL) { 
 				/* receive from the COMM driver one bye at the time */
 				if (dmon_comm_recv(comm, buf, 1) > 0) {
 					int c = buf[0];

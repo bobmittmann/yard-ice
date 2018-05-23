@@ -53,12 +53,23 @@ int gdb_tcp_init(struct tcp_pcb * tp)
 
 int gdb_tcp_send(struct tcp_pcb * tp, const void * buf, unsigned int len)
 {
+	INF("TX buf=%08x, len=%d", (uint32_t)buf, len);
+//	INFA("TX", buf, len);
 	return tcp_send(tp, buf, len, TCP_SEND_NOWAIT);
 }
 
 int gdb_tcp_recv(struct tcp_pcb * tp, void * buf, unsigned int len)
 {
-	return tcp_recv(tp, buf, len);
+	int ret;
+
+	ret = tcp_recv(tp, buf, len);
+	if (ret > 0)
+//		INFA("RX", buf, ret);
+		INF("RX %d", ret);
+	else
+		WARN("TCP ERR: %d", ret);
+
+	return ret;
 }
 
 int gdb_tcp_flush(struct tcp_pcb * tp)
@@ -133,23 +144,23 @@ int __attribute__((noreturn)) gdb_brk_task(struct gdb_tcpd * tcpd)
 
 	for (;;) {
 		/* wait for a connection */
-		DCC_LOG(LOG_TRACE, "waiting connect...");
+		DBGS("BRK: waiting connect...");
 		thinkos_flag_take(tcpd->con_flag);
 
 		/* wait for a 'target run' indication */
-		DCC_LOG(LOG_TRACE, "waiting run...");
+		DBGS("BRK: waiting run...");
 
 		/* wait for a target run */
 		thinkos_flag_take(tcpd->run_flag);
 
-		DCC_LOG(LOG_TRACE, "waiting halt...");
+		DBGS("BRK: waiting halt...");
 
 		while ((state = target_halt_wait(5000)) == ERR_TIMEOUT) {
-			DCC_LOG(LOG_TRACE, "waiting...");
+			DBGS("BRK: waiting...");
 		}
 
 		if (state == DBG_ST_HALTED) {
-			DCC_LOG(LOG_TRACE, "halted");
+			DBGS("BRK: target halted");
 
 			thinkos_flag_clr(tcpd->run_flag);
 
@@ -158,13 +169,13 @@ int __attribute__((noreturn)) gdb_brk_task(struct gdb_tcpd * tcpd)
 
 		state = target_status();
 		if (state < DBG_ST_CONNECTED) {
-			DCC_LOG(LOG_WARNING, "target not connected!");
+			WARNS("BRK: target not connected!");
 			gdb_rsp_error(gdb, state);
 			continue;
 		}
 
 		if (state != DBG_ST_HALTED) {
-			DCC_LOG(LOG_TRACE, "running");
+			DBGS("BRK: target running");
 
 			if ((state = target_halt(0)) < 0) {
 				DCC_LOG(LOG_WARNING, "target_halt() failed!");
@@ -226,7 +237,6 @@ int __attribute__((noreturn)) gdb_tcp_task(struct gdb_tcpd * tcpd)
 	struct tcp_pcb * tp;
 	int state;
 
-	DCC_LOG1(LOG_TRACE, "<%d>", thinkos_thread_self());
 	INF("<%d>", thinkos_thread_self());
 
 	for (;;) {
@@ -237,12 +247,11 @@ int __attribute__((noreturn)) gdb_tcp_task(struct gdb_tcpd * tcpd)
 
 		gdb_rsp_comm_init(gdb, &gdb_tcp_op, tp);
 
-		INF("accepted: %08x", (int)tp);
-		DCC_LOG(LOG_TRACE, "accepted.");
+		INF("GDB: accepted: %08x", (int)tp);
 
 		state = target_status();
 		if (state == DBG_ST_RUNNING) {
-			DCC_LOG(LOG_TRACE, "running");
+			INFS("GDB: target running");
 			/* wakeup the break wait thread */
 			thinkos_flag_set(tcpd->run_flag);
 		} else {
@@ -253,7 +262,7 @@ int __attribute__((noreturn)) gdb_tcp_task(struct gdb_tcpd * tcpd)
 
 		gdb_rsp_comm_loop(gdb);
 
-		DCC_LOG(LOG_TRACE, "close...");
+		INFS("GDB: close...");
 
 		tcp_close(tp);
 		tcpd->tp = NULL;
@@ -265,8 +274,8 @@ int __attribute__((noreturn)) gdb_tcp_task(struct gdb_tcpd * tcpd)
 	for (;;);
 }
 
-uint32_t gdb_srv_stack[((RSP_BUFFER_LEN * 3) / 8)  + 128];
-uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 128];
+uint32_t gdb_srv_stack[((RSP_BUFFER_LEN * 3) / 8)  + 512];
+uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 512];
 
 const struct thinkos_thread_inf gdb_srv_inf = {
 	.stack_ptr = gdb_srv_stack, 
@@ -302,7 +311,7 @@ int gdb_rspd_start(void)
 	tcp_bind(svc, INADDR_ANY, htons(1000));
 
 	if (tcp_listen(svc, 1) != 0) {
-		WARN("Can't register the TCP listner!");
+		WARNS("GDB: Can't register the TCP listner!");
 		return -1;
 	}
 

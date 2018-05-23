@@ -1,0 +1,50 @@
+
+
+------------
+
+=== STM32 Startup error cause target connection tp fail ===
+
+
+
+
+[YARD-ICE < >]$ nrst
+nRST pulse 100 ms ...
+[YARD-ICE SYN]$ tgt 9 f c
+ - Target: 'stm32f'
+ - Slow clock: 12.000 MHz.
+ - Fast clock: 12.000 MHz.
+ - JTAG probe... 0 TAPS.
+No TAPs defined!
+ # ICE configuration ERROR!
+ERROR: target_ice_configure()!
+Error: 9
+
+The following sequence may work:
+
+[YARD-ICE SYN]$ nrst; nrst 1; tgt 9 f c; trst; nrst 0; con; h; cpu
+nRST pulse 100 ms ...
+nRST set...
+ - Target: 'stm32f'
+ - Slow clock: 12.000 MHz.
+ - Fast clock: 12.000 MHz.
+ - JTAG probe... 2 TAPS.
+ - JTAG IDCODE: 0x4ba00477
+ - MCU device id: 0x10016413
+   - STM32F40X
+   - Flash size = 0KiB
+TRST pulse...
+nRST clear...
+* Connecting ... Ok.
+ xpsr= [ ..C.. T ICI/IT=00 GE=0 IPSR=0 (Thread) ]
+ ctrl= [ MSP PRIV PM=0 FM=0 BPRI=00 ]
+
+r0= 66a0c000  r4= 00000000  r8= 00000000  ip= 00000000  xpsr= 21000000
+r1= 00001d59  r5= 00000000  r9= 00000000  sp= 10010000   msp= 10010000
+r2= 00019a83  r6= 00000000  sl= 00000000  lr= 08000045   psp= 00000000
+r3= 40023800  r7= 00000000  fp= 00000000  pc= 080000c0  ctrl= 00000000
+
+080000c0:  0390       lsls      r0, r2, #14
+
+[YARD-ICE BRK]$
+
+nrst; nrst 1; tgt 9 f c; trst; nrst 0; tgt c; con; h

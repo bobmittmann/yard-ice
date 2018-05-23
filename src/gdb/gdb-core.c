@@ -30,6 +30,8 @@
 #include <sys/file.h>
 #include <sys/null.h>
 #include <string.h>
+#define TRACE_LEVEL TRACE_LVL_DBG
+#include <trace.h>
 
 #ifndef GDB_DEBUG_PACKET
 #define GDB_DEBUG_PACKET 1
@@ -1523,37 +1525,37 @@ void gdb_rsp_comm_loop(struct gdb_rsp * gdb)
 //	gdb->active_app = __thinkos_active();
 	gdb->last_signal = TARGET_SIGNAL_0;
 
-	DCC_LOG2(LOG_TRACE, "GDB [stopped=%s active_app=%s] =====================", 
+	INF("GDB: [stopped=%s active_app=%s]", 
 			 gdb->stopped ? "true" : "false",
 			 gdb->active_app ? "true" : "false");
 
-	gdb->target.op->watchpoint_clear_all(gdb->target.arg);
+	gdb->target.op->breakpoint_clear_all(gdb->target.arg);
 	gdb->target.op->watchpoint_clear_all(gdb->target.arg);
 
 	for(;;) {
 		if (gdb->comm.op->recv(gdb->comm.arg, buf, 1) != 1) {
-			DCC_LOG(LOG_WARNING, "comm_recv() failed!");
-			continue;
+			DBGS("GDB: comm_recv() failed!");
+			break;
 		}
 
 		switch (buf[0]) {
 
 		case '+':
-			DCC_LOG(LOG_INFO, "[ACK]");
+			DBGS("[ACK]");
 			break;
 
 		case '-':
 #if GDB_ENABLE_RXMIT
-			DCC_LOG(LOG_WARNING, "[NACK] rxmit!");
+			DBGS("[NACK] rxmit!");
 			rsp_pkt_rxmit(gdb);
 #else
-			DCC_LOG(LOG_WARNING, "[NACK]!");
+			DBGS("[NACK]!");
 			//				return;
 #endif
 			break;
 
 		case '$':
-			DCC_LOG(LOG_MSG, "Comm RX: '$'");
+//			DBGS("Comm RX: '$'");
 
 			if ((len = rsp_pkt_recv(comm, pkt, RSP_BUFFER_LEN)) <= 0) {
 				DCC_LOG1(LOG_WARNING, "rsp_pkt_recv(): %d", len);
@@ -1567,13 +1569,13 @@ void gdb_rsp_comm_loop(struct gdb_rsp * gdb)
 			break;
 
 		case CTRL_C:
-			DCC_LOG(LOG_TRACE, "[BREAK]");
+			DBGS("[BREAK]");
 			rsp_on_break(gdb, pkt);
 			break;
 
 
 		default:
-			DCC_LOG1(LOG_WARNING, "invalid: %02x", buf[0]);
+			WARN("GDB: invalid: %02x", buf[0]);
 			return;
 		}
 
