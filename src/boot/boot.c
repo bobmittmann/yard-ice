@@ -47,7 +47,7 @@ void monitor_task(struct dmon_comm * comm, void * param);
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	DCC_LOG(LOG_ERROR, "!");
-//	udelay(1000000);
+	udelay(1000000);
 	cm3_sysrst();
 }
 
@@ -86,7 +86,7 @@ void board_init(void)
 //	scb->shcsr = 0;
 
 	/* Reset all peripherals except USB_OTG and GPIOA */
-	rcc->ahb1rstr = ~((1 << RCC_GPIOA) | (1 << RCC_GPIOC)); 
+	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
 	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
 	rcc->apb1rstr = ~(0);
 	rcc->apb2rstr = ~(0);
@@ -96,20 +96,21 @@ void board_init(void)
 	rcc->apb1rstr = 0;
 	rcc->apb2rstr = 0;
 	/* disable all peripherals clock sources except USB_OTG and GPIOA */
-	rcc->ahb1enr = (1 << RCC_GPIOA); 
+	rcc->ahb1enr = (1 << RCC_GPIOA) | (1 << RCC_GPIOB); 
 	rcc->ahb2enr = (1 << RCC_OTGFS);
 	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;
 
 	/* select alternate functions to USB pins ... */
-	gpio->afrh = GPIO_AFRH_SET(11, GPIO_AF10) | GPIO_AFRH_SET(12, GPIO_AF10);
-	gpio->moder = GPIO_MODE_ALT_FUNC(11) | GPIO_MODE_ALT_FUNC(12) ;
+	gpio->afrh = GPIO_AFRH_SET(9, GPIO_AF10) | GPIO_AFRH_SET(11, GPIO_AF10) | \
+				 GPIO_AFRH_SET(12, GPIO_AF10);
+	gpio->moder = GPIO_MODE_ALT_FUNC(9) | GPIO_MODE_ALT_FUNC(11) | \
+				  GPIO_MODE_ALT_FUNC(12) ;
 #if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
 
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 
 	/* - Relay ------------------------------------------------------------*/
 	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
@@ -134,6 +135,20 @@ void board_init(void)
 //	__stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
 //__stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
 //	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
+#if 0
+	/* - Relay ------------------------------------------------------------*/
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_RELAY);
+	udelay(500000);
+	stm32_gpio_set(IO_RELAY);
+	udelay(500000);
+	stm32_gpio_clr(IO_RELAY);
+	udelay(500000);
+	stm32_gpio_set(IO_RELAY);
+	udelay(500000);
+	stm32_gpio_clr(IO_RELAY);
+#endif
 
 	/* Adjust USB OTG FS interrupts priority */
 	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
@@ -163,6 +178,9 @@ void main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 #endif
 
+	DCC_LOG(LOG_TRACE, "4. board_init().");
+	board_init();
+
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
@@ -170,9 +188,6 @@ void main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "3. thinkos_mpu_init()");
 	thinkos_mpu_init(0x0c00);
 #endif
-
-	DCC_LOG(LOG_TRACE, "4. board_init().");
-	board_init();
 
 	/* Wait for the other power supply and subsystems to stabilize */
 	DCC_LOG(LOG_TRACE, "5. thinkos_sleep().");
@@ -186,30 +201,31 @@ void main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
 
-	/* starts monitor with shell enabled */
-	thinkos_dbgmon(monitor_task, comm, (void *)MONITOR_SHELL);
-	flags = MONITOR_AUTOBOOT;
+	if (stm32_gpio_stat(IO_JTRST) == 0) {
+		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
+	} else {
+		/* starts monitor with shell enabled */
+		thinkos_dbgmon(monitor_task, comm, (void *)MONITOR_SHELL);
+		flags = MONITOR_AUTOBOOT;
 
-	for (i = 0; ; ++i) {
-		if (thinkos_console_timedread(buf, 1, 500) == 1) {
-			flags |= MONITOR_SHELL; 
-			if (CTRL_C == buf[0]) {
-				/* disable autoboot */
-				flags &= ~MONITOR_AUTOBOOT; 
-				thinkos_console_write("^C\r\n", 4);
-			} else {
-				/* echo back */
-				thinkos_console_write(buf, 1);
+		for (i = 0; ; ++i) {
+			if (thinkos_console_timedread(buf, 1, 500) == 1) {
+				flags |= MONITOR_SHELL; 
+				if (CTRL_C == buf[0]) {
+					/* disable autoboot */
+					flags &= ~MONITOR_AUTOBOOT; 
+					thinkos_console_write("^C\r\n", 4);
+				} else {
+					/* echo back */
+					thinkos_console_write(buf, 1);
+				}
+			} else if (flags & MONITOR_AUTOBOOT) {
+				if (i < 9) {
+					if (dmon_comm_isconnected(comm))
+						thinkos_console_write(".", 1);
+				} else
+					break;
 			}
-		} else if (flags & MONITOR_AUTOBOOT) {
-			if (i < 9) {
-				if (dmon_comm_isconnected(comm))
-					thinkos_console_write(".", 1);
-			} else
-				break;
-		}
-		if (stm32_gpio_stat(IO_JTRST) == 0) {
-			thinkos_console_write("TRST\r\n", 6);
 		}
 	}
 

@@ -138,17 +138,15 @@
  * delay
  * ------------------------------------------------------------------------- */
 
-#define UDELAY_FACTOR 1706
+#define UDELAY_FACTOR     1706
 
 /* -------------------------------------------------------------------------
    Clock 
    -------------------------------------------------------------------------- */
-#define STM32_HSE_HZ          12000000
+#define STM32_HSE_HZ          24000000
 #define STM32_HCLK_HZ        120000000
-#define STM32_ENABLE_HSI             0
 #define STM32_ENABLE_HSE             1
 #define STM32_ENABLE_PLL             1
-#define STM32_ENABLE_PLLSAI          0 
 
 /* -------------------------------------------------------------------------
    USB 
@@ -158,7 +156,7 @@
 #define STM32_OTG_FS_IO_INIT         0
 #define STM32_OTG_FS_IRQ_ENABLE      0
 #define STM32_OTG_FS_EP_MAX          4
-#define STM32_OTG_FS_VBUS_ENABLE     0
+#define STM32_OTG_FS_VBUS_ENABLE     1
 
 #define CDC_EP_OUT_MAX_PKT_SIZE      64
 #define CDC_EP_IN_MAX_PKT_SIZE       64
