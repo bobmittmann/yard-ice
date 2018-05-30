@@ -35,6 +35,7 @@
 
 #define LOG_LEVEL LOG_INFO
 #include <sys/dcclog.h>
+#include <sys/delay.h>
 
 #include <yard-ice/drv.h>
 
@@ -1046,7 +1047,7 @@ int target_connect(int force)
 		jtag_tck_freq_set(dbg->target->jtag_clk_slow);
 	}
 
-	if ((ret = ice_connect(ice, cpu->idmask, cpu->idcomp)) < 0) {
+	if ((ret = ice_connect(ice, cpu->idmask, cpu->idcomp, 0)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->connect() failed!");
 	} else { 
 		dbg->state = DBG_ST_CONNECTED;
@@ -2508,10 +2509,10 @@ int target_reset(FILE * f, int mode)
 
 	if (dbg->state > DBG_ST_CONNECTED) {
 		if (ice_status(ice) & ICE_ST_HALT) {
-			DCC_LOG(LOG_TRACE, "[DBG_ST_HALTED].");
+			INF("[DBG_ST_HALTED].");
 			dbg->state = DBG_ST_HALTED;
 		} else {
-			DCC_LOG(LOG_TRACE, "[DBG_ST_RUNNING], start polling...");
+			INF("[DBG_ST_RUNNING], start polling...");
 			dbg->state = DBG_ST_RUNNING;
 		}
 	}
@@ -2882,6 +2883,30 @@ int ice_drv_select(struct debugger * dbg, const ice_drv_info_t * info)
 
 }
 
+static inline int __do_connect(struct debugger * dbg, 
+						   const struct target_info * target,
+						   uint32_t idmask, uint32_t idcomp)
+{
+	int ret;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+
+
+	if (target->clk_slow_on_connect) {
+		INF("set JTAG clock to slow");
+		jtag_tck_freq_set(target->jtag_clk_slow);
+	}
+
+	if ((ret = ice_connect(ice, idmask, idcomp, ICE_CONNECT_ON_RESET)) < 0) {
+		WARN("ice->connect() failed!");
+	} else { 
+		INF("target connected!");
+		dbg->state = DBG_ST_CONNECTED;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_CONNECTED]");
+	}
+
+	return ret;
+}
+
 int target_ice_configure(FILE * f, const struct target_info * target, 
 						 int force)
 {
@@ -2942,12 +2967,16 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		dbg->mem_mod_id = -1;
 	}
 
-	/* release the target */
+	/* stop polling */
 	poll_stop(dbg);
 
+	/* lock the ICE driver */
 	thinkos_mutex_lock(dbg->ice_mutex);
+
+	/* release the old target */
 	ice_release(ice);
 
+	/* prepare to configure a new driver */
 	dbg->target = &target_null;
 	dbg->mem = target_null.mem;
 
@@ -3019,6 +3048,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		jtag_rtck_disable();
 	}
 
+	/*  reset prior to config */
 	if (target->reset_on_config) {
 
 #if 0
@@ -3048,21 +3078,30 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		}
 #endif
 		fprintf(f, " - Hardware reset on config...\n");
-		DCC_LOG(LOG_TRACE, "hardware reset...");
+		INFS("reset_on_config:");
 		if ((ret = hw_reset(ice, target)) < 0) {
-			DCC_LOG(LOG_WARNING, "hardware reset failed!");
+			WARNS("hardware reset failed!");
 		}
+	}
+
+	if (target->connect_on_reset) {
+		INFS("connect_on_reset: nTrst asserted!");
+		jtag_trst(true);
+		udelay(1000);
+		INFS("connect_on_reset: nRst asserted!");
+		jtag_nrst(true);
+		udelay(1000);
 	}
 
 	/* configure the scan path */
 	if (target->jtag_probe) {
 
 		fprintf(f, " - JTAG probe...");
-
-		DCC_LOG(LOG_MSG, "TAP reset...");
+	
 		/* assert the JTAG TRST signal (low) */
 		jtag_trst(true);
 		jtag_run_test(1, JTAG_TAP_IDLE);
+
 		/* deassert the JTAG TRST signal (high) */
 		jtag_trst(false);
 		/* scan the TAP reset sequence */
@@ -3193,25 +3232,20 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 			return -1;
 		}
 
-		DCC_LOG1(LOG_TRACE, "match, idcode:%08x", idcode);
+		INF("match, idcode:%08x", idcode);
 	}
 
 	tap->idmask = target->arch->cpu->idmask;
 	tap->idcomp = target->arch->cpu->idcomp;
 
 	memset(&ice->opt, 0, sizeof(ice_opt_t));
-
-	if (ice_configure(ice, tap, &ice->opt, target->ice_cfg) < 0) {
-		DCC_LOG(LOG_ERROR, "ICE controller configurarion fail!");
+	DBGS("Initializing ICE driver...");
+	if (ice_init(ice, tap) < 0) {
+		ERRS("ICE controller configurarion fail!");
 		thinkos_mutex_unlock(dbg->ice_mutex);
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return -1;
 	}
-
-	thinkos_mutex_unlock(dbg->ice_mutex);
-
-	DCC_LOG(LOG_TRACE, "Memory module register...");
-	dbg->mem_mod_id = mod_mem_register(target->mem);
 
 #if 0
 	for (i = 0; i < DBG_BREAKPOINT_MAX; i++) {
@@ -3224,15 +3258,135 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	}
 	dbg->bp_cnt = 0;
 #endif
+	if (target->connect_on_reset) {
+		int ice_st;
+
+		if ((ret = ice_connect(ice, tap->idmask, tap->idcomp, 
+							   ICE_CONNECT_ON_RESET)) < 0) {
+			WARNS("ice->connect() failed!");
+			thinkos_mutex_unlock(dbg->ice_mutex);
+			thinkos_mutex_unlock(dbg->target_mutex);
+			return ret;
+		} 
+		
+		INFS("target connected [DBG_ST_CONNECTED]!");
+		dbg->state = DBG_ST_CONNECTED;
+
+		if ((ice_st = ice_status(ice)) < 0) {
+			WARNS("ice_status() failed!");
+			thinkos_mutex_unlock(dbg->ice_mutex);
+			thinkos_mutex_unlock(dbg->target_mutex);
+			return ice_st;
+		} 
+#if 0		
+		if (ice_st & ICE_ST_HALT) {
+			INF("connect_on_reset: [DBG_ST_HALTED]");
+			dbg->state = DBG_ST_HALTED;
+			ret = 0;
+		} else {
+			INFS("connect_on_reset: [DBG_ST_RUNNING]");
+			dbg->state = DBG_ST_RUNNING;
+			/* request the core to stop */
+			INFS("halt request...");
+
+			if ((ret = ice_halt_req(ice)) < 0) {
+				WARNS("drv->halt() fail, [DBG_ST_OUTOFSYNC]!");
+				dbg->state = DBG_ST_OUTOFSYNC;
+			} 
+
+			thinkos_sleep(10);
+
+			if ((ice_st = ice_status(ice)) < 0) {
+				WARNS("ice_status() failed!");
+				thinkos_mutex_unlock(dbg->ice_mutex);
+				thinkos_mutex_unlock(dbg->target_mutex);
+				return ice_st;
+			} 
+#endif
+		INFS("connect_on_reset: nRst released!");
+		jtag_nrst(false);
+
+		thinkos_sleep(10);
+
+		if ((ice_st = ice_status(ice)) < 0) {
+			WARNS("ice_status() failed!");
+			thinkos_mutex_unlock(dbg->ice_mutex);
+			thinkos_mutex_unlock(dbg->target_mutex);
+			return ice_st;
+		} 
+
+		if (!(ice_st & ICE_ST_HALT)) {
+			WARNS("target halt failed!");
+			thinkos_mutex_unlock(dbg->ice_mutex);
+			thinkos_mutex_unlock(dbg->target_mutex);
+			return ice_st;
+		} else {
+			INF("connect_on_reset: [DBG_ST_RUNNING]");
+			dbg->state = DBG_ST_RUNNING;
+			ret = ice_st;
+		}
+
+		INF("connect_on_reset: [DBG_ST_HALTED]");
+		dbg->state = DBG_ST_HALTED;
+		ret = 0;
+
+#if 0
+
+		/* request the core to stop */
+		INF("halt ...");
+		if ((ret = ice_halt_req(ice)) < 0) {
+			WARN("drv->halt() fail, [DBG_ST_OUTOFSYNC]!");
+			dbg->state = DBG_ST_OUTOFSYNC;
+			return ret;
+		} 
+
+		ice_status(ice);
+		
+		INF("step ...");
+		if ((ret = ice_step(ice)) < 0) {
+			WARN("drv->step() fail, [DBG_ST_OUTOFSYNC]!");
+			dbg->state = DBG_ST_OUTOFSYNC;
+			return ret;
+		}
+		if ((ice_st = ice_status(ice)) < 0) {
+			WARNS("ice_status() failed!");
+			ret = ice_st;
+		} else if (ice_st & ICE_ST_HALT) {
+			INF("connect_on_reset: [DBG_ST_HALTED]");
+			dbg->state = DBG_ST_HALTED;
+			ret = 0;
+		} else {
+			INF("connect_on_reset: [DBG_ST_RUNNING]");
+			dbg->state = DBG_ST_RUNNING;
+			ret = ice_st;
+		}
+#endif
+	} else {
+		dbg->state = DBG_ST_UNCONNECTED;
+		DBGS("[DBG_ST_UNCONNECTED]");
+			ret = 0;
+	}
+
+	DBGS("Configuring ICE driver...");
+	if (ice_configure(ice, &ice->opt, target->ice_cfg) < 0) {
+		ERRS("ICE controller configurarion fail!");
+		thinkos_mutex_unlock(dbg->ice_mutex);
+		thinkos_mutex_unlock(dbg->target_mutex);
+		return -1;
+	}
+
+	DBGS("Registering memory module ...");
+	dbg->mem_mod_id = mod_mem_register(target->mem);
+
 	dbg->dasm.base = dbg->target->start_addr;
 	dbg->transf.base = dbg->target->start_addr;
 
-	dbg->state = DBG_ST_UNCONNECTED;
-	DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+	dbg_status(dbg);
 
+	thinkos_mutex_unlock(dbg->ice_mutex);
 	thinkos_mutex_unlock(dbg->target_mutex);
 
-	return 0;
+	return ret;
 }
 
 int target_config(FILE * f)
@@ -3245,22 +3399,22 @@ int target_config(FILE * f)
 	thinkos_mutex_lock(dbg->target_mutex);
 
 	if ((target = dbg->target) == NULL) {
-		DCC_LOG(LOG_ERROR, "NULL target!");
-		ERR("NULL target");
+		ERRS("NULL target");
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_NULL_TARGET;
 	}
 
-	if (dbg->state < DBG_ST_UNCONNECTED) {
-		DCC_LOG(LOG_ERROR, "Invalid state!");
-		WARN("Invalid state");
+	if (dbg->state <= DBG_ST_UNCONNECTED) {
+		ERRS("Invalid state");
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ERR_STATE;
 	}
 
+
+#if 0
 	if (dbg->state >= DBG_ST_CONNECTED) {
+		ERRS("Stop polling...");
 		poll_stop(dbg);
-		thinkos_mutex_lock(dbg->ice_mutex);
 
 		if ((ret = ice_release(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "drv->release() failed! [DBG_ST_OUTOFSYNC]");
@@ -3272,25 +3426,53 @@ int target_config(FILE * f)
 		
 		dbg->state = DBG_ST_UNCONNECTED;
 		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
-	} else
-		thinkos_mutex_lock(dbg->ice_mutex);
+	}
+#endif
 
+	thinkos_mutex_lock(dbg->ice_mutex);
+
+	if (dbg->state != DBG_ST_HALTED) {
+		int ice_st;
+		/* request the core to stop */
+		if ((ret = ice_halt_req(ice)) < 0) {
+			WARNS("drv->halt() fail, [DBG_ST_OUTOFSYNC]!");
+			dbg->state = DBG_ST_OUTOFSYNC;
+			thinkos_mutex_unlock(dbg->ice_mutex);
+			thinkos_mutex_unlock(dbg->target_mutex);
+			return ret;
+		} 
+		
+		thinkos_sleep(10);
+
+		if ((ice_st = ice_status(ice)) < 0) {
+			WARNS("ice_status() failed!");
+			thinkos_mutex_unlock(dbg->ice_mutex);
+			thinkos_mutex_unlock(dbg->target_mutex);
+			return ice_st;
+		};
+
+		if (ice_st & ICE_ST_HALT) {
+			INF("[DBG_ST_HALTED]");
+			dbg->state = DBG_ST_HALTED;
+		} else {
+			INF("[DBG_ST_RUNNING]");
+			dbg->state = DBG_ST_RUNNING;
+		}
+	}	
 
 	/* Execute the target specific configuration */
 	if (target->pos_config) {
-		DCC_LOG(LOG_TRACE, "Target pos config callback...");
 		if ((ret = target->pos_config(f, ice, target)) < 0) {
-			DCC_LOG(LOG_ERROR, "target->pos_config() fail!");
-			WARN("pos_config callback failed");
+			WARNS("pos_config callback failed");
 		} else
-			INF("target pos_config ok");
+			INFS("target pos_config ok");
 	} else {
-		INF("pos_config callback undefined");
+		INFS("pos_config callback undefined");
 		DCC_LOG(LOG_TRACE, "target->pos_config callback undefined!");
 		ret = 0;
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
+	thinkos_mutex_unlock(dbg->ice_mutex);
 	thinkos_mutex_unlock(dbg->target_mutex);
 
 	return ret;

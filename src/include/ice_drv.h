@@ -125,6 +125,7 @@ typedef enum {
 	BIG_ENDIAN = 1
 } ice_endianness_t;
 
+#define ICE_CONNECT_ON_RESET 1
 
 typedef int16_t ice_oid_t;
 
@@ -149,8 +150,9 @@ typedef struct ice_ctrl ice_ctrl_t;
 typedef int (* ice_open_t)(ice_ctrl_t * ctrl);
 typedef int (* ice_close_t)(ice_ctrl_t * ctrl);
 
-typedef int (* ice_configure_t)(ice_ctrl_t * ctrl, jtag_tap_t * tap, 
-								ice_opt_t * opt, void * cfg);
+typedef int (* ice_init_t)(ice_ctrl_t * ctrl, jtag_tap_t * tap);
+
+typedef int (* ice_configure_t)(ice_ctrl_t * ctrl, ice_opt_t * opt, void * cfg);
 
 typedef int (* ice_status_t)(ice_ctrl_t * ctrl);
 typedef int (* ice_poll_t)(ice_ctrl_t * ctrl, ice_comm_t * comm);
@@ -159,7 +161,7 @@ typedef void (* ice_signal_t)(ice_ctrl_t * ctrl, ice_sig_t sig);
 typedef int (* ice_halt_wait_t)(ice_ctrl_t * ctrl, int mutex, int tmo);
 
 typedef int (* ice_connect_t)(ice_ctrl_t * ctrl, uint32_t idmask, 
-							  uint32_t idcomp);
+							  uint32_t idcomp, uint32_t flags);
 
 typedef int (* ice_release_t)(ice_ctrl_t * ctrl);
 
@@ -266,11 +268,13 @@ typedef int (* ice_comm_close_t)(ice_ctrl_t * ctrl);
 #define ICE_VERSION_MAX 7
 
 struct ice_oper {
-	/* driver initialization */
+	/* driver loading */
 	ice_open_t open;
 	/* driver unloading */
 	ice_close_t close;
 
+	/* driver port initialization */
+	ice_init_t init;
 	/* driver configuration */
 	ice_configure_t configure;
 	/* target status */
@@ -432,9 +436,13 @@ static inline int ice_close(const ice_drv_t * ice) {
 	return ice->op.close(ice->ctrl);
 }
 
-static inline int ice_configure(const ice_drv_t * ice, jtag_tap_t * tap, 
-								ice_opt_t * opt, void * cfg) {
-	return ice->op.configure(ice->ctrl, tap, opt, cfg);
+static inline int ice_init(const ice_drv_t * ice, jtag_tap_t * tap) {
+	return ice->op.init(ice->ctrl, tap);
+}
+
+static inline int ice_configure(const ice_drv_t * ice, ice_opt_t * opt, 
+								void * cfg) {
+	return ice->op.configure(ice->ctrl, opt, cfg);
 }
 
 static inline int ice_status(const ice_drv_t * ice) {
@@ -454,8 +462,8 @@ static inline int ice_halt_wait(const ice_drv_t * ice, int mutex, int tmo) {
 }
 
 static inline int ice_connect(const ice_drv_t * ice, uint32_t idmask, 
-							  uint32_t idcomp) {
-	return ice->op.connect(ice->ctrl, idmask, idcomp);
+							  uint32_t idcomp, uint32_t flags) {
+	return ice->op.connect(ice->ctrl, idmask, idcomp, flags);
 }
 
 static inline int ice_release(const ice_drv_t * ice) {

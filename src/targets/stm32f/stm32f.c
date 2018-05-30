@@ -123,9 +123,15 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 	DCC_LOG1(LOG_TRACE, "target=0x%p", target);
 
 	/* Make sure we are using the internal oscillator */
-	ice_wr32(ice, STM32F_BASE_RCC + RCC_CFGR, 0);
+//	if (ice_wr32(ice, STM32F_BASE_RCC + RCC_CFGR, 0) < 0) {
+//		fprintf(f, " - ice_wr32 error!\n"); 
+//		return -1;
+//	}
 
-	ice_rd32(ice, 0xe0042000, &id);
+	if (ice_rd32(ice, 0xe0042000, &id) < 0) {
+		fprintf(f, " - ice_rd32 error!\n"); 
+		return -1;
+	}
 
 	INF("STM32: [0xe0042000] MCU_ID=0x%08x", id);
 	fprintf(f, " - MCU device id: 0x%08x\n", id); 
@@ -310,6 +316,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 	case 0x435:
 		ice_rd16(ice, 0x1fff75e0, &memsz);
 		ice_rd16(ice, 0x1fff7500, &pkg);
+		INF("STM32: [0x1fff75e0] FLASH_SIZE=0x%04x", memsz);
 		fprintf(f, "STM32L43XXX or STM32L44XXX\n"); 
 		fprintf(f, "   - Package: %s\n", stm32lpkg_name(pkg));
 		target->on_init = (target_script_t)stm32l4xx_on_init,
@@ -438,6 +445,8 @@ struct target_info stm32f = {
 	.jtag_probe = YES,
 	/* hardware reset before ICE configure */
 	.reset_on_config = NO,
+	/* connect_on_reset*/
+	.connect_on_reset = YES,
 
 	/* The prefered reset method is system */
 	.reset_mode = RST_SYS,

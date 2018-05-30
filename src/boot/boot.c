@@ -202,6 +202,8 @@ void main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
 
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
+		/* If  jumper is inserted between JTRST and GND boot up now
+		   and enable the monitor shell. */
 		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 	} else {
 		/* starts monitor with shell enabled */

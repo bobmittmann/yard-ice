@@ -1,0 +1,33 @@
+;
+; YARD-ICE application upload script for TeraTerm
+;
+
+PATTERN = 'release\*.bin'
+
+findfirst dh PATTERN FNAME
+
+if result=0 then
+  findclose dh
+  messagebox "Firmware file not found!" "File not found!"
+  exit
+endif
+
+findclose dh
+getdir BASEDIR
+strconcat BASEDIR '\release\'
+makepath IMAGE BASEDIR FNAME
+
+send 25 ; Ctrl+Y
+wait '[y]?' 'CC'
+
+if result=1 then
+  send 'y'
+  mpause 100
+  ymodemsend IMAGE
+  if result=1 then
+    wait 'OK'
+  endif
+else
+  messagebox IMAGE "Fail!"
+endif
+

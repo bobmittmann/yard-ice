@@ -550,10 +550,6 @@ int main(int argc, char ** argv)
 	i2c_init();
 #endif
 
-	INF("* configuring initial target ... ");
-	DCC_LOG(LOG_TRACE, "16. init_target().");
-	init_target();
-
 #if ENABLE_NETWORK
 	DCC_LOG(LOG_TRACE, " 17. network_config().");
 	INF("* Initializing network...");
@@ -592,6 +588,7 @@ int main(int argc, char ** argv)
 	{
 		FILE * f;
 		char * env;
+
 		f = console_shell();
 		if ((env = getenv("TRACE")) != NULL) {
 			INF("TRACE='%s'", env);
@@ -607,6 +604,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "24. telnet_shell().");
 	telnet_shell();
 #endif
+
+	INF("* configuring initial target ... ");
+	DCC_LOG(LOG_TRACE, "16. init_target().");
+	init_target();
 
 	for (;;) {
 		thinkos_sleep(250);

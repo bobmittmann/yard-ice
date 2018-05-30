@@ -176,6 +176,8 @@ struct target_info {
 	uint32_t jtag_probe:1;
 	/*  */
 	uint32_t reset_on_config:1;
+	/* */
+	uint32_t connect_on_reset:1;
 
 	/* default reset mode */
 	uint8_t reset_mode;

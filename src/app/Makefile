@@ -31,22 +31,22 @@ VERSION_MINOR = "40"
 PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 CFILES = ../yard-ice.c ../io.c ../debugger.c ../ice_drv.c\
-		 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
-		 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c 
+	 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
+	 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c 
 
 LIBDIRS = $(SDKDIR)/libcm3 $(SDKDIR)/libstm32f $(SDKDIR)/libutil \
-		  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \
-		  $(SDKDIR)/libstm32drv $(SDKDIR)/libbitvec $(SDKDIR)/libhexdump \
-		  $(SDKDIR)/libcrc $(SDKDIR)/libtrace $(SDKDIR)/libtty \
-		  $(SDKDIR)/libxmodem $(SDKDIR)/libshell $(SDKDIR)/libconsole \
-		  ../libopcodes ../libaltera\
-		  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
-		  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
-		  ../comm 
+	  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \
+	  $(SDKDIR)/libstm32drv $(SDKDIR)/libbitvec $(SDKDIR)/libhexdump \
+	  $(SDKDIR)/libcrc $(SDKDIR)/libtrace $(SDKDIR)/libtty \
+	  $(SDKDIR)/libxmodem $(SDKDIR)/libshell $(SDKDIR)/libconsole \
+	  ../libopcodes ../libaltera\
+	  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
+	  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
+	  ../comm 
 
 LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
-	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
-	targets tftp shell console tty gdb vcom telnet crc xmodem comm gcc
+       altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
+       targets tftp shell console tty gdb vcom telnet crc xmodem comm gcc
 
 CDEFS = CONFIG_H
 CFLAGS = -g -Ofast -Wall -fomit-frame-pointer
