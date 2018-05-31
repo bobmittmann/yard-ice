@@ -161,6 +161,7 @@ struct debugger {
 	int poll_thread;
 
 	volatile bool poll_enabled;
+	volatile uint8_t break_code;
 
 	/* debug communication control */
 	ice_comm_t comm;

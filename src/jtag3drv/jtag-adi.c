@@ -40,6 +40,8 @@
 
 #include "jtag_adi.h"
 
+#include "trace.h"
+
 #ifndef JTAG_VEC_BITS_MAX 
 #error "JTAG_VEC_BITS_MAX undefined"
 #endif

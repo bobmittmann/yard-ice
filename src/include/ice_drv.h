@@ -97,7 +97,8 @@ typedef enum {
 	ICE_BRK_UNKNOWN = 2,
 	ICE_BRK_BREAKPOINT = 3,
 	ICE_BRK_WATCHPOINT = 4,
-	ICE_BRK_EXCEPTION = 5
+	ICE_BRK_EXCEPTION = 5,
+	ICE_BRK_LOCKUP = 6
 } ice_reason_t;
 
 typedef enum {

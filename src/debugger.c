@@ -824,6 +824,7 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 			/* synchronize */
 			DCC_LOG(LOG_TRACE, "cond wait .........");
 			thinkos_cond_wait(dbg->poll_cond, dbg->ice_mutex);
+			dbg->break_code = ICE_BRK_NONE;
 		}
 
 		INF("ICE poll start...");
@@ -837,6 +838,8 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 
 		if (brk != ICE_BRK_NONE) {
 			DCC_LOG(LOG_TRACE, "break!!!!");
+
+			dbg->break_code = brk;
 			thinkos_cond_broadcast(dbg->halt_cond);
 
 			switch (brk) {
@@ -854,6 +857,9 @@ static int dbg_poll_task(struct debugger * dbg, int id)
 				break;
 			case ICE_BRK_BREAKPOINT: 
 				WARNS("ICE stopped due to breakpoint.");
+				break;
+			case ICE_BRK_LOCKUP: 
+				WARNS("ICE stopped due to processor lockup.");
 				break;
 			}
 		}

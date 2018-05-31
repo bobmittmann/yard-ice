@@ -138,23 +138,103 @@ void rtc_init(void)
  * System Supervision
  * ------------------------------------------------------------------------- */
 
-FILE * volatile spv_fout;
-volatile bool spv_auto_flush = false;
+FILE * volatile trace_file = NULL;
+volatile bool trace_autoflush = false;
+struct udp_pcb * volatile trace_udp_pcb = NULL;
+const uint16_t trace_port = 514;
+struct sockaddr_in trace_host_sin;
 
-void trace_output_set(FILE * f, bool flush)
+void trace_file_set(FILE * f)
 {
 	WARN("trace output set to 0x%08x", (uint32_t)f);
+	trace_file = f;
+}
 
-	spv_fout = f;
-	spv_auto_flush = flush;
+void trace_autoflush_set(bool enabled)
+{
+	trace_autoflush = enabled;
+}
+
+int trace_udp_host_set(char * host)
+{
+    struct udp_pcb * udp = NULL;
+
+	if (!inet_aton(host, &trace_host_sin.sin_addr)) {
+		return -1;
+	}
+	trace_host_sin.sin_port = htons(trace_port);
+
+	if ((trace_udp_pcb == NULL)) {
+		if ((udp = udp_alloc()) == NULL) {
+			return -1;
+		}
+
+		if (udp_bind(udp, INADDR_ANY, htons(5140)) < 0) {
+			return -1;
+		}
+    
+		trace_udp_pcb = udp;
+	}
+
+	return 0;
+}
+
+/*
+   RFC3164 - Syslog
+
+   Facility
+		  0             kernel messages
+          1             user-level messages
+		  ...
+
+   Severity
+		  0       Emergency: system is unusable
+           1       Alert: action must be taken immediately
+           2       Critical: critical conditions
+           3       Error: error conditions
+           4       Warning: warning conditions
+           5       Notice: normal but significant condition
+           6       Informational: informational messages
+           7       Debug: debug-level messagess
+		   */
+
+int trace_syslog_encode(char * buf, struct trace_entry * entry, 
+						struct timeval * tv, char * s)
+{
+	int day;
+	int hour;
+	int min;
+	int sec;
+	char * hostname = "YardIce";
+
+	sec = (int)tv->tv_sec;
+
+	min = sec / 60;
+	sec = sec - (min * 60);
+
+	hour = min / 60;
+	min = min - (hour * 60);
+
+	day = hour / 24;
+	hour = hour - (day * 24);
+
+	day++;
+
+	return sprintf(buf, "<%d>Jan %2d %02d:%02d:%02d %s %s[%d]: %s\n",
+				   entry->ref->lvl, day, hour, min, sec, hostname, 
+				   entry->ref->func, entry->ref->line, s);
 }
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
+	struct udp_pcb * udp = NULL;
 	struct trace_entry trace;
 	bool eth_link_up = false;
 	uint32_t eth_tmo;
 	uint32_t clk;
+	FILE * file = NULL;
+	struct sockaddr_in sin;
+	bool autoflush;
 
 	DCC_LOG(LOG_TRACE, "1.");
 	INF("<%d> started...", thinkos_thread_self());
@@ -162,32 +242,66 @@ void __attribute__((noreturn)) supervisor_task(void)
 	DCC_LOG(LOG_TRACE, "2.");
 	trace_tail(&trace);
 
+
 	DCC_LOG(LOG_TRACE, "3.");
 	clk = thinkos_clock();
 	eth_tmo = clk + 100;
 	for (;;) {
-		struct timeval tv;
-		char s[64];
+		char s[512 - 128];
+		char line[512];
 
 		/* 8Hz periodic task */
 		clk += 125;
 		thinkos_alarm(clk);
 
-		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
-			trace_ts2timeval(&tv, trace.dt);
-			if (trace.ref->lvl <= TRACE_LVL_WARN)
-				fprintf(spv_fout, "%s %2d.%06d: %s,%d: %s\n",
-						trace_lvl_nm[trace.ref->lvl],
-						(int)tv.tv_sec, (int)tv.tv_usec,
-						trace.ref->func, trace.ref->line, s);
-			else
-				fprintf(spv_fout, "%s %2d.%06d: %s\n",
-						trace_lvl_nm[trace.ref->lvl],
-						(int)tv.tv_sec, (int)tv.tv_usec, s);
+		if (eth_link_up) {
+			if ((udp = trace_udp_pcb) != NULL) {
+				trace_host_sin.sin_port = htons(trace_port);
+				sin = trace_host_sin;
+			}
+		} else {
+			udp = NULL;
 		}
 
-		if (spv_auto_flush)
-			trace_flush(&trace);
+		file = trace_file;
+		autoflush = trace_autoflush;
+
+		if ((udp != NULL) || (file != NULL)) {
+			while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+				unsigned int n;
+				struct timeval tv;
+
+				if (file != NULL) {
+
+					trace_ts2timeval(&tv, trace.dt);
+
+					if (trace.ref->lvl <= TRACE_LVL_WARN)
+						n = sprintf(line, "%s %2d.%06d: %s,%d: %s\n",
+									trace_lvl_nm[trace.ref->lvl],
+									(int)tv.tv_sec, (int)tv.tv_usec,
+									trace.ref->func, trace.ref->line, s);
+					else
+						n = sprintf(line, "%s %2d.%06d: %s\n",
+									trace_lvl_nm[trace.ref->lvl],
+									(int)tv.tv_sec, (int)tv.tv_usec, s);
+
+					/* write log to console */
+					fwrite(line, n, 1, file);
+				}
+
+				if (udp != NULL)  {
+					/* send log to remote station */
+					trace_tm2timeval(&tv, trace.tm);
+					n = trace_syslog_encode(line, &trace, &tv, s);
+					printf(line);
+					udp_sendto(udp, line, n, &sin);
+					//				udp_send(udp, line, n);
+				}
+			}
+
+			if (autoflush)
+				trace_flush(&trace);
+		}
 
 		if ((int32_t)(clk - eth_tmo) >= 0) {
 			bool up = ethif_link_up();
@@ -196,11 +310,13 @@ void __attribute__((noreturn)) supervisor_task(void)
 					struct route * rt;
 					INF("Ethernet link UP!");
 					if ((rt = ipv4_route_get(INADDR_ANY, INADDR_ANY)) != NULL) {
-						/* send a gratuitous ARP request to the default gateway */
+						/* send a gratuitous ARP request to 
+						   the default gateway */
 						ipv4_arp_query(rt->rt_gateway);
 					}
 				}
 				eth_tmo += 250;
+
 			} else {
 				if (eth_link_up) {
 					WARN("Ethernet link DOWN!");
@@ -212,14 +328,13 @@ void __attribute__((noreturn)) supervisor_task(void)
 	}
 }
 
-
-uint32_t supervisor_stack[128];
+uint32_t supervisor_stack[512];
 
 const struct thinkos_thread_inf supervisor_inf = {
 	.stack_ptr = supervisor_stack,
 	.stack_size = sizeof(supervisor_stack),
-	.priority = 32,
-	.thread_id = 18,
+	.priority = 2,
+	.thread_id = 2,
 	.paused = false,
 	.tag = "SUPV"
 };
@@ -228,9 +343,7 @@ void supervisor_init(void)
 {
 	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
 							  &supervisor_inf);
-
-	DCC_LOG(LOG_TRACE, "thinkos_sleep()...");
-	thinkos_sleep(1);
+	thinkos_sleep(10);
 }
 
 int eth_strtomac(uint8_t ethaddr[], const char * s)
@@ -498,10 +611,7 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, " 5. stdio_init().");
 	stdio_init();
-
 	printf("\n---\n");
-	/* set monitor to stderr */
-	spv_fout = stderr;
 
 	DCC_LOG(LOG_TRACE, " 6. trace_init().");
 	trace_init();
@@ -592,10 +702,20 @@ int main(int argc, char ** argv)
 		f = console_shell();
 		if ((env = getenv("TRACE")) != NULL) {
 			INF("TRACE='%s'", env);
-			if (strcmp(env, "console") == 0)
-				trace_output_set(f, true);
+			if (strcmp(env, "console") == 0) {
+				trace_file_set(f);
+				trace_autoflush_set(true);
+			}
 		} else
 			INFS("TRACE environment not set.");
+
+		if ((env = getenv("SYSLOG")) != NULL) {
+			trace_udp_host_set(env);
+			trace_autoflush_set(true);
+		} else {
+			INFS("UDP environment not set.");
+		}
+
 	}
 #endif
 

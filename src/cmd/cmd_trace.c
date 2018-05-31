@@ -35,8 +35,8 @@
 #include "eval.h"
 #include "trace.h"
 
-extern volatile FILE * spv_fout;
-extern volatile bool spv_auto_flush;
+void trace_file_set(FILE * f);
+void trace_autoflush_set(bool enabled);
 
 int cmd_trace(FILE * f, int argc, char ** argv)
 {
@@ -49,17 +49,17 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 	while (argc) {
 		if ((strcmp(*argv, "sup") == 0) || (strcmp(*argv, "s") == 0)) {
 			fprintf(f, "Supervisory trace set to this console.\n");
-			spv_fout = f;
+			trace_file_set(f);
 			flush = true;
 		} else if ((strcmp(*argv, "auto") == 0) || 
 				   (strcmp(*argv, "a") == 0)) {
 			fprintf(f, "Supervisory auto-flush enabled.\n");
-			spv_auto_flush = true;
+			trace_autoflush_set(true);
 			dump = false;
 		} else if ((strcmp(*argv, "keep") == 0) || 
 				   (strcmp(*argv, "k") == 0)) {
 			fprintf(f, "Supervisory auto-flush disabled.\n");
-			spv_auto_flush = false;
+			trace_autoflush_set(false);
 			dump = false;
 		} else if ((strcmp(*argv, "flush") == 0) || 
 				   (strcmp(*argv, "f") == 0)) {
