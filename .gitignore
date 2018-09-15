@@ -47,3 +47,4 @@ RemoteSystemsTempFiles/
 /doc/thinkos/xml/*
 History/
 Project Logs*/
+*.orig
