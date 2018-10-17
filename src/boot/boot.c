@@ -42,7 +42,7 @@
 #include "board.h"
 #include "version.h"
 
-void monitor_task(struct dmon_comm * comm, void * param);
+void monitor_task(const struct dbgmon_comm * comm, void * param);
 
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
@@ -163,7 +163,7 @@ void board_init(void)
 
 void main(int argc, char ** argv)
 {
-	struct dmon_comm * comm;
+	struct dbgmon_comm * comm;
 	uint32_t flags = 0;
 	char buf[1];
 	int i;
@@ -197,7 +197,7 @@ void main(int argc, char ** argv)
 	thinkos_console_init();
 
 	DCC_LOG(LOG_TRACE, "7. usb_comm_init()");
-	comm = usb_comm_init(&stm32f_otg_fs_dev);
+	comm = (struct dbgmon_comm *)usb_comm_init(&stm32f_otg_fs_dev);
 
 	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
 
@@ -223,7 +223,7 @@ void main(int argc, char ** argv)
 				}
 			} else if (flags & MONITOR_AUTOBOOT) {
 				if (i < 9) {
-					if (dmon_comm_isconnected(comm))
+					if (dbgmon_comm_isconnected(comm))
 						thinkos_console_write(".", 1);
 				} else
 					break;

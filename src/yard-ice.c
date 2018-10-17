@@ -58,6 +58,21 @@
 
 #include <yard-ice/drv.h>
 
+#ifndef TRACE_ENABLE_VT100    
+#define TRACE_ENABLE_VT100    1
+#endif
+
+#include <trace.h>
+
+#if TRACE_ENABLE_VT100
+#include <vt100.h>
+#endif
+
+/* -------------------------------------------------------------------------
+ * Private control structures  
+ * ------------------------------------------------------------------------- */
+
+
 #include "board.h"
 #include "module.h"
 #include "debugger.h"
@@ -137,6 +152,43 @@ void rtc_init(void)
 /* -------------------------------------------------------------------------
  * System Supervision
  * ------------------------------------------------------------------------- */
+
+#if TRACE_ENABLE_VT100
+const char * const lvl_attr_nm[] = {
+	VT_FRD VT_BRI VT_BLK "PANIC" VT_FWH VT_NML,
+	VT_FRD VT_BRI " CRIT" VT_FWH VT_NML,
+	VT_FRD VT_BRI "ALERT" VT_FWH VT_NML,
+	VT_FRD VT_BRI "ERROR" VT_FWH VT_NML,
+
+	VT_FYW " WARN" VT_FWH VT_NML,
+	VT_FGR " NOTE" VT_FWH VT_NML,
+	VT_FBL " INFO" VT_FWH VT_NML,
+	VT_FCY "DEBUG" VT_FWH VT_NML,
+
+	VT_FCY VT_DIM "  YAP" VT_FWH VT_NML,
+	" !!!!",
+	" ????"
+	" ????"
+};
+
+const char * const txt_attr[] = {
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+	VT_FWH VT_NML,
+	};
+#endif
+
 
 FILE * volatile trace_file = NULL;
 volatile bool trace_autoflush = false;
@@ -269,22 +321,45 @@ void __attribute__((noreturn)) supervisor_task(void)
 		if ((udp != NULL) || (file != NULL)) {
 			while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
 				unsigned int n;
+				unsigned int lvl;
 				struct timeval tv;
 
+				trace_ts2timeval(&tv, trace.dt);
+
 				if (file != NULL) {
+					if ((lvl = trace.ref->lvl) <= TRACE_LVL_WARN)
+#if TRACE_ENABLE_VT100
+						/* extra info */
+						n = sprintf(line, _ATTR_PUSH_ "%s "
+									"%2d.%06d" _NORMAL_ ": %s,%d: %s%s"
+									_ATTR_POP_ "\n",
+									lvl_attr_nm[lvl],
+									(int) tv.tv_sec, (int) tv.tv_usec, 
+									trace.ref->func, trace.ref->line,
+									txt_attr[lvl], s);
 
-					trace_ts2timeval(&tv, trace.dt);
-
-					if (trace.ref->lvl <= TRACE_LVL_WARN)
-						n = sprintf(line, "%s %2d.%06d: %s,%d: %s\n",
-									trace_lvl_nm[trace.ref->lvl],
-									(int)tv.tv_sec, (int)tv.tv_usec,
-									trace.ref->func, trace.ref->line, s);
+#else
+					n = sprintf(line, "%2d.%06d: %s,%d: %s%s\n",
+								(int) tv.tv_sec, (int) tv.tv_usec, 
+								trace.ref->func, trace.ref->line,
+								s);
+#endif
 					else
+#if TRACE_ENABLE_VT100
+						n = sprintf(line, _ATTR_PUSH_ "%s " _BRIGHT_
+									"%2d.%06d" _NORMAL_ ": %s%s"
+									_ATTR_POP_ "\n",
+									lvl_attr_nm[lvl],
+									(int) tv.tv_sec,
+									(int) tv.tv_usec, 
+									txt_attr[lvl],
+									s);
+#else
 						n = sprintf(line, "%s %2d.%06d: %s\n",
 									trace_lvl_nm[trace.ref->lvl],
 									(int)tv.tv_sec, (int)tv.tv_usec, s);
 
+#endif
 					/* write log to console */
 					fwrite(line, n, 1, file);
 				}
@@ -730,7 +805,7 @@ int main(int argc, char ** argv)
 	init_target();
 
 	for (;;) {
-		thinkos_sleep(250);
+		thinkos_sleep(500);
 
 		DCC_LOG(LOG_TRACE, "25. stdio_shell().");
 		stdio_shell();

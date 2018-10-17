@@ -114,8 +114,6 @@
 #define THINKOS_ENABLE_STACK_INIT       0
 #define THINKOS_ENABLE_THREAD_VOID      0
 #define THINKOS_ENABLE_IDLE_WFI         1
-#define THINKOS_IDLE_STACK_BSS          1
-#define THINKOS_IDLE_STACK_ALLOC        0
 
 #define THINKOS_ASM_SCHEDULER           1
 #define THINKOS_ENABLE_OFAST            0
@@ -126,7 +124,6 @@
 #define THINKOS_DBGMON_STACK_SIZE       360
 #define THINKOS_DBGMON_ENABLE_RST_VEC   0 
 #define THINKOS_DBGMON_ENABLE_FLOWCTL   0 
-#define THINKOS_DBGMON_ENABLE_IRQ_MGMT  0 
 #define DMPRINTF_ENABLE_FAST            1
 #define DMPRINTF_ENABLE_UNSIGNED        0
 #define THINKOS_CONSOLE_RX_FIFO_LEN     64
@@ -212,18 +209,21 @@
 #define ENABLE_MONITOR  1
 #define ENABLE_NETWORK  1
 #define ENABLE_TFTP     1
-#define ENABLE_NAND     1
+#define ENABLE_NAND     0
 #define ENABLE_COMM     1
 #define ENABLE_GDB      1
-#define ENABLE_VCOM     1
-#define ENABLE_I2C      1
+#define ENABLE_VCOM     0
+#define ENABLE_I2C      0
 #define ENABLE_TELNET   1
+
+#define ENABLE_YMODEM   1
 
 /* -------------------------------------------------------------------------
  * Trace 
  * ------------------------------------------------------------------------- */
 
-#define TRACE_LEVEL TRACE_LVL_DBG
+#define TRACE_LEVEL           TRACE_LVL_DBG
+#define TRACE_ENABLE_VT100    1
 
 /* -------------------------------------------------------------------------
  * LibC

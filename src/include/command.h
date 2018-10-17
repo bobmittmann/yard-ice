@@ -119,6 +119,10 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv);
 
 int cmd_tcp_send(FILE * f, int argc, char ** argv);
 
+int cmd_ymodem_recv(FILE * f, int argc, char ** argv);
+
+int cmd_ymodem_send(FILE * f, int argc, char ** argv);
+
 int cmd_trst(FILE * f, int argc, char ** argv);
 
 int cmd_nrst(FILE * f, int argc, char ** argv);

@@ -423,6 +423,16 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 #endif
 #endif
 
+#if (ENABLE_YMODEM)
+	{ cmd_ymodem_recv, "rcvy", "ry", 
+		"[ADDR [SIZE]]", "receive file using YMODEM protocol" },
+#endif
+
+//#if (ENABLE_YMODEM)
+	//{ cmd_ymodem_send, "sndy", "sy", 
+//		"[ADDR] [SIZE]", "send memory block using YMODEM protocol" },
+//#endif
+
 	{ NULL, "", "", NULL, NULL }
 };
 

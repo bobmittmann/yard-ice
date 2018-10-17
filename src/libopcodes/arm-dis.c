@@ -4778,7 +4778,7 @@ print_insn_thumb32(bfd_vma pc, struct disassemble_info *info, long given)
 						if (PRE_BIT_SET) {
 							if (off || !U) {
 								func(stream, ", #%c%u", U ? '+' : '-', off * 4);
-								value_in_comment = off * 4 * U ? 1 : -1;
+								value_in_comment = (off * 4 * U) != 0 ? 1 : -1;
 							}
 							func(stream, "]");
 							if (W)
@@ -4787,7 +4787,7 @@ print_insn_thumb32(bfd_vma pc, struct disassemble_info *info, long given)
 							func(stream, "], ");
 							if (W) {
 								func(stream, "#%c%u", U ? '+' : '-', off * 4);
-								value_in_comment = off * 4 * U ? 1 : -1;
+								value_in_comment = (off * 4 * U) != 0 ? 1 : -1;
 							} else {
 								func(stream, "{%u}", off);
 								value_in_comment = off;

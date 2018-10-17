@@ -173,7 +173,7 @@ static const char s_confirm[] = "Confirm [y]?";
 #endif
 
 #if (MONITOR_OSINFO_ENABLE)
-#define PUTS(S) dmprintf(comm, S) 
+#define PUTS(S) dbgmon_printf(comm, S) 
 #else
 #define PUTS(S) dmputs(S, comm) 
 #endif
@@ -249,7 +249,7 @@ static void rbf_yflash(void)
 
 int __scan_stack(void * stack, unsigned int size);
 
-static void print_osinfo(struct dmon_comm * comm)
+static void print_osinfo(struct dbgmon_comm * comm)
 {
 	struct thinkos_rt * rt = &thinkos_rt;
 #if THINKOS_ENABLE_PROFILING
@@ -278,7 +278,7 @@ static void print_osinfo(struct dmon_comm * comm)
 	__thinkos_memset32(rt->cyccnt, 0, sizeof(cycbuf));
 #endif
 
-	dmprintf(comm, s_hr);
+	dbgmon_printf(comm, s_hr);
 #if THINKOS_ENABLE_PROFILING
 	cycsum = 0;
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i)
@@ -289,18 +289,18 @@ static void print_osinfo(struct dmon_comm * comm)
 	cycdiv = (cycsum + 500) / 1000;
 	busy = (cycbusy + cycdiv / 2) / cycdiv;
 	idle = 1000 - busy;
-	dmprintf(comm, "CPU: %d.%d%% busy, %d.%d%% idle\r\n", 
+	dbgmon_printf(comm, "CPU: %d.%d%% busy, %d.%d%% idle\r\n", 
 			 busy / 10, busy % 10, idle / 10, idle % 10);
 #endif
 
-	dmprintf(comm, " Th     Tag       SP       LR       PC  WQ TmW");
+	dbgmon_printf(comm, " Th     Tag       SP       LR       PC  WQ TmW");
 #if THINKOS_ENABLE_PROFILING
-	dmprintf(comm, " CPU %% ");
+	dbgmon_printf(comm, " CPU %% ");
 #endif
 #if (MONITOR_LOCKINFO_ENABLE)
-	dmprintf(comm, " Locks");
+	dbgmon_printf(comm, " Locks");
 #endif
-	dmprintf(comm, "\r\n");
+	dbgmon_printf(comm, "\r\n");
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt->ctx[i] != NULL) {
@@ -310,23 +310,23 @@ static void print_osinfo(struct dmon_comm * comm)
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
 			tag = (rt->th_inf[i] != NULL) ? rt->th_inf[i]->tag : "...";
-			dmprintf(comm, "%3d %7s %08x %08x %08x %3d %s", i + 1, tag,
+			dbgmon_printf(comm, "%3d %7s %08x %08x %08x %3d %s", i + 1, tag,
 					 (uint32_t)rt->ctx[i], rt->ctx[i]->lr, rt->ctx[i]->pc, 
 					 rt->th_stat[i] >> 1, rt->th_stat[i] & 1 ? "Yes" : " No");
 
 #if THINKOS_ENABLE_PROFILING
 			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
-			dmprintf(comm, " %3d.%d", busy / 10, busy % 10);
+			dbgmon_printf(comm, " %3d.%d", busy / 10, busy % 10);
 #endif
 
 
 #if (MONITOR_LOCKINFO_ENABLE)
 			for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
 				if (rt->lock[j] == i)
-					dmprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
+					dbgmon_printf(comm, " %d", j + THINKOS_MUTEX_BASE);
 			}
 #endif
-			dmprintf(comm, "\r\n");
+			dbgmon_printf(comm, "\r\n");
 		}
 	}
 }
@@ -378,13 +378,13 @@ static void pause_all(void)
 }
 #endif
 
-static bool monitor_process_input(struct dmon_comm * comm, int c)
+static bool monitor_process_input(struct dbgmon_comm * comm, int c)
 {
 	switch (c) {
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_FS:
 		PUTS(s_confirm);
-		if (dmgetc(comm) == 'y')
+		if (dbgmon_getc(comm) == 'y')
 			bootloader_yflash();
 		break;
 #endif
@@ -409,7 +409,7 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_Y:
 		PUTS(s_confirm);
-		if (dmgetc(comm) == 'y') {
+		if (dbgmon_getc(comm) == 'y') {
 			app_yflash();
 		} else {
 			PUTS("\r\n");
@@ -421,7 +421,7 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_R:
 		PUTS(s_confirm);
-		if (dmgetc(comm) == 'y')
+		if (dbgmon_getc(comm) == 'y')
 			rbf_yflash();
 		break;
 #endif
@@ -448,7 +448,7 @@ static bool monitor_process_input(struct dmon_comm * comm, int c)
 #define MONITOR_AUTOBOOT 1
 #define MONITOR_SHELL 2
 
-void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm, void * param)
+void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * param)
 {
 	uint32_t sigmask;
 	uint32_t sigset;
@@ -520,7 +520,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm, void * para
 		if (sigset & (1 << DBGMON_COMM_RCV)) {
 			if (flags & MONITOR_SHELL) { 
 				/* receive from the COMM driver one bye at the time */
-				if (dmon_comm_recv(comm, buf, 1) > 0) {
+				if (dbgmon_comm_recv(comm, buf, 1) > 0) {
 					int c = buf[0];
 					/* process the input character */
 					if (!monitor_process_input(comm, c)) {
@@ -540,7 +540,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm, void * para
 			} else {
 				if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
 					DCC_LOG1(LOG_INFO, "Comm recv. rx_pipe.free=%d", cnt);
-					if ((len = dmon_comm_recv(comm, ptr, cnt)) > 0)
+					if ((len = dbgmon_comm_recv(comm, ptr, cnt)) > 0)
 						__console_rx_pipe_commit(len); 
 				} else {
 					DCC_LOG(LOG_INFO, "Comm recv. Masking DMON_COMM_RCV!");
@@ -565,7 +565,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm, void * para
 			DCC_LOG(LOG_MSG, "TX Pipe.");
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
 				DCC_LOG1(LOG_INFO, "TX Pipe, %d pending chars.", cnt);
-				cnt = dmon_comm_send(comm, ptr, cnt);
+				cnt = dbgmon_comm_send(comm, ptr, cnt);
 				__console_tx_pipe_commit(cnt); 
 			} else {
 				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
