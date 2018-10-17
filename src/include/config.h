@@ -129,7 +129,10 @@
 #define THINKOS_CONSOLE_RX_FIFO_LEN     64
 #define THINKOS_CONSOLE_TX_FIFO_LEN     128
 
-#define THINKOS_ENABLE_IRQ_CYCCNT_RET   0
+#define THINKOS_ENABLE_IRQ_CYCCNT       0
+#define THINKOS_ENABLE_IRQ_TIMEDWAIT    0
+#define THINKOS_ENABLE_IRQ_PRIORITY_0   0
+#define THINKOS_ENABLE_WQ_IRQ           0
 
 /* -------------------------------------------------------------------------
  * delay
@@ -158,6 +161,9 @@
 #define CDC_EP_OUT_MAX_PKT_SIZE      64
 #define CDC_EP_IN_MAX_PKT_SIZE       64
 #define CDC_EP_INT_MAX_PKT_SIZE      8
+
+#define STM32_OTG_FS_INEP_MAX 2
+#define STM32_OTG_FS_OUTEP_MAX 1
 
 /* -------------------------------------------------------------------------
  * TCP/IP

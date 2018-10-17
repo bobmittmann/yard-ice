@@ -39,10 +39,24 @@
 
 #define __THINKOS_DBGMON__
 #include <thinkos/dbgmon.h>
+#define __THINKOS_BOOTLDR__
+#include <thinkos/bootldr.h>
 #include <thinkos.h>
 #include <sys/dcclog.h>
 #include <sys/delay.h>
 #include "version.h"
+
+static const struct magic_blk app_magic = {
+	.hdr = {
+		.pos = 0,
+		.cnt = 3
+	},
+	.rec = {
+		{  0xffffffff, 0x0a0de004 },
+		{  0xffffffff, 0x6e696854 },
+		{  0xffffffff, 0x00534f6b }
+	}
+};
 
 extern int __heap_end;
 const void * heap_end = &__heap_end; 
@@ -180,10 +194,10 @@ static const char s_confirm[] = "Confirm [y]?";
 
 #if (MONITOR_UPGRADE_ENABLE)
 static int yflash(uint32_t blk_offs, uint32_t blk_size,
-		   const struct magic * magic)
+		   const struct magic_blk * magic)
 {
 	uint32_t * yflash_code = (uint32_t *)(0x20001000);
-	int (* yflash_ram)(uint32_t, uint32_t, const struct magic *) = 
+	int (* yflash_ram)(uint32_t, uint32_t, const struct magic_blk *) = 
 		((void *)yflash_code) + 1;
 //	unsigned int pri;
 	int ret;
@@ -199,24 +213,7 @@ static int yflash(uint32_t blk_offs, uint32_t blk_size,
 	return ret;
 }
 
-static const struct magic app_magic = {
-	.hdr = {
-		.pos = 0,
-		.cnt = 3
-	},
-	.rec = {
-		{  0xffffffff, 0x0a0de004 },
-		{  0xffffffff, 0x6e696854 },
-		{  0xffffffff, 0x00534f6b }
-	}
-};
-
-static int app_yflash(void)
-{
-	return yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
-}
-
-static const struct magic bootloader_magic = {
+static const struct magic_blk bootloader_magic = {
 	.hdr = {
 		.pos = 0,
 		.cnt = 2
@@ -227,16 +224,6 @@ static const struct magic bootloader_magic = {
 	}
 };
 
-static void bootloader_yflash(void)
-{
-	yflash(0, 32768, &bootloader_magic);
-}
-
-static void rbf_yflash(void)
-{
-	dbgmon_soft_reset();
-	yflash(RBF_BLOCK_OFFS, RBF_BLOCK_SIZE, NULL);
-}
 #endif
 
 #if (MONITOR_OSINFO_ENABLE)
@@ -384,8 +371,10 @@ static bool monitor_process_input(struct dbgmon_comm * comm, int c)
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_FS:
 		PUTS(s_confirm);
-		if (dbgmon_getc(comm) == 'y')
-			bootloader_yflash();
+		if (dbgmon_getc(comm) == 'y') {
+			dbgmon_soft_reset();
+			dbgmon_signal(DBGMON_USER_EVENT2);
+		}
 		break;
 #endif
 #if (MONITOR_OSINFO_ENABLE)
@@ -410,19 +399,19 @@ static bool monitor_process_input(struct dbgmon_comm * comm, int c)
 	case CTRL_Y:
 		PUTS(s_confirm);
 		if (dbgmon_getc(comm) == 'y') {
-			app_yflash();
+			dbgmon_req_app_upload(); 
 		} else {
 			PUTS("\r\n");
 		}
 
 		break;
-#endif
 
-#if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_R:
 		PUTS(s_confirm);
-		if (dbgmon_getc(comm) == 'y')
-			rbf_yflash();
+		if (dbgmon_getc(comm) == 'y') {
+			dbgmon_soft_reset();
+			dbgmon_signal(DBGMON_USER_EVENT1);
+		}
 		break;
 #endif
 
@@ -430,9 +419,7 @@ static bool monitor_process_input(struct dbgmon_comm * comm, int c)
 #if (MONITOR_APPRESTART_ENABLE)
 	case CTRL_Z:
 		PUTS("^Z\r\n");
-		dbgmon_soft_reset();
-		/* Request app exec */
-		dbgmon_signal(DBGMON_APP_EXEC); 
+		dbgmon_req_app_exec(); 
 		break;
 #endif
 	default:
@@ -442,16 +429,14 @@ static bool monitor_process_input(struct dbgmon_comm * comm, int c)
 	return true;
 }
 
-/*
-   Dafault Monitor Task
- */
+/* Default Monitor Task */
 #define MONITOR_AUTOBOOT 1
 #define MONITOR_SHELL 2
 
 void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * param)
 {
 	uint32_t sigmask;
-	uint32_t sigset;
+	uint32_t sig;
 	uint8_t buf[1];
 	uint8_t * ptr;
 	int cnt;
@@ -461,7 +446,10 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 	/* unmask events */
 	sigmask = (1 << DBGMON_SOFTRST) | 
 		(1 << DBGMON_COMM_RCV) | (1 << DBGMON_TX_PIPE) | 
-		(1 << DBGMON_RX_PIPE) | (1 << DBGMON_APP_EXEC) ;
+		(1 << DBGMON_RX_PIPE) | (1 << DBGMON_APP_EXEC) |
+		(1 << DBGMON_APP_UPLOAD) | (1 << DBGMON_USER_EVENT1) | 
+		(1 << DBGMON_USER_EVENT2);
+
 #if DEBUG
 	sigmask |= (1 << DBGMON_COMM_CTL);
 #endif
@@ -472,13 +460,36 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 	}
 
 	if (flags & MONITOR_AUTOBOOT) {
-		dbgmon_soft_reset();
-		dbgmon_signal(DBGMON_APP_EXEC); 
+		dbgmon_req_app_exec(); 
 	}
 
 	for(;;) {
-		sigset = dbgmon_select(sigmask);
-		DCC_LOG1(LOG_MSG, "sigset=%08x", sigset);
+		switch ((sig = dbgmon_select(sigmask))) {
+
+		case DBGMON_STARTUP:
+			dbgmon_clear(DBGMON_STARTUP);
+			break;
+
+		case DBGMON_SOFTRST:
+			dbgmon_clear(DBGMON_SOFTRST);
+			board_init();
+			PUTS("+RST\r\n");
+			break;
+
+		case DBGMON_APP_UPLOAD:
+			dbgmon_clear(DBGMON_APP_UPLOAD);
+			yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
+			break;
+
+		case DBGMON_USER_EVENT1:
+			dbgmon_clear(DBGMON_USER_EVENT1);
+			yflash(RBF_BLOCK_OFFS, RBF_BLOCK_SIZE, NULL);
+			break;
+
+		case DBGMON_USER_EVENT2:
+			dbgmon_clear(DBGMON_USER_EVENT2);
+			yflash(0, 32768, &bootloader_magic);
+			break;
 
 #if DEBUG
 		if (sigset & (1 << DBGMON_COMM_CTL)) {
@@ -488,24 +499,14 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 				dbgmon_reset();
 		}
 #endif
-
-		if (sigset & (1 << DBGMON_SOFTRST)) {
-			dbgmon_clear(DBGMON_SOFTRST);
-			board_init();
-			PUTS("+RST\r\n");
-		}
-
-		if (sigset & (1 << DBGMON_APP_EXEC)) {
+		case DBGMON_APP_EXEC: {
 			uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;
 			int i = app_magic.hdr.cnt;
 
-			DCC_LOG(LOG_TRACE, "/!\\ APP_EXEC signal !");
 			dbgmon_clear(DBGMON_APP_EXEC);
 
 			for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
 				if (signature[i] != app_magic.rec[i].comp) {
-					DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", 
-							 signature);
 					PUTS("!ERR: magic\r\n");
 					flags |= MONITOR_SHELL;
 					break;
@@ -516,8 +517,17 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 				__main_thread_exec((void *)(APPLICATION_START_ADDR | 1));
 			}
 		}
+			break;
+#if 0
+		case DBGMON_APP_EXEC:
+			dbgmon_clear(DBGMON_APP_EXEC);
+			if (!dbgmon_app_exec(app, false)) {
+				PUTS("!ERR: app\r\n");
+			}
+			break;
+#endif
 
-		if (sigset & (1 << DBGMON_COMM_RCV)) {
+		case DBGMON_COMM_RCV:
 			if (flags & MONITOR_SHELL) { 
 				/* receive from the COMM driver one bye at the time */
 				if (dbgmon_comm_recv(comm, buf, 1) > 0) {
@@ -539,38 +549,33 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 				} 
 			} else {
 				if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-					DCC_LOG1(LOG_INFO, "Comm recv. rx_pipe.free=%d", cnt);
 					if ((len = dbgmon_comm_recv(comm, ptr, cnt)) > 0)
 						__console_rx_pipe_commit(len); 
 				} else {
-					DCC_LOG(LOG_INFO, "Comm recv. Masking DMON_COMM_RCV!");
 					sigmask &= ~(1 << DBGMON_COMM_RCV);
 				}
 			}
-		}
+			break;
 
-		if (sigset & (1 << DBGMON_RX_PIPE)) {
+		case DBGMON_RX_PIPE:
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_INFO, "RX Pipe. rx_pipe.free=%d. "
-						 "Unmaksing DMON_COMM_RCV!", cnt);
 				sigmask |= (1 << DBGMON_COMM_RCV);
 			} else {
-				DCC_LOG(LOG_INFO, "RX Pipe empty!!!");
+				sigmask &= ~(1 << DBGMON_RX_PIPE);
 			}
-			dbgmon_clear(DBGMON_RX_PIPE);
-		}
+//			dbgmon_clear(DBGMON_RX_PIPE);
+			break;
 
 
-		if (sigset & (1 << DBGMON_TX_PIPE)) {
-			DCC_LOG(LOG_MSG, "TX Pipe.");
+		case DBGMON_TX_PIPE:
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_INFO, "TX Pipe, %d pending chars.", cnt);
 				cnt = dbgmon_comm_send(comm, ptr, cnt);
 				__console_tx_pipe_commit(cnt); 
 			} else {
-				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
-				dbgmon_clear(DBGMON_TX_PIPE);
+				sigmask |= (1 << DBGMON_TX_PIPE);
+				//dbgmon_clear(DBGMON_TX_PIPE);
 			}
 		}
 	}
 }
+

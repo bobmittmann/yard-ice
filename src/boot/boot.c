@@ -102,8 +102,8 @@ void board_init(void)
 	rcc->apb2enr = 0;
 
 	/* select alternate functions to USB pins ... */
-	gpio->afrh = GPIO_AFRH_SET(9, GPIO_AF10) | GPIO_AFRH_SET(11, GPIO_AF10) | \
-				 GPIO_AFRH_SET(12, GPIO_AF10);
+	gpio->afrh = GPIO_AFRH_SET(9, GPIO_AF10) | GPIO_AFRH_SET(11, GPIO_AF10);
+//				 GPIO_AFRH_SET(12, GPIO_AF10);
 	gpio->moder = GPIO_MODE_ALT_FUNC(9) | GPIO_MODE_ALT_FUNC(11) | \
 				  GPIO_MODE_ALT_FUNC(12) ;
 #if 0
