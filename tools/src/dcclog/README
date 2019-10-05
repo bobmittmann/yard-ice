@@ -1,0 +1,10 @@
+dcclog - decode trace data from a dcclog dump or TCP connection.
+
+
+== Building ==
+
+- install autoconf and automake
+- sh autogen.sh 
+- make
+
+
