@@ -121,7 +121,8 @@ begin
 		s_data3 when "11";
 
 	with s_sel_out select
-		out_addr <= s_addr0 when "00", 
+		out_addr <= 
+		s_addr0 when "00", 
 		s_addr1 when "01", 
 		s_addr2 when "10", 
 		s_addr3 when "11";

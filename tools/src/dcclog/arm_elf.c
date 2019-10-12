@@ -246,6 +246,27 @@ void arm_elf_show_section_headers(Elf32_Ehdr * ehdr, Elf32_Shdr * shdr,
 	}
 }
 
+Elf32_Shdr * arm_elf_section_lookup(Elf32_Ehdr * ehdr, Elf32_Shdr * shdr, 
+								  char * strtab, const char * name)
+{
+	int i;
+
+	if (strtab == NULL) {
+		return NULL;
+	}
+
+	for (i = 0; i < ehdr->e_shnum; i++) {
+		if (shdr->sh_type != SHT_NULL) {
+			if (strcmp(name, &strtab[shdr->sh_name]) == 0) {
+				return shdr;
+			}
+		}
+		shdr++;
+	}
+
+	return NULL;
+}
+
 
 const char * st_bind_tab[] = {
 	"LOCAL", /* Local symbol */

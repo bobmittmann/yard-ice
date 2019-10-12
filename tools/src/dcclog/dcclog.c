@@ -85,6 +85,46 @@ void print_mem_blocks(int level)
 	}
 }
 
+int hexdump_mem_block(FILE * f, unsigned int idx)
+{
+
+	if (idx >= mem_count)
+		return -1;
+	
+	printf("       start:        end:     size:\n");
+	printf("   0x%08x  0x%08x  %8d\n", mem[idx].addr, 
+		   mem[idx].addr + mem[idx].size - 1, 
+		   mem[idx].size);
+
+	return hexdump(stdout, mem[idx].addr, mem[idx].image, mem[idx].size);
+}
+
+int dump_dcclog(int level)
+{
+	unsigned int i;
+
+	if (level <= 0)
+		return 0;
+
+	printf(" - dcc entries: (%d)\n", dcc_count);
+	printf("       addr:    file  line  lvl   opt    func     msg\n") ;
+	for (i = 0; i < dcc_count; i++) {
+		struct dcclog_entry * p;
+
+		if ((p = image_ptr(dcc[i].addr)) == NULL) {
+			fprintf(stderr, " * %s: dcc[%d].addr invalid!\n", __func__, i);
+			return -1;
+		}
+
+		printf(" 0x%08x: 0x%08x  %6d %3d 0x%02x 0x%08x 0x%08x\n",
+			   dcc[i].addr,
+			   (uint32_t)p->file, p->line, p->level, p->opt, 
+			   (uint32_t)p->function, (uint32_t)p->msg);
+	}
+
+	return 0;
+}
+
 void print_dcc_entries(int level)
 {
 	int file_width = 0;
@@ -163,7 +203,7 @@ void print_symbols(int level)
  * log entries
  * TODO: endianness
  */
-int fix_log(void) 
+int fix_dcclog(void) 
 {
 	struct log_def * log;
 	struct dcclog_entry * entry;
@@ -172,22 +212,48 @@ int fix_log(void)
 	for (i = 0; i < dcc_count; i++) {
 		log = &dcc[i];
 
-		if ((entry = image_ptr(log->addr)) == NULL)
+		if ((entry = image_ptr(log->addr)) == NULL) {
+			fprintf(stderr, " * %s: log->addr invalid!\n", __func__);
 			return -1;
+		}
 
-		if ((log->file = image_ptr(entry->file)) == NULL)
+		if ((log->fmt = image_ptr(entry->msg)) == NULL) {
+			fprintf(stderr, " *%s: (0x%08x) entry->msg invalid! \n", 
+					__func__, log->addr);
 			return -2;
+		}
 
-		if ((log->function = image_ptr(entry->function)) == NULL)
+		if ((log->function = image_ptr(entry->function)) == NULL) {
+			fprintf(stderr, " * %s: (0x%08x) entry->function invalid!\n", 
+					__func__, log->addr);
 			return -3;
+		}
 
-		if ((log->fmt = image_ptr(entry->msg)) == NULL)
+		if ((log->file = image_ptr(entry->file)) == NULL) {
+			fprintf(stderr, " * %s: (0x%08x) entry->file invalid!\n", 
+					__func__, log->addr);
 			return -4;
+		}
 
 		log->line = entry->line;
 		log->level = entry->level;
 		log->opt = entry->opt;
 	}
+
+	return 0;
+}
+
+int dcccompar(const void * p1, const void * p2)
+{
+	uint32_t addr1 = ((struct log_def *)p1)->addr;
+	uint32_t addr2 = ((struct log_def *)p2)->addr;
+
+	return (int32_t)(addr2 - addr1);
+}
+
+int sort_dcclog(void) 
+{
+	qsort(dcc, dcc_count, sizeof(struct dcclog_entry ), dcccompar);
 
 	return 0;
 }
@@ -1051,12 +1117,15 @@ int main(int argc, char *argv[])
 	signal(SIGABRT, sig_quit);
 #endif
 
-	if (fix_log() < 0) {
+	print_mem_blocks(showmem);
+	print_symbols(showsym);
+
+	dump_dcclog(showdcc * verbose);
+
+	if (fix_dcclog() < 0) {
 		return 3;
 	}
 
-	print_symbols(showsym);
-	print_mem_blocks(showmem);
 	print_dcc_entries(showdcc);
 
 	if (showsym || showmem || showdcc) {

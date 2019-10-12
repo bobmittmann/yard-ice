@@ -123,7 +123,6 @@
 
 #define THINKOS_DBGMON_STACK_SIZE       360
 #define THINKOS_DBGMON_ENABLE_RST_VEC   0 
-#define THINKOS_DBGMON_ENABLE_FLOWCTL   0 
 #define DMPRINTF_ENABLE_FAST            1
 #define DMPRINTF_ENABLE_UNSIGNED        0
 #define THINKOS_CONSOLE_RX_FIFO_LEN     64
@@ -144,6 +143,7 @@
    Clock 
    -------------------------------------------------------------------------- */
 #define STM32_HSE_HZ          24000000
+//#define STM32_HSE_HZ          12000000
 #define STM32_HCLK_HZ        120000000
 #define STM32_ENABLE_HSE             1
 #define STM32_ENABLE_PLL             1

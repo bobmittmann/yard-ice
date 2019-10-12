@@ -104,7 +104,7 @@ extern struct sym_def sym[16384];
 extern int sym_count;
 
 /* memory block content */ 
-extern struct mem_def mem[64];
+extern struct mem_def mem[128];
 extern int mem_count;
 
 extern const char * level_tab[];

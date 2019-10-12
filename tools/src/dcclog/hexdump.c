@@ -31,9 +31,10 @@ void show_line_char(FILE * f, uint32_t  addr, const uint8_t * data, int count)
 
 	cp = (uint8_t *)data; 
 	for (i = 0; i < n; i++) {
+#if 0
 		if (i == 8)
 			fprintf(f, " ");
-
+#endif
 		if (i < j) {
 			fprintf(f, ".");
 		} else {
@@ -70,7 +71,7 @@ void show_line_hex8(FILE * f, uint32_t  addr, const uint8_t * data, int count)
 	}
 
 	for (; i < 16; i += 1)
-		fprintf(f, "   ");
+		fprintf(f, "  ");
 }
 
 static void show_hex32(FILE * f, uint32_t  addr, const void * buf, int count)
@@ -177,7 +178,7 @@ int hexdump_g1(FILE * f, uint32_t  addr, const void * buf, int size)
 	while (n > 0) {
 		fprintf(f, "%08x: ", base);
 		show_line_hex8(f, addr, cp, n);
-		fprintf(f, ": ");
+		fprintf(f, "  ");
 		show_line_char(f, addr, cp, n);
 		fprintf(f, "\n");
 		cp += n;

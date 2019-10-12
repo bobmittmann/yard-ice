@@ -50,8 +50,8 @@
 void __attribute__((noreturn)) mon_task(const struct dbgmon_comm * comm,
 											void * arg)
 {
-	bool connected;
 	uint32_t sigmask = 0;
+	bool connected;
 	uint8_t * ptr;
 	int free;
 	int cnt;

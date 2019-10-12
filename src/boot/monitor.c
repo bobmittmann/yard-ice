@@ -1,5 +1,5 @@
 /* 
- * File:	 usb-cdc.c
+ * File:	 monitor.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -476,6 +476,7 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 			PUTS("+RST\r\n");
 			break;
 
+#if (MONITOR_UPGRADE_ENABLE)
 		case DBGMON_APP_UPLOAD:
 			dbgmon_clear(DBGMON_APP_UPLOAD);
 			yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
@@ -490,14 +491,14 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 			dbgmon_clear(DBGMON_USER_EVENT2);
 			yflash(0, 32768, &bootloader_magic);
 			break;
+#endif
 
 #if DEBUG
-		if (sigset & (1 << DBGMON_COMM_CTL)) {
-			DCC_LOG1(LOG_TRACE, "Comm Ctl, sigset=%08x", sigset);
+		case DBGMON_COMM_CTL:
 			dbgmon_clear(DBGMON_COMM_CTL);
 			if (!dbgmon_comm_isconnected(comm))	
 				dbgmon_reset();
-		}
+			break;
 #endif
 		case DBGMON_APP_EXEC: {
 			uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;

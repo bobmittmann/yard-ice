@@ -75,7 +75,7 @@ struct sym_def sym[16384];
 int sym_count = 0;
 
 /* memory block content */ 
-struct mem_def mem[64];
+struct mem_def mem[128];
 int mem_count = 0;
 
 extern int verbose;
@@ -137,11 +137,22 @@ int add_sym(char * section, char * name, uint32_t addr, uint32_t size)
 		return 0;
 	}
 
+	if (strcmp(section, ".dccdata")  == 0) {
+		if (verbose) {
+			if (verbose > 1) {
+				printf("+dcc: ");
+			}
+			printf("%12s  %08x %6d %s\n", section, addr, size, name); 
+			fflush(stdout);
+		}
+		return 0;
+	}
+
 	if ((strcmp(section, ".text")  == 0) || 
 		(strcmp(section, ".init")  == 0)) {
 		if (verbose) {
 			if (verbose > 1) {
-				printf("+log: ");
+				printf("+sym: ");
 			}
 			printf("%12s  %08x %6d %s\n", section, addr, size, name); 
 			fflush(stdout);
