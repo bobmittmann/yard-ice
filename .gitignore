@@ -18,7 +18,6 @@ tools/src/dcclog/config.h
 tools/src/dcclog/config.log
 tools/src/dcclog/config.status
 tools/src/dcclog/config.sub
-tools/src/dcclog/configure
 tools/src/dcclog/depcomp
 tools/src/dcclog/install-sh
 tools/src/dcclog/Makefile

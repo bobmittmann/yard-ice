@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
 #if defined(WIN32)
   #include <winsock2.h>
@@ -41,6 +42,12 @@
   #endif
 #else
   #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <netinet/tcp.h>
+  #include <netdb.h>
+  #include <pthread.h>
+  #include <assert.h>
 #endif
 
 #include "dcc.h"
@@ -55,7 +62,7 @@ struct tcp_drv {
 #ifdef _WIN32
 	SOCKET sock;
 #else
-	int sock
+	int sock;
 #endif
 };
 
