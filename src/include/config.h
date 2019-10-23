@@ -80,12 +80,15 @@
 #define THINKOS_ENABLE_IRQ_CTL          1
 
 #define THINKOS_ENABLE_CONSOLE          1
+#define THINKOS_ENABLE_CONSOLE_MODE     0
+#define THINKOS_ENABLE_CONSOLE_NONBLOCK 0
+#define THINKOS_ENABLE_CONSOLE_BREAK    0
 #define THINKOS_ENABLE_COMM             0
 
 #define THINKOS_ENABLE_MPU              0
 #define THINKOS_ENABLE_FPU              0
 
-#define THINKOS_ENABLE_PROFILING        1
+#define THINKOS_ENABLE_PROFILING        0
 
 #define THINKOS_ENABLE_ARG_CHECK        0
 #define THINKOS_ENABLE_DEADLOCK_CHECK   0
@@ -166,12 +169,12 @@
    USB 
    -------------------------------------------------------------------------- */
 
-#define STM32_ENABLE_OTG_FS       1
+#define STM32_ENABLE_OTG_FS       2
 #define STM32_OTG_FS_INEP_MAX     3
-#define STM32_OTG_FS_OUTEP_MAX    2
+#define STM32_OTG_FS_OUTEP_MAX    1
 #define STM32_OTG_FS_IO_INIT      0
-#define STM32_OTG_FS_VBUS_ENABLE  1
-#define STM32_VBUS_SENS_ENABLED   0
+#define STM32_OTG_FS_VBUS_SENS    1
+#define STM32_OTG_FS_VBUS_CONNECT 1
 #define STM32_OTG_FS_RX_FIFO_SIZE 192
 #define STM32_OTG_FS_BULK_PKTS    4
 

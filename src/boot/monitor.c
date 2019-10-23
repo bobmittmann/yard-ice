@@ -26,9 +26,8 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#include "monitor-i.h"
+#include "version.h"
 
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
@@ -37,14 +36,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define __THINKOS_DBGMON__
-#include <thinkos/dbgmon.h>
 #define __THINKOS_BOOTLDR__
 #include <thinkos/bootldr.h>
-#include <thinkos.h>
+
 #include <sys/dcclog.h>
-#include <sys/delay.h>
-#include "version.h"
 
 static const struct magic_blk app_magic = {
 	.hdr = {
@@ -96,7 +91,7 @@ struct magic {
 #endif
 
 #ifndef MONITOR_OSINFO_ENABLE 
-#define MONITOR_OSINFO_ENABLE      1
+#define MONITOR_OSINFO_ENABLE      0
 #endif
 
 #ifndef MONITOR_PAUSE_ENABLE
@@ -189,7 +184,7 @@ static const char s_confirm[] = "Confirm [y]?";
 #if (MONITOR_OSINFO_ENABLE)
 #define PUTS(S) dbgmon_printf(comm, S) 
 #else
-#define PUTS(S) dmputs(S, comm) 
+#define PUTS(S) dbgmon_puts(S, comm) 
 #endif
 
 #if (MONITOR_UPGRADE_ENABLE)
@@ -362,7 +357,7 @@ static void pause_all(void)
 }
 #endif
 
-static bool monitor_process_input(struct dbgmon_comm * comm, int c)
+static bool monitor_process_input(const struct dbgmon_comm * comm, int c)
 {
 	switch (c) {
 #if (MONITOR_UPGRADE_ENABLE)
@@ -426,37 +421,66 @@ static bool monitor_process_input(struct dbgmon_comm * comm, int c)
 	return true;
 }
 
-/* Default Monitor Task */
-#define MONITOR_AUTOBOOT 1
-#define MONITOR_SHELL 2
-
-void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * param)
+static bool monitor_app_exec(struct monitor * monitor) 
 {
-	uint32_t sigmask;
+	uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;
+	int i = app_magic.hdr.cnt;
+
+	for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
+		if (signature[i] != app_magic.rec[i].comp) {
+			monitor->flags |= MONITOR_SHELL;
+			return false;
+		}
+	}
+
+	if (i < 0) {
+		__main_thread_exec((void *)(APPLICATION_START_ADDR | 1));
+		return true;
+	}
+
+	return false;
+}
+
+/* Default Monitor Task */
+void __attribute__((noreturn)) monitor_task(const struct dbgmon_comm * comm, 
+											void * param)
+{
+	uint32_t sigmask = 0;
 	uint32_t sig;
 	uint8_t buf[1];
 	uint8_t * ptr;
 	int cnt;
-	int len;
-	uint32_t flags = (uint32_t)param;
+#if (THINKOS_ENABLE_CONSOLE_RAW)
+	bool raw_mode = false;
+#endif
+#if (THINKOS_ENABLE_CONSOLE)
+	bool connected = false;
+#endif
+	struct monitor monitor;
+
+	monitor.flags = (uint32_t)param;
 
 	/* unmask events */
-	sigmask = (1 << DBGMON_SOFTRST) | 
-		(1 << DBGMON_COMM_RCV) | (1 << DBGMON_TX_PIPE) | 
-		(1 << DBGMON_RX_PIPE) | (1 << DBGMON_APP_EXEC) |
-		(1 << DBGMON_APP_UPLOAD) | (1 << DBGMON_USER_EVENT1) | 
-		(1 << DBGMON_USER_EVENT2);
-
-#if DEBUG
+	sigmask |= (1 << DBGMON_SOFTRST);
+	sigmask |= (1 << DBGMON_STARTUP);
+	sigmask |= (1 << DBGMON_COMM_RCV);
+#if (THINKOS_ENABLE_CONSOLE)
 	sigmask |= (1 << DBGMON_COMM_CTL);
+	sigmask |= (1 << DBGMON_TX_PIPE);
 #endif
+	sigmask |= (1 << DBGMON_APP_STOP);
+	sigmask |= (1 << DBGMON_APP_EXEC);
+	sigmask |= (1 << DBGMON_APP_UPLOAD);
+	sigmask |= (1 << DBGMON_APP_ERASE);
+	sigmask |= (1 << DBGMON_USER_EVENT1);
+	sigmask |= (1 << DBGMON_USER_EVENT2);
 
-	if (!(flags & MONITOR_AUTOBOOT)) {
+	if (!(monitor.flags & MONITOR_AUTOBOOT)) {
 		PUTS(s_hr);
 		PUTS(s_version);
 	}
 
-	if (flags & MONITOR_AUTOBOOT) {
+	if (monitor.flags & MONITOR_AUTOBOOT) {
 		dbgmon_req_app_exec(); 
 	}
 
@@ -471,6 +495,9 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 			dbgmon_clear(DBGMON_SOFTRST);
 			board_reset();
 			PUTS("+RST\r\n");
+#if THINKOS_ENABLE_CONSOLE
+			goto is_connected;
+#endif
 			break;
 
 #if (MONITOR_UPGRADE_ENABLE)
@@ -490,89 +517,188 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 			break;
 #endif
 
-#if DEBUG
-		case DBGMON_COMM_CTL:
-			dbgmon_clear(DBGMON_COMM_CTL);
-//			if (!dbgmon_comm_isconnected(comm))	
-//				dbgmon_reset();
-			break;
-#endif
-		case DBGMON_APP_EXEC: {
-			uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;
-			int i = app_magic.hdr.cnt;
-
-			dbgmon_clear(DBGMON_APP_EXEC);
-
-			for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
-				if (signature[i] != app_magic.rec[i].comp) {
-					PUTS("!ERR: magic\r\n");
-					flags |= MONITOR_SHELL;
-					break;
-				}
-			}
-
-			if (i < 0) {
-				__main_thread_exec((void *)(APPLICATION_START_ADDR | 1));
-			}
-		}
-			break;
-#if 0
 		case DBGMON_APP_EXEC:
 			dbgmon_clear(DBGMON_APP_EXEC);
-			if (!dbgmon_app_exec(app, false)) {
+			if (!monitor_app_exec(&monitor)) {
 				PUTS("!ERR: app\r\n");
 			}
 			break;
-#endif
 
 		case DBGMON_COMM_RCV:
-			if (flags & MONITOR_SHELL) { 
-				/* receive from the COMM driver one bye at the time */
-				if (dbgmon_comm_recv(comm, buf, 1) > 0) {
-					int c = buf[0];
-					/* process the input character */
-					if (!monitor_process_input(comm, c)) {
-						/* if the character was not consumed by the monitor 
-						   insert into the console pipe */
-						/* get a pointer to the head of the pipe.
-						   __console_rx_pipe_ptr() will return the number of 
-						   consecutive spaces in the buffer. We need only one. */
-						if (__console_rx_pipe_ptr(&ptr) > 0) {
-							/* copy the character into the RX fifo */
-							ptr[0] = c;
-							/* commit the fifo head */
-							__console_rx_pipe_commit(1);
-						}
+			DCC_LOG(LOG_MSG, "COMM_RCV: +++++++++++++++++");
+#if (THINKOS_ENABLE_CONSOLE)
+#if (THINKOS_ENABLE_CONSOLE_RAW)
+			raw_mode = __console_is_raw_mode();
+			if (raw_mode) {
+				goto raw_mode_recv;
+			}
+#endif
+			/* receive from the COMM driver one byte at the time */
+			if ((cnt = dbgmon_comm_recv(comm, buf, 1)) > 0) {
+				int c = buf[0];
+
+				DCC_LOG1(LOG_MSG, "COMM_RCV: c=0x%02x", c);
+				/* process the input character */
+				if (!monitor_process_input(comm, c)) {
+					int n;
+					/* if the character was not consumed by the monitor 
+					   insert into the console pipe */
+					/* get a pointer to the head of the pipe.
+					 __console_rx_pipe_ptr() will return the number of 
+					 consecutive spaces in the buffer. We need only one. */
+					if ((n = __console_rx_pipe_ptr(&ptr)) > 0) {
+						/* copy the character into the RX fifo */
+						ptr[0] = c;
+						/* commit the fifo head */
+						__console_rx_pipe_commit(1);
+					} else {
+						/* discard */
 					}
-				} 
-			} else {
-				if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-					if ((len = dbgmon_comm_recv(comm, ptr, cnt)) > 0)
-						__console_rx_pipe_commit(len); 
-				} else {
-					sigmask &= ~(1 << DBGMON_COMM_RCV);
 				}
+			}
+			break;
+
+#if (THINKOS_ENABLE_CONSOLE_RAW)
+raw_mode_recv:
+			/* get a pointer to the head of the pipe.
+			   __console_rx_pipe_ptr() will return the number of 
+			   consecutive spaces in the buffer. */
+			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
+				int n;
+			
+				DCC_LOG1(LOG_MSG, "Raw mode RX, cnt=%d", cnt);
+
+				/* receive from the COMM driver */
+				if ((n = dbgmon_comm_recv(comm, ptr, cnt)) > 0) {
+					/* commit the fifo head */
+					__console_rx_pipe_commit(n);
+					if (n == cnt) {
+						/* Wait for RX_PIPE */
+						DCC_LOG(LOG_TRACE, "Wait for RX_PIPE && COMM_RECV");
+						sigmask |= (1 << DBGMON_COMM_RCV);
+						sigmask &=  ~(1 << DBGMON_RX_PIPE);
+						//sigmask &=  ~(1 << DBGMON_RX_PIPE);
+					} else {
+						/* Wait for COMM_RECV */
+						DCC_LOG(LOG_TRACE, "Wait for COMM_RECV");
+						sigmask |= (1 << DBGMON_COMM_RCV);
+						sigmask &=  ~(1 << DBGMON_RX_PIPE);
+					}
+				} else {
+					DCC_LOG1(LOG_ERROR, "dbgmon_comm_recv n=%d", n);
+					/* Wait for COMM_RECV */
+					sigmask |= (1 << DBGMON_COMM_RCV);
+					sigmask &=  ~(1 << DBGMON_RX_PIPE);
+				}
+			} else {
+				DCC_LOG(LOG_TRACE, "Raw mode RX wait RX_PIPE");
+				/* Wait for RX_PIPE */
+				sigmask &= ~(1 << DBGMON_COMM_RCV);
+				sigmask |= (1 << DBGMON_RX_PIPE);
+			}
+			break;
+#endif
+#else
+			if (dbgmon_comm_recv(comm, buf, 1) > 0) {
+				/* process the input character */
+				monitor_process_input(comm, buf[0]);
+			}
+#endif
+			DCC_LOG(LOG_TRACE, "COMM_RCV: ----------------");
+			break;
+
+#if (THINKOS_ENABLE_CONSOLE)
+		case DBGMON_COMM_CTL:
+			dbgmon_clear(DBGMON_COMM_CTL);
+			DCC_LOG(LOG_TRACE, "COMM_CTL !!!!!");
+is_connected:
+			{
+				connected = dbgmon_comm_isconnected(comm);
+				__console_connect_set(connected);
+#if (THINKOS_ENABLE_CONSOLE_RAW)
+				raw_mode = __console_is_raw_mode();
+#endif
+				sigmask &= ~((1 << DBGMON_COMM_EOT) | 
+							 (1 << DBGMON_COMM_RCV) |
+							 (1 << DBGMON_RX_PIPE));
+				if (connected) {
+					sigmask |= ((1 << DBGMON_COMM_EOT) |
+								(1 << DBGMON_COMM_RCV));
+				} else {
+					DCC_LOG(LOG_TRACE, "Comm not connected!");
+				}
+
+				sigmask |= (1 << DBGMON_TX_PIPE);
+			}
+			break;
+
+		case DBGMON_COMM_EOT:
+			DCC_LOG(LOG_TRACE, "COMM_EOT");
+			/* FALLTHROUGH */
+		case DBGMON_TX_PIPE:
+			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+				int n;
+				DCC_LOG1(LOG_TRACE, "TX Pipe: cnt=%d, send...", cnt);
+				if ((n = dbgmon_comm_send(comm, ptr, cnt)) > 0) {
+					__console_tx_pipe_commit(n);
+					if (n == cnt) {
+						/* Wait for TX_PIPE */
+						sigmask |= (1 << DBGMON_TX_PIPE);
+						sigmask &= ~(1 << DBGMON_COMM_EOT);
+					} else {
+						/* Wait for COMM_EOT */
+						sigmask |= (1 << DBGMON_COMM_EOT);
+						sigmask &= ~(1 << DBGMON_TX_PIPE);
+					}
+				} else {
+					/* Wait for COMM_EOT */
+					sigmask |= (1 << DBGMON_COMM_EOT);
+					sigmask &=  ~(1 << DBGMON_TX_PIPE);
+				}
+			} else {
+				/* Wait for TX_PIPE */
+				DCC_LOG1(LOG_TRACE, "TX Pipe: cnt=%d, wait....", cnt);
+				sigmask |= (1 << DBGMON_TX_PIPE);
+				sigmask &= ~(1 << DBGMON_COMM_EOT);
 			}
 			break;
 
 		case DBGMON_RX_PIPE:
+			/* get a pointer to the head of the pipe.
+			   __console_rx_pipe_ptr() will return the number of 
+			   consecutive spaces in the buffer. */
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				sigmask |= (1 << DBGMON_COMM_RCV);
+				int n;
+			
+				/* receive from the COMM driver */
+				if ((n = dbgmon_comm_recv(comm, ptr, cnt)) > 0) {
+					/* commit the fifo head */
+					__console_rx_pipe_commit(n);
+					if (n == cnt) {
+						/* Wait for RX_PIPE */
+						DCC_LOG(LOG_TRACE, "RX_PIPE: Wait for RX_PIPE");
+						sigmask |= (1 << DBGMON_COMM_RCV);
+						sigmask &=  ~(1 << DBGMON_RX_PIPE);
+					} else {
+						/* Wait for COMM_RECV */
+						sigmask |= (1 << DBGMON_COMM_RCV);
+						sigmask &= ~(1 << DBGMON_RX_PIPE);
+					}
+				} else {
+					/* Wait for COMM_RECV */
+					DCC_LOG(LOG_ERROR, "RX_PIPE: Wait for COMM_RECV");
+					sigmask |= (1 << DBGMON_COMM_RCV);
+					sigmask &= ~(1 << DBGMON_RX_PIPE);
+				}
 			} else {
-				sigmask &= ~(1 << DBGMON_RX_PIPE);
+				DCC_LOG1(LOG_ERROR, "RX_PIPE: RX, cnt=%d", cnt);
+				/* Wait for RX_PIPE */
+				sigmask &= ~(1 << DBGMON_COMM_RCV);
+				sigmask |= (1 << DBGMON_RX_PIPE);
 			}
-//			dbgmon_clear(DBGMON_RX_PIPE);
 			break;
 
-
-		case DBGMON_TX_PIPE:
-			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
-				cnt = dbgmon_comm_send(comm, ptr, cnt);
-				__console_tx_pipe_commit(cnt); 
-			} else {
-				sigmask |= (1 << DBGMON_TX_PIPE);
-				//dbgmon_clear(DBGMON_TX_PIPE);
-			}
+#endif
 		}
 	}
 }

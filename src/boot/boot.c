@@ -23,19 +23,10 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdlib.h>
-#include <stdbool.h>
+#include "monitor-i.h"
 
 #include <sys/stm32f.h>
 #include <sys/delay.h>
-
-#define __THINKOS_DBGMON__
-#include <thinkos/dbgmon.h>
-#include <thinkos.h>
 
 #include <sys/dcclog.h>
 
@@ -45,8 +36,6 @@
 #ifndef RELAY_CHATTER_ENABLE
 #define RELAY_CHATTER_ENABLE 1
 #endif
-
-void monitor_task(const struct dbgmon_comm * comm, void * param);
 
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
@@ -183,18 +172,12 @@ void board_init(void)
 #endif
 }
 
-#define MONITOR_AUTOBOOT 1
-#define MONITOR_SHELL 2
-
-#define CTRL_C  0x03 /* ETX */
-
 void main(int argc, char ** argv)
 {
 	const struct dbgmon_comm * comm;
 	uint32_t flags = 0;
 	char buf[1];
 	int i;
-
 
 	DCC_LOG_INIT();
 #if DEBUG
@@ -266,6 +249,7 @@ void main(int argc, char ** argv)
 		   and enable the monitor shell. */
 		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 	} else {
+		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 		/* starts monitor with shell enabled */
 		thinkos_dbgmon(monitor_task, comm, (void *)MONITOR_SHELL);
 		flags = MONITOR_AUTOBOOT;
