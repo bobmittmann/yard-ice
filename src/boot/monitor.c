@@ -63,7 +63,7 @@ const void * heap_end = &__heap_end;
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
-void board_init(void);
+void board_reset(void);
 
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
@@ -196,19 +196,15 @@ static const char s_confirm[] = "Confirm [y]?";
 static int yflash(uint32_t blk_offs, uint32_t blk_size,
 		   const struct magic_blk * magic)
 {
-	uint32_t * yflash_code = (uint32_t *)(0x20001000);
-	int (* yflash_ram)(uint32_t, uint32_t, const struct magic_blk *) = 
-		((void *)yflash_code) + 1;
-//	unsigned int pri;
+	uintptr_t yflash_code = (uintptr_t)(0x20001000);
+	int (* yflash_ram)(uint32_t, uint32_t, const struct magic_blk *);
 	int ret;
 
-//	pri = cm3_primask_get();
+	yflash_ram = (void *)(yflash_code | 0x0001); /* thumb call */
 	cm3_primask_set(1);
-
-	__thinkos_memcpy(yflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
+	__thinkos_memcpy((void *)yflash_code, otg_xflash_pic, 
+					 sizeof_otg_xflash_pic);
 	ret = yflash_ram(blk_offs, blk_size, magic);
-
-//	cm3_primask_set(pri);
 
 	return ret;
 }
@@ -320,7 +316,7 @@ static void print_osinfo(struct dbgmon_comm * comm)
 
 #endif /* MONITOR_OSINFO_ENABLE */
 
-static void __main_thread_exec(void (* func)(int))
+static void __main_thread_exec(int (* func)(void *))
 {
 	int thread_id = 0;
 
@@ -328,7 +324,8 @@ static void __main_thread_exec(void (* func)(int))
 	__thinkos_thread_abort(thread_id);
 
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, (void *)NULL);
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
+								(int (*)(void *))func, (void *)NULL);
 
 #if THINKOS_ENABLE_THREAD_INFO
 	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
@@ -349,7 +346,7 @@ static void pause_all(void)
 
 
 	/* clear all bits on all queues */
-	for (wq = 0; wq < THINKOS_WQ_LST_END; ++wq) 
+	for (wq = 0; wq < THINKOS_WQ_CNT; ++wq) 
 		thinkos_rt.wq_lst[wq] = 0;
 
 #if ((THINKOS_THREADS_MAX) < 32) 
@@ -472,7 +469,7 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 
 		case DBGMON_SOFTRST:
 			dbgmon_clear(DBGMON_SOFTRST);
-			board_init();
+			board_reset();
 			PUTS("+RST\r\n");
 			break;
 
@@ -496,8 +493,8 @@ void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * pa
 #if DEBUG
 		case DBGMON_COMM_CTL:
 			dbgmon_clear(DBGMON_COMM_CTL);
-			if (!dbgmon_comm_isconnected(comm))	
-				dbgmon_reset();
+//			if (!dbgmon_comm_isconnected(comm))	
+//				dbgmon_reset();
 			break;
 #endif
 		case DBGMON_APP_EXEC: {

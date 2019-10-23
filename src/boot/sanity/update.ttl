@@ -1,0 +1,34 @@
+PATTERN = 'Release\*.bin'
+
+findfirst dh PATTERN FNAME
+
+if result=0 then
+  findclose dh
+  messagebox "Firmware file not found!" "File not found!"
+  exit
+endif
+
+findclose dh
+getdir BASEDIR
+strconcat BASEDIR '\Release\'
+makepath IMAGE BASEDIR FNAME
+
+send 25 ; Ctrl+Y
+wait '[y]?' 
+
+if result=1 then
+  send 'y'
+  wait '...' 
+  if result=1 then
+    ymodemsend IMAGE
+    if result=1 then
+      wait 'OK'
+    else
+      messagebox IMAGE "Fail 3!"
+    endif
+  else
+    messagebox IMAGE "Fail 2!"
+else
+  messagebox IMAGE "Fail 1!"
+endif
+

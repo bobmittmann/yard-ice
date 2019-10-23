@@ -118,7 +118,16 @@
 #define THINKOS_ASM_SCHEDULER           1
 #define THINKOS_ENABLE_OFAST            0
 
-#define THINKOS_ENABLE_SCHED_DEBUG      0
+#if DEBUG
+  /* Enable scheduler trace calls */
+  #define THINKOS_ENABLE_SCHED_DEBUG      1
+  /* Enable scheduler stack error detection */
+  #define THINKOS_ENABLE_SCHED_ERROR      1
+#else
+  #define THINKOS_ENABLE_SCHED_DEBUG      0
+  #define THINKOS_ENABLE_SCHED_ERROR      0
+#endif
+
 #define THINKOS_ENABLE_RT_DEBUG         0
 
 #define THINKOS_DBGMON_STACK_SIZE       360
@@ -132,6 +141,10 @@
 #define THINKOS_ENABLE_IRQ_TIMEDWAIT    0
 #define THINKOS_ENABLE_IRQ_PRIORITY_0   0
 #define THINKOS_ENABLE_WQ_IRQ           0
+#define THINKOS_ENABLE_DMA              0
+
+#define THINKOS_ENABLE_IDLE_HOOKS       0
+#define THINKOS_ENABLE_IDLE_MSP         0
 
 /* -------------------------------------------------------------------------
  * delay
@@ -148,22 +161,24 @@
 #define STM32_ENABLE_HSE             1
 #define STM32_ENABLE_PLL             1
 
+
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
 
-#define STM32_ENABLE_OTG_FS          1
-#define STM32_OTG_FS_IO_INIT         0
-#define STM32_OTG_FS_IRQ_ENABLE      0
-#define STM32_OTG_FS_EP_MAX          4
-#define STM32_OTG_FS_VBUS_ENABLE     1
+#define STM32_ENABLE_OTG_FS       1
+#define STM32_OTG_FS_INEP_MAX     3
+#define STM32_OTG_FS_OUTEP_MAX    2
+#define STM32_OTG_FS_IO_INIT      0
+#define STM32_OTG_FS_VBUS_ENABLE  1
+#define STM32_VBUS_SENS_ENABLED   0
+#define STM32_OTG_FS_RX_FIFO_SIZE 192
+#define STM32_OTG_FS_BULK_PKTS    4
 
 #define CDC_EP_OUT_MAX_PKT_SIZE      64
 #define CDC_EP_IN_MAX_PKT_SIZE       64
 #define CDC_EP_INT_MAX_PKT_SIZE      8
 
-#define STM32_OTG_FS_INEP_MAX 2
-#define STM32_OTG_FS_OUTEP_MAX 1
 
 /* -------------------------------------------------------------------------
  * TCP/IP

@@ -42,37 +42,37 @@
 #include "board.h"
 #include "version.h"
 
+#ifndef RELAY_CHATTER_ENABLE
+#define RELAY_CHATTER_ENABLE 1
+#endif
+
 void monitor_task(const struct dbgmon_comm * comm, void * param);
 
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
+#if DEBUG
 	DCC_LOG(LOG_ERROR, "!");
-	udelay(1000000);
+	asm volatile ("mov r3, #0\n"
+				  "1:\n"
+				  "cmp r3, #0\n"
+				  "beq 1b\n"
+				  : : );
+#else
 	cm3_sysrst();
-}
-
-#if 0
-static inline void __stm32_gpio_af(struct stm32_gpio * gpio, int pin, int af)
-{
-	uint32_t tmp;
-
-	if (pin < 8) {
-		tmp = gpio->afrl;
-		tmp &= ~GPIO_AFRL_MASK(pin);
-		tmp |= GPIO_AFRL_SET(pin, af);
-		gpio->afrl = tmp;
-	} else {
-		tmp = gpio->afrh;
-		tmp &= ~GPIO_AFRH_MASK(pin);
-		tmp |= GPIO_AFRH_SET(pin, af);
-		gpio->afrh = tmp;
-	}
-
-	/* select alternate function pin mode */
-	tmp = (gpio->moder & ~GPIO_MODE_MASK(pin)) | GPIO_MODE_ALT_FUNC(pin);
-	gpio->moder = tmp;
-}
 #endif
+}
+
+void board_reset(void)
+{
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "USB irq configure...");
+	udelay(0x10000);
+#endif
+	/* Adjust USB OTG FS interrupts priority */
+	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
+	/* Enable USB OTG FS interrupts */
+	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+}
 
 void board_init(void)
 {
@@ -80,36 +80,74 @@ void board_init(void)
 	struct stm32_rcc * rcc = STM32_RCC;
 //	struct cm3_scb * scb = CM3_SCB;
 
-	DCC_LOG(LOG_TRACE, "...");
-
 	/* Disable exceptions */
 //	scb->shcsr = 0;
 
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "Reset all peripherals ...");
+	udelay(0x10000);
+#endif
 	/* Reset all peripherals except USB_OTG and GPIOA */
-	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
+	rcc->ahb1rstr = ~(1 << RCC_GPIOA);
 	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
 	rcc->apb1rstr = ~(0);
 	rcc->apb2rstr = ~(0);
 	/* clear reset bits */
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "Clear reset bits...");
+	udelay(0x10000);
+#endif
 	rcc->ahb1rstr = 0;
 	rcc->ahb2rstr = 0;
 	rcc->apb1rstr = 0;
 	rcc->apb2rstr = 0;
-	/* disable all peripherals clock sources except USB_OTG and GPIOA */
-	rcc->ahb1enr = (1 << RCC_GPIOA) | (1 << RCC_GPIOB); 
+
+	/* disable all peripherals clock sources except USB_OTG, GPIOA, GPIOB,
+	   GPIOC and GPIOD */
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "Disable peripheral clock sources ...");
+	udelay(0x10000);
+#endif
+	rcc->ahb1enr = (1 << RCC_GPIOA) | (1 << RCC_GPIOB)  |
+				   (1 << RCC_GPIOB) | (1 << RCC_GPIOC) | (1 << RCC_GPIOD); 
 	rcc->ahb2enr = (1 << RCC_OTGFS);
 	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;
 
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "Select alternate functions to USB pins...");
+	udelay(0x40000);
+#endif
+
+#if 1
 	/* select alternate functions to USB pins ... */
-	gpio->afrh = GPIO_AFRH_SET(9, GPIO_AF10) | GPIO_AFRH_SET(11, GPIO_AF10);
-//				 GPIO_AFRH_SET(12, GPIO_AF10);
-	gpio->moder = GPIO_MODE_ALT_FUNC(9) | GPIO_MODE_ALT_FUNC(11) | \
-				  GPIO_MODE_ALT_FUNC(12) ;
+	gpio->afrh = GPIO_AFRH_SET(12, GPIO_AF10) | GPIO_AFRH_SET(11, GPIO_AF10) |
+		GPIO_AFRH_SET(9, GPIO_AF10);
+	gpio->ospeedr = GPIO_OSPEED_HIGH(12) | GPIO_OSPEED_HIGH(11) |
+		GPIO_OSPEED_LOW(9);
+	gpio->otyper = GPIO_PUSH_PULL(12) | GPIO_PUSH_PULL(11);
+	gpio->pupdr = 0;
+	gpio->moder &= ~(GPIO_MODE_MASK(12) | GPIO_MODE_MASK(11) | 
+					 GPIO_MODE_MASK(9));
+	gpio->moder |= GPIO_MODE_ALT_FUNC(12) | GPIO_MODE_ALT_FUNC(11) | 
+		GPIO_MODE_ALT_FUNC(9);
+
+	DCC_LOG3(LOG_TRACE, "OTYPER=0x%08X OSPEEDR=0x%08X MODER=0x%08x", 
+			 gpio->otyper, gpio->ospeedr, gpio->moder);
+#else
+	stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
+ 	stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
+	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
+	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+#endif
+
+
 #if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
-
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 
 	/* - Relay ------------------------------------------------------------*/
@@ -124,36 +162,25 @@ void board_init(void)
 	stm32_gpio_mode(IO_UART5_TX, OUTPUT, SPEED_LOW);
 	stm32_gpio_clr(IO_UART5_TX);
 	stm32_gpio_mode(IO_UART5_TX, INPUT, SPEED_LOW | PULL_UP);
-
-//#define IO_JTRST          STM32_GPIOB, 4
 #endif
-//	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-//	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-//	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 
-
-//	__stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
-//__stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
-//	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
-#if 0
+#if RELAY_CHATTER_ENABLE
+  #if DEBUG
+	DCC_LOG(LOG_TRACE, "Relay chatter ...");
+	udelay(0x40000);
+  #endif
 	/* - Relay ------------------------------------------------------------*/
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
 	stm32_gpio_clr(IO_RELAY);
-	udelay(500000);
+	thinkos_sleep(256);
 	stm32_gpio_set(IO_RELAY);
-	udelay(500000);
+	thinkos_sleep(256);
 	stm32_gpio_clr(IO_RELAY);
-	udelay(500000);
+	thinkos_sleep(256);
 	stm32_gpio_set(IO_RELAY);
-	udelay(500000);
+	thinkos_sleep(256);
 	stm32_gpio_clr(IO_RELAY);
 #endif
-
-	/* Adjust USB OTG FS interrupts priority */
-	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
-	/* Enable USB OTG FS interrupts */
-	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
 #define MONITOR_AUTOBOOT 1
@@ -163,14 +190,20 @@ void board_init(void)
 
 void main(int argc, char ** argv)
 {
-	struct dbgmon_comm * comm;
+	const struct dbgmon_comm * comm;
 	uint32_t flags = 0;
 	char buf[1];
 	int i;
 
+
 	DCC_LOG_INIT();
-#if DEBUG > 2
+#if DEBUG
 	DCC_LOG_CONNECT();
+	udelay(0x10000);
+	DCC_LOG(LOG_INFO, "______________________________________________________");
+	DCC_LOG(LOG_INFO, "_________________ ! Board start up ! _________________");
+	DCC_LOG(LOG_INFO, "______________________________________________________");
+	udelay(0x10000);
 #endif
 
 #ifndef UDELAY_FACTOR 
@@ -178,30 +211,57 @@ void main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 #endif
 
-	DCC_LOG(LOG_TRACE, "4. board_init().");
+#if DEBUG
+	DCC_LOG1(LOG_TRACE, "1. udelay_factor=%d.", udelay_factor);
+	udelay(0x10000);
+#endif
+
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "2. thinkos_krn_init().");
+	udelay(0x10000);
+#endif
+	thinkos_krn_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), NULL, NULL);
+
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "3. board_init().");
+	udelay(0x10000);
+#endif
+
 	board_init();
 
-	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	/* Wait for the other power supply and subsystems to stabilize */
+	DCC_LOG(LOG_TRACE, "4. thinkos_sleep().");
+	thinkos_sleep(100);
+
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "5. usb_comm_init()");
+	udelay(0x40000);
+#endif
+
+	comm = usb_comm_init(&stm32f_otg_fs_dev);
+
+#if THINKOS_ENABLE_CONSOLE
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "6. thinkos_console_init()");
+	udelay(0x40000);
+#endif
+	thinkos_console_init();
+#endif
 
 #if THINKOS_ENABLE_MPU
-	DCC_LOG(LOG_TRACE, "3. thinkos_mpu_init()");
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "6. thinkos_mpu_init()");
+	udelay(1024);
+#endif
 	thinkos_mpu_init(0x0c00);
 #endif
 
-	/* Wait for the other power supply and subsystems to stabilize */
-	DCC_LOG(LOG_TRACE, "5. thinkos_sleep().");
-	thinkos_sleep(100);
-
-	DCC_LOG(LOG_TRACE, "6. thinkos_console_init()");
-	thinkos_console_init();
-
-	DCC_LOG(LOG_TRACE, "7. usb_comm_init()");
-	comm = (struct dbgmon_comm *)usb_comm_init(&stm32f_otg_fs_dev);
+	board_reset();
 
 	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
 
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
+		DCC_LOG(LOG_TRACE, "SHELL | AUTOBOOT");
 		/* If  jumper is inserted between JTRST and GND boot up now
 		   and enable the monitor shell. */
 		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
