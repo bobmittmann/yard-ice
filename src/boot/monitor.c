@@ -198,6 +198,7 @@ static int yflash(uint32_t blk_offs, uint32_t blk_size,
 	int (* yflash_ram)(uint32_t, uint32_t, const struct magic_blk *);
 	int ret;
 
+
 	yflash_ram = (void *)(yflash_code | 0x0001); /* thumb call */
 	cm3_primask_set(1);
 	__thinkos_memcpy((void *)yflash_code, otg_xflash_pic, 
@@ -437,7 +438,8 @@ static bool monitor_app_exec(struct monitor * monitor)
 	}
 
 	if (i < 0) {
-		__main_thread_exec((void *)(APPLICATION_START_ADDR | 1));
+		void  * app = (void *)((uintptr_t)signature) + 1;
+		__main_thread_exec(app);
 		return true;
 	}
 

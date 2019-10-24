@@ -132,7 +132,6 @@ void board_init(void)
 	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 #endif
 
-
 #if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
