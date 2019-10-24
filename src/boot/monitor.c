@@ -41,6 +41,8 @@
 
 #include <sys/dcclog.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 static const struct magic_blk app_magic = {
 	.hdr = {
 		.pos = 0,
@@ -52,6 +54,7 @@ static const struct magic_blk app_magic = {
 		{  0xffffffff, 0x00534f6b }
 	}
 };
+#pragma GCC diagnostic pop
 
 extern int __heap_end;
 const void * heap_end = &__heap_end; 

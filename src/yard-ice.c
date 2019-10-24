@@ -53,7 +53,6 @@
 #include <sys/tty.h>
 
 #include <jtag.h>
-#include <trace.h>
 #include <ctype.h>
 
 #include <yard-ice/drv.h>
@@ -279,8 +278,9 @@ int trace_syslog_encode(char * buf, struct trace_entry * entry,
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
+	struct trace_iterator trace_it;
 	struct udp_pcb * udp = NULL;
-	struct trace_entry trace;
+	struct trace_entry * trace;
 	bool eth_link_up = false;
 	uint32_t eth_tmo;
 	uint32_t clk;
@@ -292,8 +292,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 	INF("<%d> started...", thinkos_thread_self());
 
 	DCC_LOG(LOG_TRACE, "2.");
-	trace_tail(&trace);
-
+	trace_tail(&trace_it);
 
 	DCC_LOG(LOG_TRACE, "3.");
 	clk = thinkos_clock();
@@ -319,15 +318,16 @@ void __attribute__((noreturn)) supervisor_task(void)
 		autoflush = trace_autoflush;
 
 		if ((udp != NULL) || (file != NULL)) {
-			while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+			while ((trace = trace_getnext(&trace_it)) != NULL) {
 				unsigned int n;
 				unsigned int lvl;
 				struct timeval tv;
 
-				trace_ts2timeval(&tv, trace.dt);
+				n = trace_fmt(trace, s, sizeof(s));
+				trace_ts2timeval(&tv, trace->dt);
 
 				if (file != NULL) {
-					if ((lvl = trace.ref->lvl) <= TRACE_LVL_WARN)
+					if ((lvl = trace->ref->lvl) <= TRACE_LVL_WARN)
 #if TRACE_ENABLE_VT100
 						/* extra info */
 						n = sprintf(line, _ATTR_PUSH_ "%s "
@@ -335,13 +335,13 @@ void __attribute__((noreturn)) supervisor_task(void)
 									_ATTR_POP_ "\n",
 									lvl_attr_nm[lvl],
 									(int) tv.tv_sec, (int) tv.tv_usec, 
-									trace.ref->func, trace.ref->line,
+									trace->ref->func, trace->ref->line,
 									txt_attr[lvl], s);
 
 #else
 					n = sprintf(line, "%2d.%06d: %s,%d: %s%s\n",
 								(int) tv.tv_sec, (int) tv.tv_usec, 
-								trace.ref->func, trace.ref->line,
+								trace->ref->func, trace->ref->line,
 								s);
 #endif
 					else
@@ -356,7 +356,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 									s);
 #else
 						n = sprintf(line, "%s %2d.%06d: %s\n",
-									trace_lvl_nm[trace.ref->lvl],
+									trace_lvl_nm[trace->ref->lvl],
 									(int)tv.tv_sec, (int)tv.tv_usec, s);
 
 #endif
@@ -366,8 +366,8 @@ void __attribute__((noreturn)) supervisor_task(void)
 
 				if (udp != NULL)  {
 					/* send log to remote station */
-					trace_tm2timeval(&tv, trace.tm);
-					n = trace_syslog_encode(line, &trace, &tv, s);
+					trace_tm2timeval(&tv, trace->tm);
+					n = trace_syslog_encode(line, trace, &tv, s);
 					printf(line);
 					udp_sendto(udp, line, n, &sin);
 					//				udp_send(udp, line, n);
@@ -375,7 +375,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 			}
 
 			if (autoflush)
-				trace_flush(&trace);
+				trace_flush(&trace_it);
 		}
 
 		if ((int32_t)(clk - eth_tmo) >= 0) {

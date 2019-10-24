@@ -40,6 +40,7 @@ void trace_autoflush_set(bool enabled);
 
 int cmd_trace(FILE * f, int argc, char ** argv)
 {
+#if 0
 	bool flush = false;
 	bool dump = true;
 
@@ -98,7 +99,7 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 		if (flush)
 			trace_flush(&trace);
 	}
-
+#endif
 	return 0;
 }
 

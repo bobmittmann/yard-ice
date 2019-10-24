@@ -38,7 +38,7 @@ LIBDIRS = $(SDKDIR)/libcm3 $(SDKDIR)/libstm32f $(SDKDIR)/libutil \
 	  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \
 	  $(SDKDIR)/libstm32drv $(SDKDIR)/libbitvec $(SDKDIR)/libhexdump \
 	  $(SDKDIR)/libcrc $(SDKDIR)/libtrace $(SDKDIR)/libtty \
-	  $(SDKDIR)/libxmodem $(SDKDIR)/libshell $(SDKDIR)/libconsole \
+	  $(SDKDIR)/libxmodem $(SDKDIR)/libshell $(SDKDIR)/libthinkos-usr \
 	  ../libopcodes ../libaltera\
 	  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
 	  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
@@ -46,9 +46,10 @@ LIBDIRS = $(SDKDIR)/libcm3 $(SDKDIR)/libstm32f $(SDKDIR)/libutil \
 
 LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
        altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
-       targets tftp shell console tty gdb vcom telnet crc xmodem comm gcc
+       targets tftp shell thinkos-usr tty gdb vcom telnet crc xmodem comm gcc
 
 CDEFS = CONFIG_H
+#CFLAGS = -g -Os -Wall -Wextra -fomit-frame-pointer
 CFLAGS = -g -Os -Wall -fomit-frame-pointer
 OPTIONS = -mno-unaligned-access 
 

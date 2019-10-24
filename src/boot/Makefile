@@ -42,7 +42,7 @@ INCPATH = $(SDKDIR)/include ../include
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
-CFLAGS = -Os -Wall -Wextra -fno-builtin -ffreestanding -fomit-frame-pointer -Wno-unused-parameter
+CFLAGS = -Os -Wall -Wextra -Wpedantic -fno-builtin -ffreestanding -fomit-frame-pointer -Wno-unused-parameter
 OPTIONS = -g -mno-unaligned-access 
 
 MACH = stm32f207
