@@ -94,7 +94,7 @@ struct magic {
 #endif
 
 #ifndef MONITOR_OSINFO_ENABLE 
-#define MONITOR_OSINFO_ENABLE      0
+#define MONITOR_OSINFO_ENABLE      1
 #endif
 
 #ifndef MONITOR_PAUSE_ENABLE
@@ -102,7 +102,7 @@ struct magic {
 #endif
 
 #ifndef MONITOR_LOCKINFO_ENABLE
-#define MONITOR_LOCKINFO_ENABLE    1
+#define MONITOR_LOCKINFO_ENABLE    0
 #endif
 
 #define RBF_BLOCK_OFFS 0x00010000
@@ -191,23 +191,28 @@ static const char s_confirm[] = "Confirm [y]?";
 #endif
 
 #if (MONITOR_UPGRADE_ENABLE)
+/* Receies a file using YMODEM protocol and writes into Flash. */
 static int yflash(uint32_t blk_offs, uint32_t blk_size,
 		   const struct magic_blk * magic)
 {
 	uintptr_t yflash_code = (uintptr_t)(0x20001000);
 	int (* yflash_ram)(uint32_t, uint32_t, const struct magic_blk *);
+	uintptr_t thumb;
 	int ret;
 
-
-	yflash_ram = (void *)(yflash_code | 0x0001); /* thumb call */
 	cm3_primask_set(1);
 	__thinkos_memcpy((void *)yflash_code, otg_xflash_pic, 
 					 sizeof_otg_xflash_pic);
+
+    thumb = yflash_code | 0x00000001; /* thumb call */
+	yflash_ram = (int (*)(uint32_t, uint32_t, const struct magic_blk *))thumb;
 	ret = yflash_ram(blk_offs, blk_size, magic);
 
 	return ret;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 static const struct magic_blk bootloader_magic = {
 	.hdr = {
 		.pos = 0,
@@ -218,6 +223,7 @@ static const struct magic_blk bootloader_magic = {
 		{  0xffff0000, 0x08000000 },
 	}
 };
+#pragma GCC diagnostic pop
 
 #endif
 
@@ -231,7 +237,7 @@ static const struct magic_blk bootloader_magic = {
 
 int __scan_stack(void * stack, unsigned int size);
 
-static void print_osinfo(struct dbgmon_comm * comm)
+static void print_osinfo(const struct dbgmon_comm * comm)
 {
 	struct thinkos_rt * rt = &thinkos_rt;
 #if THINKOS_ENABLE_PROFILING
@@ -314,28 +320,6 @@ static void print_osinfo(struct dbgmon_comm * comm)
 }
 
 #endif /* MONITOR_OSINFO_ENABLE */
-
-static void __main_thread_exec(int (* func)(void *))
-{
-	int thread_id = 0;
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
-	__thinkos_thread_abort(thread_id);
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
-								(int (*)(void *))func, (void *)NULL);
-
-#if THINKOS_ENABLE_THREAD_INFO
-	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
-#endif
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
-	__thinkos_thread_resume(thread_id);
-
-	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
-	__thinkos_defer_sched();
-}
 
 #if (MONITOR_PAUSE_ENABLE)
 static void pause_all(void)
@@ -425,10 +409,32 @@ static bool monitor_process_input(const struct dbgmon_comm * comm, int c)
 	return true;
 }
 
+static void __main_thread_exec(int (* func)(void *))
+{
+	int thread_id = 0;
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
+	__thinkos_thread_abort(thread_id);
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
+								(int (*)(void *))func, (void *)NULL);
+
+#if THINKOS_ENABLE_THREAD_INFO
+	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
+#endif
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
+	__thinkos_thread_resume(thread_id);
+
+	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
+	__thinkos_defer_sched();
+}
+
 static bool monitor_app_exec(struct monitor * monitor) 
 {
 	uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;
-	int i = app_magic.hdr.cnt;
+	int i;
 
 	for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
 		if (signature[i] != app_magic.rec[i].comp) {
@@ -438,7 +444,11 @@ static bool monitor_app_exec(struct monitor * monitor)
 	}
 
 	if (i < 0) {
-		void  * app = (void *)((uintptr_t)signature) + 1;
+		uintptr_t thumb;
+		int (* app)(void *);
+
+		thumb = ((uintptr_t)signature) + 1;
+		app = (int (*)(void *))thumb;
 		__main_thread_exec(app);
 		return true;
 	}
@@ -508,7 +518,8 @@ void __attribute__((noreturn)) monitor_task(const struct dbgmon_comm * comm,
 #if (MONITOR_UPGRADE_ENABLE)
 		case DBGMON_APP_UPLOAD:
 			dbgmon_clear(DBGMON_APP_UPLOAD);
-			yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
+			yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, 
+				   &app_magic);
 			break;
 
 		case DBGMON_USER_EVENT1:

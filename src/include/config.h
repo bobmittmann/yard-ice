@@ -83,6 +83,11 @@
 #define THINKOS_ENABLE_CONSOLE_MODE     0
 #define THINKOS_ENABLE_CONSOLE_NONBLOCK 0
 #define THINKOS_ENABLE_CONSOLE_BREAK    0
+#define THINKOS_ENABLE_CONSOLE_DRAIN    0
+#define THINKOS_ENABLE_CONSOLE_OPEN     0
+#define THINKOS_ENABLE_CONSOLE_READ     1
+#define THINKOS_ENABLE_CONSOLE_MISC     0
+
 #define THINKOS_ENABLE_COMM             0
 
 #define THINKOS_ENABLE_MPU              0
@@ -108,6 +113,7 @@
 #define THINKOS_EXCEPT_STACK_SIZE       320
 
 #define THINKOS_ENABLE_MONITOR          1
+#define THINKOS_ENABLE_MONITOR_THREADS  0
 #define THINKOS_ENABLE_DMCLOCK          0
 #define THINKOS_ENABLE_DEBUG_STEP       0
 #define THINKOS_ENABLE_DEBUG_BKPT       0
@@ -116,19 +122,19 @@
 
 #define THINKOS_ENABLE_STACK_INIT       0
 #define THINKOS_ENABLE_THREAD_VOID      0
-#define THINKOS_ENABLE_IDLE_WFI         1
+#define THINKOS_ENABLE_IDLE_WFI         0
 
 #define THINKOS_ASM_SCHEDULER           1
 #define THINKOS_ENABLE_OFAST            0
 
 #if DEBUG
   /* Enable scheduler trace calls */
-  #define THINKOS_ENABLE_SCHED_DEBUG      1
+  #define THINKOS_ENABLE_SCHED_DEBUG    1
   /* Enable scheduler stack error detection */
-  #define THINKOS_ENABLE_SCHED_ERROR      1
+  #define THINKOS_ENABLE_SCHED_ERROR    1
 #else
-  #define THINKOS_ENABLE_SCHED_DEBUG      0
-  #define THINKOS_ENABLE_SCHED_ERROR      0
+  #define THINKOS_ENABLE_SCHED_DEBUG    0
+  #define THINKOS_ENABLE_SCHED_ERROR    0
 #endif
 
 #define THINKOS_ENABLE_RT_DEBUG         0
