@@ -152,11 +152,10 @@ void board_init(void)
 	stm32_gpio_mode(IO_UART5_TX, INPUT, SPEED_LOW | PULL_UP);
 #endif
 
-#if RELAY_CHATTER_ENABLE
-  #if DEBUG
+#if DEBUG
+  #if RELAY_CHATTER_ENABLE
 	DCC_LOG(LOG_TRACE, "Relay chatter ...");
 	udelay(0x40000);
-  #endif
 	/* - Relay ------------------------------------------------------------*/
 	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
 	stm32_gpio_clr(IO_RELAY);
@@ -168,6 +167,7 @@ void board_init(void)
 	stm32_gpio_set(IO_RELAY);
 	thinkos_sleep(256);
 	stm32_gpio_clr(IO_RELAY);
+  #endif
 #endif
 }
 
