@@ -24,9 +24,9 @@
 THINKOSDIR = ../../thinkos
 SDKDIR = $(THINKOSDIR)/sdk
 
-VERSION_DATE = "2018-10-17"
+VERSION_DATE = "2019-10-26"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "41"
+VERSION_MINOR = "42"
 
 PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
@@ -49,7 +49,7 @@ LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
        targets tftp shell thinkos-usr tty gdb vcom telnet crc xmodem comm gcc
 
 CDEFS = CONFIG_H
-#CFLAGS = -g -Os -Wall -Wextra -fomit-frame-pointer
+#CFLAGS = -g -Os -Wall -Wextra -fomit-frame-pointer -Wno-unused-parameter
 CFLAGS = -g -Os -Wall -fomit-frame-pointer
 OPTIONS = -mno-unaligned-access 
 

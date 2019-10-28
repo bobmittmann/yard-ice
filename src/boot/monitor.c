@@ -98,7 +98,7 @@ struct magic {
 #endif
 
 #ifndef MONITOR_PAUSE_ENABLE
-#define MONITOR_PAUSE_ENABLE       1
+#define MONITOR_PAUSE_ENABLE       0
 #endif
 
 #ifndef MONITOR_LOCKINFO_ENABLE
@@ -243,7 +243,7 @@ int __scan_stack(void * stack, unsigned int size);
 static void print_osinfo(const struct dbgmon_comm * comm)
 {
 	struct thinkos_rt * rt = &thinkos_rt;
-#if THINKOS_ENABLE_PROFILING
+#if (THINKOS_ENABLE_PROFILING)
 	uint32_t cycbuf[CYCCNT_MAX];
 	uint32_t cyccnt;
 	int32_t delta;
@@ -256,7 +256,7 @@ static void print_osinfo(const struct dbgmon_comm * comm)
 	const char * tag;
 	int i;
 
-#if THINKOS_ENABLE_PROFILING
+#if (THINKOS_ENABLE_PROFILING)
 	cyccnt = CM3_DWT->cyccnt;
 	delta = cyccnt - thinkos_rt.cycref;
 	/* update the reference */
@@ -270,7 +270,7 @@ static void print_osinfo(const struct dbgmon_comm * comm)
 #endif
 
 	dbgmon_puts(s_hr, comm);
-#if THINKOS_ENABLE_PROFILING
+#if (THINKOS_ENABLE_PROFILING)
 	cycsum = 0;
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i)
 		cycsum += cycbuf[i];
@@ -280,12 +280,20 @@ static void print_osinfo(const struct dbgmon_comm * comm)
 	cycdiv = (cycsum + 500) / 1000;
 	busy = (cycbusy + cycdiv / 2) / cycdiv;
 	idle = 1000 - busy;
-	dbgmon_printf(comm, "CPU: %d.%d%% busy, %d.%d%% idle\r\n", 
-			 busy / 10, busy % 10, idle / 10, idle % 10);
+
+	dbgmon_puts("CPU: ", comm);
+	dbgmon_comm_send_uint(busy / 10, 3, comm);
+	dbgmon_putc('.', comm);
+	dbgmon_comm_send_uint(busy % 10, 1, comm);
+	dbgmon_puts("% busy, ", comm);
+	dbgmon_comm_send_uint(idle / 10, 3, comm);
+	dbgmon_putc('.', comm);
+	dbgmon_comm_send_uint(idle % 10, 1, comm);
+	dbgmon_puts("% idle\r\n", comm);
 #endif
 
 	dbgmon_puts( " Th     Tag       SP       LR       PC  WQ TmW", comm);
-#if THINKOS_ENABLE_PROFILING
+#if (THINKOS_ENABLE_PROFILING)
 	dbgmon_puts(" CPU % ", comm);
 #endif
 #if (MONITOR_LOCKINFO_ENABLE)
@@ -312,13 +320,10 @@ static void print_osinfo(const struct dbgmon_comm * comm)
 			dbgmon_comm_send_uint(rt->th_stat[i] >> 1, 4, comm);
 			dbgmon_comm_send_str(rt->th_stat[i] & 1 ? "Yes" : " No", 4, comm);
 
-//			dbgmon_printf(comm, "%3d %7s %08x %08x %08x %3d %s", i + 1, tag,
-//					 (uint32_t)rt->ctx[i], rt->ctx[i]->lr, rt->ctx[i]->pc, 
-//					 rt->th_stat[i] >> 1, rt->th_stat[i] & 1 ? "Yes" : " No");
-
-#if THINKOS_ENABLE_PROFILING
+#if (THINKOS_ENABLE_PROFILING)
 			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
 			dbgmon_comm_send_uint(busy / 10, 3, comm);
+			dbgmon_putc('.', comm);
 			dbgmon_comm_send_uint(busy % 10, 1, comm);
 #endif
 

@@ -288,13 +288,10 @@ void __attribute__((noreturn)) supervisor_task(void)
 	struct sockaddr_in sin;
 	bool autoflush;
 
-	DCC_LOG(LOG_TRACE, "1.");
 	INF("<%d> started...", thinkos_thread_self());
 
-	DCC_LOG(LOG_TRACE, "2.");
 	trace_tail(&trace_it);
 
-	DCC_LOG(LOG_TRACE, "3.");
 	clk = thinkos_clock();
 	eth_tmo = clk + 100;
 	for (;;) {
@@ -368,7 +365,6 @@ void __attribute__((noreturn)) supervisor_task(void)
 					/* send log to remote station */
 					trace_tm2timeval(&tv, trace->tm);
 					n = trace_syslog_encode(line, trace, &tv, s);
-					printf(line);
 					udp_sendto(udp, line, n, &sin);
 					//				udp_send(udp, line, n);
 				}
@@ -512,7 +508,6 @@ int network_config(void)
 	ethaddr[0] = (ethaddr[0] & 0xfc) | 0x02; /* Locally administered MAC */
 
 
-	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
 
 	if ((env = getenv("IPCFG")) == NULL) {
@@ -529,7 +524,6 @@ int network_config(void)
 		eth_strtomac(ethaddr, env);
 	} else {
 		INF("Ethernet MAC address not set, using defaults!");
-		DCC_LOG(LOG_WARNING, "Ethernet MAC address not set.");
 	}
 
     INF("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x",
@@ -537,7 +531,6 @@ int network_config(void)
 		   ethaddr[3], ethaddr[4], ethaddr[5]);
 
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
-		DCC_LOG(LOG_WARNING, "inet_aton() failed.");
 		return -1;
 	}
 
@@ -613,8 +606,7 @@ int init_target(void)
 
 	/* TODO: ice driver selection */
 	if (target_ice_configure(stdout, target, 1) < 0) {
-		INF("ERROR: target_ice_configure()!");
-		DCC_LOG(LOG_WARNING, "target_ice_configure() failed!");
+		WARN("ERROR: target_ice_configure()!");
 		return -1;
 	}
 
@@ -624,8 +616,7 @@ int init_target(void)
 		   target->arch->cpu->vendor);
 
 	if (target_config(stdout) < 0) {
-		INF("ERROR: target_config()!");
-		DCC_LOG(LOG_WARNING, "target_config() failed!");
+		WARN("ERROR: target_config()!");
 		return -1;
 	}
 
@@ -657,10 +648,10 @@ int sys_start(void);
 int main(int argc, char ** argv)
 {
 	int ret;
+
 	io_init();
 
 #ifdef THINKAPP
-	DCC_LOG(LOG_TRACE, " 1. thinkos_udelay_factor().");
 	thinkos_udelay_factor(&udelay_factor);
 #else
 	DCC_LOG_INIT();
@@ -684,11 +675,10 @@ int main(int argc, char ** argv)
 
 #endif
 
-	DCC_LOG(LOG_TRACE, " 5. stdio_init().");
 	stdio_init();
 	printf("\n---\n");
+	printf("YARD-ICE " VERSION_NUM " - " VERSION_DATE "\n");
 
-	DCC_LOG(LOG_TRACE, " 6. trace_init().");
 	trace_init();
 
 	INF("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
@@ -696,6 +686,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, " 7. supervisor_init().");
 	supervisor_init();
 
+	//trace_file_set(stdout);
 	DCC_LOG(LOG_TRACE, " 8. stm32f_nvram_env_init().");
 	stm32f_nvram_env_init();
 
@@ -716,7 +707,7 @@ int main(int argc, char ** argv)
 	INF("* Initializing JTAG module ...");
 	DCC_LOG(LOG_TRACE, " 13. jtag_start().");
 	if ((ret = jtag_start()) < 0) {
-		INF("jtag_start() failed! [ret=%d]", ret);
+		ERR("jtag_start() failed! [ret=%d]", ret);
 		debugger_except("JTAG driver fault");
 	}
 
@@ -736,7 +727,7 @@ int main(int argc, char ** argv)
 #endif
 
 #if ENABLE_NETWORK
-	DCC_LOG(LOG_TRACE, " 17. network_config().");
+	DCC_LOG(LOG_TRACE, " 16. network_config().");
 	INF("* Initializing network...");
 	network_config();
 #endif
@@ -745,19 +736,18 @@ int main(int argc, char ** argv)
 	INF("* starting VCOM daemon ... ");
 	/* connect the UART to the JTAG auxiliary pins */
 	jtag3ctrl_aux_uart(true);
-	DCC_LOG(LOG_TRACE, "18. vcom_start().");
 	vcom_start();
 #endif
 
 #if (ENABLE_COMM)
 	INF("* starting COMM daemon ... ");
-	DCC_LOG(LOG_TRACE, "19. comm_tcp_start().");
+	DCC_LOG(LOG_TRACE, "18. comm_tcp_start().");
 	comm_tcp_start(&debugger.comm);
 #endif
 
 #if (ENABLE_TFTP)
 	INF("* starting TFTP server ... ");
-	DCC_LOG(LOG_TRACE, "20. tftpd_start().");
+	DCC_LOG(LOG_TRACE, "19. tftpd_start().");
 	tftpd_start();
 #endif
 

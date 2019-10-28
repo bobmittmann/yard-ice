@@ -66,16 +66,16 @@ void __attribute__((noreturn)) mon_task(const struct dbgmon_comm * comm,
 
 		case DBGMON_STARTUP:
 			dbgmon_clear(DBGMON_STARTUP);
-			__thinkos_console_reset();
+			thinkos_console_init();
 			/* Update the console connection flag which was cleared
-			 by __console_reset(). */
+			 by thinkos_console_init(). */
 			goto is_connected;
 
 		case DBGMON_COMM_CTL:
 			dbgmon_clear(DBGMON_COMM_CTL);
 is_connected:
 			connected = dbgmon_comm_isconnected(comm);
-			__console_connect_set(connected);
+			thinkos_console_connect_set(connected);
 			if (connected) {
 				sigmask |= ((1 << DBGMON_COMM_EOT) | (1 << DBGMON_COMM_RCV) |
 							(1 << DBGMON_TX_PIPE) | (1 << DBGMON_RX_PIPE));
@@ -88,13 +88,13 @@ is_connected:
 		case DBGMON_COMM_RCV:
 		case DBGMON_RX_PIPE:
 			/* get a pointer to the head of the pipe.
-			   __console_rx_pipe_ptr() will return the number of 
+			   thinkos_console_rx_pipe_ptr() will return the number of 
 			   consecutive spaces in the buffer. */
-			if ((free = __console_rx_pipe_ptr(&ptr)) > 0) {
+			if ((free = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
 				/* receive from the COMM driver */
 				if ((n = dbgmon_comm_recv(comm, ptr, free)) > 0) {
 					/* commit the fifo head */
-					__console_rx_pipe_commit(n);
+					thinkos_console_rx_pipe_commit(n);
 					if (n == free) {
 						/* Wait for RX_PIPE */
 						sigmask &= ~(1 << DBGMON_COMM_RCV);
@@ -118,9 +118,9 @@ is_connected:
 
 		case DBGMON_COMM_EOT:
 		case DBGMON_TX_PIPE:
-			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+			if ((cnt = thinkos_console_tx_pipe_ptr(&ptr)) > 0) {
 				if ((n = dbgmon_comm_send(comm, ptr, cnt)) > 0) {
-					__console_tx_pipe_commit(n); 
+					thinkos_console_tx_pipe_commit(n); 
 					if (n == cnt) {
 						/* Wait for TX_PIPE */
 						sigmask |= (1 << DBGMON_TX_PIPE);

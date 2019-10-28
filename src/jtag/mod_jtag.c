@@ -35,7 +35,7 @@
 #include "jtag.h"
 #include "module.h"
 
-#include <sys/dcclog.h>
+#include <trace.h>
 
 /***************************************************************************
  *
@@ -69,7 +69,7 @@ enum {
 
 int jtag_var_get(void * jtag, int var_id, value_t * val)
 {
-	DCC_LOG1(LOG_TRACE, "var_id=%d", var_id);
+	DBG("var_id=%d", var_id);
 
 	switch (var_id) {
 	case ID_JTAG_CLK:
@@ -83,7 +83,7 @@ int jtag_var_get(void * jtag, int var_id, value_t * val)
 
 int jtag_var_set(void * jtag, int var_id, const value_t * val)
 {
-	DCC_LOG1(LOG_TRACE, "var_id=%d", var_id);
+	DBG("var_id=%d", var_id);
 
 	switch (var_id) {
 	case ID_JTAG_CLK:
@@ -103,10 +103,10 @@ int mod_jtag_init(void * jtag, int mod_id)
 {
 	int ret;
 
-	DCC_LOG(LOG_TRACE, "...");
+	INF("JTAG: mod_id=%d", mod_id);
 
 	if ((ret = jtag_drv_init()) < 0) {
-		DCC_LOG(LOG_WARNING, "jtag_drv_init() failed!");
+		WARN("jtag_drv_init() failed!");
 		return ret;
 	}
 
@@ -119,14 +119,14 @@ int mod_jtag_init(void * jtag, int mod_id)
 
 	var_global_add(mod_id, "speed", TYPE_UINT32, ID_JTAG_CLK);
 
-	DCC_LOG(LOG_TRACE, "done.");
+	INF("JTAG: init done.");
 
 	return 0;
 }
 
 int mod_jtag_done(void * jtag, int mod_id)
 {
-	DCC_LOG1(LOG_TRACE, "mod_id=%d", mod_id);
+	INF("mod_id=%d", mod_id);
 	
 	jtag_drv_done();
 

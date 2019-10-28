@@ -93,7 +93,7 @@
 #define THINKOS_ENABLE_MPU              0
 #define THINKOS_ENABLE_FPU              0
 
-#define THINKOS_ENABLE_PROFILING        0
+#define THINKOS_ENABLE_PROFILING        1
 
 #define THINKOS_ENABLE_ARG_CHECK        0
 #define THINKOS_ENABLE_DEADLOCK_CHECK   0
@@ -122,7 +122,6 @@
 
 #define THINKOS_ENABLE_STACK_INIT       0
 #define THINKOS_ENABLE_THREAD_VOID      0
-#define THINKOS_ENABLE_IDLE_WFI         0
 
 #define THINKOS_ASM_SCHEDULER           1
 #define THINKOS_ENABLE_OFAST            0
@@ -149,11 +148,12 @@
 #define THINKOS_ENABLE_IRQ_CYCCNT       0
 #define THINKOS_ENABLE_IRQ_TIMEDWAIT    0
 #define THINKOS_ENABLE_IRQ_PRIORITY_0   0
-#define THINKOS_ENABLE_WQ_IRQ           0
+#define THINKOS_ENABLE_WQ_IRQ           1
 #define THINKOS_ENABLE_DMA              0
 
-#define THINKOS_ENABLE_IDLE_HOOKS       0
+#define THINKOS_ENABLE_IDLE_HOOKS       1
 #define THINKOS_ENABLE_IDLE_MSP         0
+#define THINKOS_ENABLE_IDLE_WFI         1
 
 /* -------------------------------------------------------------------------
  * delay

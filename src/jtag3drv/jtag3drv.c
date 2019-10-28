@@ -36,10 +36,11 @@
 #include <yard-ice/drv.h>
 
 #include "jtag3drv.h"
-#include "dbglog.h"
 
 #include "armice.h"
 #include "board.h"
+
+#include <trace.h>
 
 #ifndef FPGA_RBF_ADDR 
 #define FPGA_RBF_ADDR STM32_FLASH_MEM + FLASH_BLK_RBF_OFFS
@@ -66,7 +67,7 @@ int jtag_tck_freq_set(unsigned int tck_freq)
 	uint32_t fmain = JTAG_FMAIN;
 	int32_t div;
 
-	DCC_LOG1(LOG_TRACE, "freq: %d Hz", tck_freq);
+	INF("freq: %d Hz", tck_freq);
 	div = ((fmain + (tck_freq - 1)) / tck_freq);
 
 	if (div < 2)
@@ -79,7 +80,7 @@ int jtag_tck_freq_set(unsigned int tck_freq)
 	/* cache the interface tck_freq */
 	jtag3drv.tck_freq = fmain / (div + 2);
 
-	DCC_LOG1(LOG_INFO, "brg freq=%d", fmain / (div + 2));
+	INF("brg freq=%d", fmain / (div + 2));
 
 	return JTAG_OK;
 }
@@ -100,7 +101,7 @@ int jtag_rtck_freq_set(unsigned int freq)
 	uint32_t fmain = JTAG_FMAIN;
 	uint32_t div;
 
-	DCC_LOG1(LOG_TRACE, "freq: %d Hz", freq);
+	INF("freq: %d Hz", freq);
 
 	div = (fmain / freq) - 2;
 
@@ -114,8 +115,6 @@ unsigned int jtag_rtck_freq_get(void)
 	uint32_t fmain = JTAG_FMAIN;
 	unsigned int div;
 
-	DCC_LOG(LOG_TRACE, ".");
-
 	/* brg divisor */
 	div = reg_rd(REG_CKGEN_RTDIV);
 
@@ -125,8 +124,6 @@ unsigned int jtag_rtck_freq_get(void)
 int jtag_rtck_enable(void)
 {
 	int cfg = reg_rd(REG_CFG);
-
-	DCC_LOG(LOG_TRACE, ".");
 
 	cfg |= CFG_RTCK_EN;
 	reg_wr(REG_CFG, cfg);
@@ -138,8 +135,6 @@ int jtag_rtck_disable(void)
 {
 	int cfg = reg_rd(REG_CFG);
 
-	DCC_LOG(LOG_TRACE, ".");
-
 	cfg &= ~CFG_RTCK_EN;
 	reg_wr(REG_CFG, cfg);
 
@@ -148,7 +143,7 @@ int jtag_rtck_disable(void)
 
 int jtag_trst(bool assert)
 {
-	DCC_LOG1(LOG_TRACE, "%s", assert ? "LOW" : "HIGH");
+	INF("%s", assert ? "LOW" : "HIGH");
 	jtag3ctrl_trst(assert);
 	jtag3drv.arm_scan_chain = -1;
 	return JTAG_OK;
@@ -156,7 +151,7 @@ int jtag_trst(bool assert)
 
 int jtag_nrst(bool assert)
 {
-	DCC_LOG1(LOG_TRACE, "%s", assert ? "LOW" : "HIGH");
+	INF("%s", assert ? "LOW" : "HIGH");
 
 	jtag3ctrl_nrst(assert);
 	jtag3drv.arm_scan_chain = -1;
@@ -165,7 +160,7 @@ int jtag_nrst(bool assert)
 
 void jtag_run_test(int n, unsigned int final_state)
 {	
-	DCC_LOG2(LOG_TRACE, "cycles: %d --> %s", n, jtag_state_name[final_state]);
+	INF("cycles: %d --> %s", n, jtag_state_name[final_state]);
 
 	insn_run_test(n, final_state);
 }
@@ -179,7 +174,7 @@ int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	unsigned int tx_addr = 0;
 	unsigned int rx_addr = 0;
 
-	DCC_LOG2(LOG_TRACE, "len=%d state=%s", vlen, jtag_state_name[final_state]);
+	INF("len=%d state=%s", vlen, jtag_state_name[final_state]);
 
 	/* create a descriptor table with one entry */
 	desc_wr(desc, JTAG_DESC(rx_addr, 0, tx_addr, 0, vlen));
@@ -193,11 +188,9 @@ int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	isr = jtag3drv_int_wait(IRQ_TAP);
 
 	if ((isr & IRQ_TAP) == 0) {
-		DCC_LOG1(LOG_WARNING, "isr:0x%02x", isr);
+		WARN("isr:0x%02x", isr);
 		return -1;
 	}
-
-	DCC_LOG(LOG_INFO, ".");
 
 	if (vout != NULL)
 		jtag3ctrl_vec_rd(rx_addr, (uint16_t *)vout, vlen);
@@ -207,7 +200,7 @@ int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout,
 
 void jtag_ir_pause(int n, unsigned int final_state)
 {
-	DCC_LOG2(LOG_TRACE, "cycles: %d --> %s", n, jtag_state_name[final_state]);
+	INF("cycles: %d --> %s", n, jtag_state_name[final_state]);
 
 	insn_ir_pause(n, final_state);
 }
@@ -221,7 +214,7 @@ int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	unsigned int tx_addr = 0;
 	unsigned int rx_addr = 0;
 
-	DCC_LOG2(LOG_TRACE, "len=%d state=%s", vlen, jtag_state_name[final_state]);
+	INF("len=%d state=%s", vlen, jtag_state_name[final_state]);
 
 	/* create a descriptor table with one entry */
 	desc_wr(desc, JTAG_DESC(rx_addr, 0, tx_addr, 0, vlen));
@@ -235,11 +228,9 @@ int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	isr = jtag3drv_int_wait(IRQ_TAP);
 
 	if ((isr & IRQ_TAP) == 0) {
-		DCC_LOG1(LOG_WARNING, "isr:0x%02x", isr);
+		WARN("isr:0x%02x", isr);
 		return -1;
 	}
-
-	DCC_LOG(LOG_INFO, ".");
 
 	if (vout != NULL)
 		jtag3ctrl_vec_rd(rx_addr, (uint16_t *)vout, vlen);
@@ -249,7 +240,7 @@ int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout,
 
 void jtag_dr_pause(int n, unsigned int final_state)
 {
-	DCC_LOG2(LOG_TRACE, "cycles: %d --> %s", n, jtag_state_name[final_state]);
+	INF("cycles: %d --> %s", n, jtag_state_name[final_state]);
 
 	insn_dr_pause(n, final_state);
 }
@@ -262,7 +253,7 @@ void jtag_dr_pause(int n, unsigned int final_state)
 
 void jtag_drv_tap_reset(int cnt)
 {	
-	DCC_LOG(LOG_TRACE, "[-----]");
+	INF("[-----]");
 	insn_tap_reset(cnt, JTAG_TAP_RESET);
 	jtag3drv.arm_scan_chain = -1;
 }
@@ -280,17 +271,15 @@ int jtag_drv_init(void)
 	stm32f_dac_init();
 	stm32f_dac_vout_set(3300);
 
-	DCC_LOG1(LOG_TRACE, "FPGA init: RBF=0x%08x", jtag3ctrl_rbf);
+	INF("JtagDrv: init start: RBF=0x%08x", (uint32_t)jtag3ctrl_rbf);
 
 	if (jtag3ctrl_init(jtag3ctrl_rbf, FPGA_RBF_SIZE) < 0) {
-		DCC_LOG(LOG_WARNING, "jtag3ctrl_init() failed!");
+		WARN("jtag3ctrl_init() failed!");
 		return JTAG_ERR_FPGA_PROGRAM;
 	}
 
-	DCC_LOG(LOG_TRACE, "IRQ probe...");
-
 	if (!jtag3ctrl_fpga_probe()) {
-		DCC_LOG(LOG_WARNING, "jtag3ctrl_fpga_probe() failed!");
+		WARN("jtag3ctrl_fpga_probe() failed!");
 		return JTAG_ERR_FPGA_TEST;
 	}
 
@@ -299,13 +288,13 @@ int jtag_drv_init(void)
 	/* enable TAP interrupts */
 	reg_wr(REG_INT_EN, IRQ_TAP);
 
+	INF("JtagDrv: init done.");
+
 	return 0;
 }
 
 int jtag_drv_done(void)
 {
-	DCC_LOG(LOG_TRACE, ".");
-
 	return JTAG_OK;
 }
 
