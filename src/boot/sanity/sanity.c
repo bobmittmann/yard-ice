@@ -34,13 +34,9 @@
 #include <sys/console.h>
 #include <thinkos.h>
 #include <stdio.h>
-#include <trace.h>
 
-const unsigned int tracelevel = TRACE_LVL_DBG;
-const bool showtrace = true;
-const bool showcpu = false;
-const bool showdetail = false;
-const bool flushtrace = true;
+int timer_test_init(uint32_t freq);
+
 unsigned int second;
 unsigned int minute;
 unsigned int hour;
@@ -50,12 +46,16 @@ int app_task(FILE * f)
 {
 	uint32_t clk;
 
+	printf("<%d>\r\n", thinkos_thread_self());
+
 	clk = thinkos_clock();
 	second = 0;
 	minute = 0;
 	hour = 0;
 	for (;;) {
 		int i;
+
+		printf("\r%02d:%02d:%02d", hour, minute, second);
 
 		for (i = 0; i < 5; ++i) {
 			clk += 150;
@@ -70,7 +70,6 @@ int app_task(FILE * f)
 				hour++;
 			}
 		}
-		printf("\r%02d:%02d:%02d", hour, minute, second);
 	}
 
 	return 0;
@@ -88,8 +87,6 @@ void stdio_init(void)
 	stdin = f;
 }
 
-int timer_test_init(uint32_t freq);
-
 uint32_t app_stack[1024] __attribute__ ((aligned(8), section(".stack")));
 
 const struct thinkos_thread_inf app_thread_inf = {
@@ -105,15 +102,22 @@ int main(int argc, char ** argv)
 {
 	stdio_init();
 
-	trace_init();
+	thinkos_sleep(10);
+
+	timer_test_init(10);
 
 	/* Start the main application thread */
 	thinkos_thread_create_inf((int (*)(void *))app_task, (void *)stdout,
 							&app_thread_inf);
 
+
+	for (;;) {
+		thinkos_sleep(10);
+	}
+
+
 	/* cancel the current thread */
 	thinkos_thread_abort(0);
-
 
 	return 0;
 }

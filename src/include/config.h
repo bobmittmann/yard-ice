@@ -93,7 +93,7 @@
 #define THINKOS_ENABLE_MPU              0
 #define THINKOS_ENABLE_FPU              0
 
-#define THINKOS_ENABLE_PROFILING        1
+#define THINKOS_ENABLE_PROFILING        0
 
 #define THINKOS_ENABLE_ARG_CHECK        0
 #define THINKOS_ENABLE_DEADLOCK_CHECK   0
@@ -125,6 +125,10 @@
 
 #define THINKOS_ASM_SCHEDULER           1
 #define THINKOS_ENABLE_OFAST            0
+
+#define THINKOS_ENABLE_FLASH_MEM        0
+#define THINKOS_ENABLE_MEM_MAP          0
+#define THINKOS_ENABLE_KRN_TRACE        0
 
 #if DEBUG
   /* Enable scheduler trace calls */

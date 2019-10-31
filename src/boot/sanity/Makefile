@@ -25,12 +25,13 @@ SDKDIR = $(THINKOSDIR)/sdk
 
 PROG = sanity
 
-CFILES = sanity.c 
+CFILES = sanity.c timer.c
 
-LIBDIRS = $(SDKDIR)/libthinkos-usr $(SDKDIR)/libtty $(SDKDIR)/libutil \
-		  $(SDKDIR)/libc 
+LIBDIRS = $(SDKDIR)/libcm3 $(SDKDIR)/libthinkos-usr \
+		  $(SDKDIR)/libtty $(SDKDIR)/libutil \
+		  $(SDKDIR)/libc $(SDKDIR)/libstm32f 
 
-LIBS = gcc m util c thinkos-usr tty 
+LIBS = cm3 gcc m util c thinkos-usr tty stm32f
 
 INCPATH = $(SDKDIR)/include $(PROJECTDIR)/src/include
 

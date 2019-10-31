@@ -328,11 +328,10 @@ int jtag3ctrl_init(const void * rbf, int size)
 	jtag3ctrl_bus_init(NULL);
 	
 	if ((ret = altera_configure(rbf, size)) < 0) {
-		DCC_LOG1(LOG_ERROR, "altera_configure() failed: %d!", ret);
-		INF(" # altera_configure() failed: %d!", ret);
+		ERR(" # altera_configure() failed: %d!", ret);
 		return ret;
 	} else {
-		INF("- FPGA configuration done (%d bytes)", ret);
+		INF("FPGA configuration done (%d bytes)", ret);
 	}
 
 	/* Enable clock output */
@@ -374,7 +373,7 @@ bool jtag3ctrl_fpga_probe(void)
 			/* clear interrupts */
 			reg_wr(REG_INT_ST, 0xffff);
 			if (--cnt == 0) {
-				WARN("FPGA IRQ probe failed. Stuck at high!");
+				WARN("FPGA IRQ probe failed. Stuck at high (%d)!", j);
 				return false;
 			}
 		}

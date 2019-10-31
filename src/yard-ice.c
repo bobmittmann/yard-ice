@@ -679,6 +679,12 @@ int main(int argc, char ** argv)
 	printf("\n---\n");
 	printf("YARD-ICE " VERSION_NUM " - " VERSION_DATE "\n");
 
+	DCC_LOG(LOG_TRACE, " 8. stm32f_nvram_env_init().");
+	stm32f_nvram_env_init();
+
+	DCC_LOG(LOG_TRACE, " 9. rtc_init().");
+	rtc_init();
+
 	trace_init();
 
 	INF("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
@@ -686,12 +692,20 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, " 7. supervisor_init().");
 	supervisor_init();
 
-	//trace_file_set(stdout);
-	DCC_LOG(LOG_TRACE, " 8. stm32f_nvram_env_init().");
-	stm32f_nvram_env_init();
+#if 0
+	char * env;
 
-	DCC_LOG(LOG_TRACE, " 9. rtc_init().");
-	rtc_init();
+	if ((env = getenv("TRACE")) != NULL) {
+		INF("TRACE='%s'", env);
+		if (strcmp(env, "stderr") == 0) {
+			trace_file_set(stderr);
+			trace_autoflush_set(true);
+		}
+	} else {
+		trace_file_set(stderr);
+		INFS("TRACE environment not set.");
+	}
+#endif
 
 	DCC_LOG(LOG_TRACE, " 10. modules_init().");
 	modules_init();
