@@ -21,6 +21,7 @@
 
 THINKOSDIR = ../../thinkos
 SDKDIR = $(THINKOSDIR)/sdk
+ARCHDIR = $(THINKOSDIR)/arch/stm32
 
 VERSION_DATE = "2019-10-12"
 VERSION_MAJOR = "0"
@@ -30,7 +31,7 @@ PROG = thinkos-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 CFILES = boot.c monitor.c otg_xflash_pic.c
 
-LIBDIRS = $(SDKDIR)/libstm32f $(SDKDIR)/libcm3 $(SDKDIR)/libutil\
+LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libcm3 $(SDKDIR)/libutil\
 		  $(SDKDIR)/libice-comm \
 		  $(SDKDIR)/libthinkos-krn $(SDKDIR)/libthinkos-dbg 
 		  
@@ -46,5 +47,5 @@ CFLAGS = -Os -Wall -Wextra -Wpedantic -fno-builtin -ffreestanding -fomit-frame-p
 OPTIONS = -g -mno-unaligned-access 
 
 MACH = stm32f207
-include $(THINKOSDIR)/mk/stm32.mk
+include $(ARCHDIR)/mk/stm32.mk
 
