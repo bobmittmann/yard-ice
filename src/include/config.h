@@ -155,7 +155,7 @@
 #define THINKOS_ENABLE_WQ_IRQ           1
 #define THINKOS_ENABLE_DMA              0
 
-#define THINKOS_ENABLE_IDLE_HOOKS       1
+#define THINKOS_ENABLE_IDLE_HOOKS       0
 #define THINKOS_ENABLE_IDLE_MSP         0
 #define THINKOS_ENABLE_IDLE_WFI         1
 

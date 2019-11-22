@@ -51,18 +51,6 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 #endif
 }
 
-void board_reset(void)
-{
-#if DEBUG
-	DCC_LOG(LOG_TRACE, "USB irq configure...");
-	udelay(0x10000);
-#endif
-	/* Adjust USB OTG FS interrupts priority */
-	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
-	/* Enable USB OTG FS interrupts */
-	cm3_irq_enable(STM32F_IRQ_OTG_FS);
-}
-
 void board_init(void)
 {
 	struct stm32_gpio * gpio = STM32_GPIOA;
@@ -170,6 +158,19 @@ void board_init(void)
   #endif
 #endif
 }
+
+void board_reset(void)
+{
+#if DEBUG
+	DCC_LOG(LOG_TRACE, "USB irq configure...");
+	udelay(0x10000);
+#endif
+	/* Adjust USB OTG FS interrupts priority */
+	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
+	/* Enable USB OTG FS interrupts */
+	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+}
+
 
 void main(int argc, char ** argv)
 {

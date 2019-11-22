@@ -61,10 +61,10 @@ const void * heap_end = &__heap_end;
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
-void board_reset(void);
-
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
+
+void board_reset(void);
 
 struct magic_hdr {
 	uint16_t pos;
@@ -478,12 +478,12 @@ static bool monitor_app_exec(struct monitor * monitor)
 
 /* Default Monitor Task */
 void __attribute__((noreturn)) monitor_task(const struct dbgmon_comm * comm, 
-											void * param)
+                                            void * param)
 {
 	uint32_t sigmask = 0;
-	uint32_t sig;
 	uint8_t buf[1];
 	uint8_t * ptr;
+	uint32_t sig;
 	int cnt;
 #if (THINKOS_ENABLE_CONSOLE_RAW)
 	bool raw_mode = false;
@@ -608,24 +608,10 @@ raw_mode_recv:
 				if ((n = dbgmon_comm_recv(comm, ptr, cnt)) > 0) {
 					/* commit the fifo head */
 					thinkos_console_rx_pipe_commit(n);
-					if (n == cnt) {
-						/* Wait for RX_PIPE */
-						DCC_LOG(LOG_TRACE, "Wait for RX_PIPE && COMM_RECV");
-						sigmask |= (1 << DBGMON_COMM_RCV);
-						sigmask &=  ~(1 << DBGMON_RX_PIPE);
-						//sigmask &=  ~(1 << DBGMON_RX_PIPE);
-					} else {
-						/* Wait for COMM_RECV */
-						DCC_LOG(LOG_TRACE, "Wait for COMM_RECV");
-						sigmask |= (1 << DBGMON_COMM_RCV);
-						sigmask &=  ~(1 << DBGMON_RX_PIPE);
-					}
-				} else {
-					DCC_LOG1(LOG_ERROR, "dbgmon_comm_recv n=%d", n);
-					/* Wait for COMM_RECV */
-					sigmask |= (1 << DBGMON_COMM_RCV);
-					sigmask &=  ~(1 << DBGMON_RX_PIPE);
 				}
+				/* Wait for COMM_RECV */
+				sigmask |= (1 << DBGMON_COMM_RCV);
+				sigmask &=  ~(1 << DBGMON_RX_PIPE);
 			} else {
 				DCC_LOG(LOG_TRACE, "Raw mode RX wait RX_PIPE");
 				/* Wait for RX_PIPE */
@@ -634,7 +620,7 @@ raw_mode_recv:
 			}
 			break;
 #endif
-#else
+#else /* THINKOS_ENABLE_CONSOLE */
 			if (dbgmon_comm_recv(comm, buf, 1) > 0) {
 				/* process the input character */
 				monitor_process_input(comm, buf[0]);
@@ -659,9 +645,7 @@ is_connected:
 							 (1 << DBGMON_RX_PIPE));
 				if (connected) {
 					sigmask |= ((1 << DBGMON_COMM_EOT) |
-								(1 << DBGMON_COMM_RCV));
-				} else {
-					DCC_LOG(LOG_TRACE, "Comm not connected!");
+							(1 << DBGMON_COMM_RCV));
 				}
 
 				sigmask |= (1 << DBGMON_TX_PIPE);
@@ -674,26 +658,15 @@ is_connected:
 		case DBGMON_TX_PIPE:
 			if ((cnt = thinkos_console_tx_pipe_ptr(&ptr)) > 0) {
 				int n;
-				DCC_LOG1(LOG_TRACE, "TX Pipe: cnt=%d, send...", cnt);
+				/* send to the COMM driver */
 				if ((n = dbgmon_comm_send(comm, ptr, cnt)) > 0) {
 					thinkos_console_tx_pipe_commit(n);
-					if (n == cnt) {
-						/* Wait for TX_PIPE */
-						sigmask |= (1 << DBGMON_TX_PIPE);
-						sigmask &= ~(1 << DBGMON_COMM_EOT);
-					} else {
-						/* Wait for COMM_EOT */
-						sigmask |= (1 << DBGMON_COMM_EOT);
-						sigmask &= ~(1 << DBGMON_TX_PIPE);
-					}
-				} else {
-					/* Wait for COMM_EOT */
-					sigmask |= (1 << DBGMON_COMM_EOT);
-					sigmask &=  ~(1 << DBGMON_TX_PIPE);
-				}
+				} 
+				/* Wait for COMM_EOT */
+				sigmask |= (1 << DBGMON_COMM_EOT);
+				sigmask &= ~(1 << DBGMON_TX_PIPE);
 			} else {
 				/* Wait for TX_PIPE */
-				DCC_LOG1(LOG_TRACE, "TX Pipe: cnt=%d, wait....", cnt);
 				sigmask |= (1 << DBGMON_TX_PIPE);
 				sigmask &= ~(1 << DBGMON_COMM_EOT);
 			}
@@ -705,35 +678,20 @@ is_connected:
 			   consecutive spaces in the buffer. */
 			if ((cnt = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
 				int n;
-			
 				/* receive from the COMM driver */
 				if ((n = dbgmon_comm_recv(comm, ptr, cnt)) > 0) {
 					/* commit the fifo head */
 					thinkos_console_rx_pipe_commit(n);
-					if (n == cnt) {
-						/* Wait for RX_PIPE */
-						DCC_LOG(LOG_TRACE, "RX_PIPE: Wait for RX_PIPE");
-						sigmask |= (1 << DBGMON_COMM_RCV);
-						sigmask &=  ~(1 << DBGMON_RX_PIPE);
-					} else {
-						/* Wait for COMM_RECV */
-						sigmask |= (1 << DBGMON_COMM_RCV);
-						sigmask &= ~(1 << DBGMON_RX_PIPE);
-					}
-				} else {
-					/* Wait for COMM_RECV */
-					DCC_LOG(LOG_ERROR, "RX_PIPE: Wait for COMM_RECV");
-					sigmask |= (1 << DBGMON_COMM_RCV);
-					sigmask &= ~(1 << DBGMON_RX_PIPE);
 				}
+				/* Wait for COMM_RECV */
+				sigmask |= (1 << DBGMON_COMM_RCV);
+				sigmask &= ~(1 << DBGMON_RX_PIPE);
 			} else {
-				DCC_LOG1(LOG_ERROR, "RX_PIPE: RX, cnt=%d", cnt);
 				/* Wait for RX_PIPE */
 				sigmask &= ~(1 << DBGMON_COMM_RCV);
 				sigmask |= (1 << DBGMON_RX_PIPE);
 			}
 			break;
-
 #endif
 		}
 	}
