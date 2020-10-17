@@ -174,7 +174,7 @@ void board_reset(void)
 
 void main(int argc, char ** argv)
 {
-	const struct dbgmon_comm * comm;
+	const struct monitor_comm * comm;
 	uint32_t flags = 0;
 	char buf[1];
 	int i;
@@ -228,7 +228,7 @@ void main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "6. thinkos_console_init()");
 	udelay(0x40000);
 #endif
-	thinkos_console_init();
+	thinkos_krn_console_init();
 #endif
 
 #if THINKOS_ENABLE_MPU
@@ -241,7 +241,7 @@ void main(int argc, char ** argv)
 
 	board_reset();
 
-	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
+	DCC_LOG(LOG_TRACE, "8. thinkos_monitor()");
 
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
 		DCC_LOG(LOG_TRACE, "SHELL | AUTOBOOT");
@@ -251,7 +251,7 @@ void main(int argc, char ** argv)
 	} else {
 		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 		/* starts monitor with shell enabled */
-		thinkos_dbgmon(monitor_task, comm, (void *)MONITOR_SHELL);
+		thinkos_krn_monitor_init(comm, monitor_task, (void *)MONITOR_SHELL);
 		flags = MONITOR_AUTOBOOT;
 
 		for (i = 0; ; ++i) {
@@ -267,7 +267,7 @@ void main(int argc, char ** argv)
 				}
 			} else if (flags & MONITOR_AUTOBOOT) {
 				if (i < 9) {
-					if (dbgmon_comm_isconnected(comm))
+					if (monitor_comm_isconnected(comm))
 						thinkos_console_write(".", 1);
 				} else
 					break;
@@ -275,13 +275,13 @@ void main(int argc, char ** argv)
 		}
 	}
 
+	/* starts/restarts monitor with autoboot enabled */
+	thinkos_krn_monitor_init(comm, monitor_task, (void *)flags);
+
 #if THINKOS_ENABLE_MPU
 	DCC_LOG(LOG_TRACE, "9. thinkos_userland()");
 	thinkos_userland();
 #endif
-
-	/* starts/restarts monitor with autoboot enabled */
-	thinkos_dbgmon(monitor_task, comm, (void *)flags);
 
 	DCC_LOG(LOG_TRACE, "10. thinkos_thread_abort()");
 	thinkos_thread_abort(0);

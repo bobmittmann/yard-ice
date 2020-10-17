@@ -30,8 +30,12 @@
 #include "config.h"
 #endif
 
-#define __THINKOS_DBGMON__
-#include <thinkos/dbgmon.h>
+#define __THINKOS_MONITOR__
+#include <thinkos/monitor.h>
+#define __THINKOS_BOOTLDR__
+#include <thinkos/bootldr.h>
+#define __THINKOS_CONSOLE__
+#include <thinkos/console.h>
 #include <thinkos.h>
 
 #include <stdlib.h>
@@ -52,7 +56,7 @@ struct monitor {
 extern "C" {
 #endif
 
-void monitor_task(const struct dbgmon_comm * comm, void * param);
+void monitor_task(const struct monitor_comm * comm, void * param);
 
 #ifdef __cplusplus
 }
