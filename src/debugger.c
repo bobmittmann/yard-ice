@@ -51,6 +51,9 @@
 #include "module.h"
 #include "nand.h"
 
+#define TRACE_LEVEL TRACE_LVL_DBG
+#include <trace.h>
+
 #ifndef DBG_BREAKPOINT_MAX
 #define DBG_BREAKPOINT_MAX 16
 #endif
@@ -3630,7 +3633,7 @@ void debugger_except(const char * msg)
 
 int mod_ice_register(struct debugger * dbg);
 
-uint32_t dbg_poll_stack[96];
+uint32_t __attribute__((aligned(8))) dbg_poll_stack[112];
 
 const struct thinkos_thread_inf dbg_poll_inf = {
 	.stack_ptr = dbg_poll_stack, 
@@ -3646,7 +3649,14 @@ void debugger_init(void)
 	struct debugger * dbg = &debugger;
 
 	dbg->target_mutex = thinkos_mutex_alloc();
-	DCC_LOG1(LOG_TRACE, "debugger target_mutex mutex: %d", dbg->target_mutex);
+	INF("DBG: target_mutex mutex: %d", dbg->target_mutex);
+	dbg->ice_mutex = thinkos_mutex_alloc();
+	INF("DBG: ice_mutex mutex: %d", dbg->ice_mutex);
+	/* FIXME: the dcc semaphore must be created/destroyed in the
+	   TAP sctructure */
+	dbg->poll_cond = thinkos_cond_alloc();
+	dbg->halt_cond = thinkos_cond_alloc();
+	dbg->poll_enabled = false;
 
 	/* initialize the breakpoint management */
 	dbg_bp_init(&dbg->bp_ctrl);
@@ -3674,16 +3684,8 @@ void debugger_init(void)
 	dbg->tcp_port = 9;
 	dbg->transf.size = 64 * 1024;
 
-	dbg->ice_mutex = thinkos_mutex_alloc();
-	DCC_LOG1(LOG_TRACE, "debugger ice_mutex mutex: %d", dbg->ice_mutex);
 
-	/* FIXME: the dcc semaphore must be created/destroyed in the
-	   TAP sctructure */
-	dbg->poll_cond = thinkos_cond_alloc();
-	dbg->halt_cond = thinkos_cond_alloc();
-	dbg->poll_enabled = false;
-
-	DCC_LOG3(LOG_TRACE, "ice_mutex=%d poll_cond=%d halt_cond=%d", 
+	INF("DBG: ice_mutex=%d poll_cond=%d halt_cond=%d", 
 			 dbg->ice_mutex, dbg->poll_cond, dbg->halt_cond);
 
 	ice_comm_init(&dbg->comm);

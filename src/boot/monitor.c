@@ -83,7 +83,7 @@ struct magic {
 
 #ifndef MONITOR_UPGRADE_ENABLE
 #if DEBUG
-#define MONITOR_UPGRADE_ENABLE     0
+#define MONITOR_UPGRADE_ENABLE     1
 #else
 #define MONITOR_UPGRADE_ENABLE     1
 #endif
@@ -102,7 +102,7 @@ struct magic {
 #endif
 
 #ifndef MONITOR_LOCKINFO_ENABLE
-#define MONITOR_LOCKINFO_ENABLE    0
+#define MONITOR_LOCKINFO_ENABLE    1
 #endif
 
 #define RBF_BLOCK_OFFS 0x00010000
@@ -232,11 +232,7 @@ void monitor_putuint(uint32_t val, unsigned int witdh,
 void monitor_putint(int32_t val, unsigned int witdh, 
 				   const struct monitor_comm * comm);
 
-#if THINKOS_ENABLE_THREAD_VOID
-#define CYCCNT_MAX ((THINKOS_THREADS_MAX) + 2) /* extra slot for void thread */
-#else
-#define CYCCNT_MAX ((THINKOS_THREADS_MAX) + 1)
-#endif
+#define CYCCNT_MAX THINKOS_THREADS_MAX
 
 int __scan_stack(void * stack, unsigned int size);
 
@@ -275,7 +271,6 @@ static void print_osinfo(const struct monitor_comm * comm)
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i)
 		cycsum += cycbuf[i];
 	cycbusy = cycsum;
-	cycsum += cycbuf[THINKOS_CYCCNT_IDLE];
 
 	cycdiv = (cycsum + 500) / 1000;
 	busy = (cycbusy + cycdiv / 2) / cycdiv;
@@ -312,13 +307,14 @@ static void print_osinfo(const struct monitor_comm * comm)
 			tag = (rt->th_inf[i] != NULL) ? rt->th_inf[i]->tag : "...";
 			monitor_comm_send_str(tag, 8, comm);
 			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex((uint32_t)rt->ctx[i], 8, comm);
+			monitor_comm_send_hex(__thread_sp_get(rt, i), 8, comm);
 			monitor_comm_send_blanks(1, comm);
-//			monitor_comm_send_hex(rt->ctx[i]->lr, 8, comm);
+			monitor_comm_send_hex(__thread_lr_get(rt, i), 8, comm);
 			monitor_comm_send_blanks(1, comm);
-//			monitor_comm_send_hex(rt->ctx[i]->pc, 8, comm);
-			monitor_comm_send_uint(rt->th_stat[i] >> 1, 4, comm);
-			monitor_comm_send_str(rt->th_stat[i] & 1 ? "Yes" : " No", 4, comm);
+			monitor_comm_send_hex(__thread_pc_get(rt, i), 8, comm);
+			monitor_comm_send_uint(__thread_wq_get(rt, i), 4, comm);
+			monitor_comm_send_str(__thread_tmw_get(rt, i) ? 
+								  "Yes" : " No", 4, comm);
 
 #if (THINKOS_ENABLE_PROFILING)
 			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
@@ -365,7 +361,7 @@ static void pause_all(void)
 }
 #endif
 
-static bool monitor_process_input(const struct monitor_comm * comm, int c)
+bool monitor_process_input(const struct monitor_comm * comm, int c)
 {
 	switch (c) {
 #if (MONITOR_UPGRADE_ENABLE)
@@ -415,7 +411,6 @@ static bool monitor_process_input(const struct monitor_comm * comm, int c)
 		break;
 #endif
 
-
 #if (MONITOR_APPRESTART_ENABLE)
 	case CTRL_Z:
 		monitor_puts("^Z\r\n", comm);
@@ -429,7 +424,7 @@ static bool monitor_process_input(const struct monitor_comm * comm, int c)
 	return true;
 }
 
-static void __main_thread_exec(int (* func)(void *))
+static void __main_thread_exec(int (* func)(void *), void * arg)
 {
 	int thread_id = 0;
 	struct thinkos_context * ctx;
@@ -439,22 +434,21 @@ static void __main_thread_exec(int (* func)(void *))
 
 	DCC_LOG2(LOG_TRACE, "__thinkos_thread_ctx_init(func=%p arg=%p)", func, arg);
 	ctx = __thinkos_thread_ctx_init(thread_id, (uintptr_t)&_stack, 
-									(uintptr_t)func, (uintptr_t)NULL);
+									(uintptr_t)func, (uintptr_t)arg);
 
-#if THINKOS_ENABLE_THREAD_INFO
+#if (THINKOS_ENABLE_THREAD_INFO)
 	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
 #endif
 	
 #if (THINKOS_ENABLE_STACK_LIMIT)
-	__thinkos_thread_sl_set(thread_id, sl);
-#endif
-
-#if (THINKOS_ENABLE_DEBUG_FAULT)
-	__thinkos_thread_fault_clr(thread_id);
+	__thinkos_thread_sl_set(thread_id, 0);
 #endif
 
 	/* commit the context to the kernel */ 
 	__thinkos_thread_ctx_set(thread_id, ctx, CONTROL_SPSEL | CONTROL_nPRIV);
+
+	DCC_LOG1(LOG_INFO, "thread=%d [ready]", thread_id);
+	__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);
 
 	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
 	__thinkos_defer_sched();
@@ -478,7 +472,7 @@ static bool __monitor_app_exec(struct monitor * monitor)
 
 		thumb = ((uintptr_t)signature) + 1;
 		app = (int (*)(void *))thumb;
-		__main_thread_exec(app);
+		__main_thread_exec(app, NULL);
 		return true;
 	}
 
@@ -497,9 +491,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 #if (THINKOS_ENABLE_CONSOLE_RAW)
 	bool raw_mode = false;
 #endif
-#if (THINKOS_ENABLE_CONSOLE)
 	bool connected = false;
-#endif
 	struct monitor monitor;
 
 	monitor.flags = (uint32_t)param;
@@ -508,10 +500,8 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	sigmask |= (1 << MONITOR_SOFTRST);
 	sigmask |= (1 << MONITOR_STARTUP);
 	sigmask |= (1 << MONITOR_COMM_RCV);
-#if (THINKOS_ENABLE_CONSOLE)
 	sigmask |= (1 << MONITOR_COMM_CTL);
 	sigmask |= (1 << MONITOR_TX_PIPE);
-#endif
 	sigmask |= (1 << MONITOR_APP_STOP);
 	sigmask |= (1 << MONITOR_APP_EXEC);
 	sigmask |= (1 << MONITOR_APP_UPLOAD);
@@ -539,10 +529,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			monitor_clear(MONITOR_SOFTRST);
 			board_reset();
 			monitor_puts("+RST\r\n", comm);
-#if THINKOS_ENABLE_CONSOLE
 			goto is_connected;
-#endif
-			break;
 
 #if (MONITOR_UPGRADE_ENABLE)
 		case MONITOR_APP_UPLOAD:
@@ -570,8 +557,6 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			break;
 
 		case MONITOR_COMM_RCV:
-			DCC_LOG(LOG_MSG, "COMM_RCV: +++++++++++++++++");
-#if (THINKOS_ENABLE_CONSOLE)
 #if (THINKOS_ENABLE_CONSOLE_RAW)
 			raw_mode = thinkos_console_is_raw_mode();
 			if (raw_mode) {
@@ -581,8 +566,6 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			/* receive from the COMM driver one byte at the time */
 			if ((cnt = monitor_comm_recv(comm, buf, 1)) > 0) {
 				int c = buf[0];
-
-				DCC_LOG1(LOG_MSG, "COMM_RCV: c=0x%02x", c);
 				/* process the input character */
 				if (!monitor_process_input(comm, c)) {
 					int n;
@@ -610,9 +593,6 @@ raw_mode_recv:
 			   consecutive spaces in the buffer. */
 			if ((cnt = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
 				int n;
-			
-				DCC_LOG1(LOG_MSG, "Raw mode RX, cnt=%d", cnt);
-
 				/* receive from the COMM driver */
 				if ((n = monitor_comm_recv(comm, ptr, cnt)) > 0) {
 					/* commit the fifo head */
@@ -622,26 +602,15 @@ raw_mode_recv:
 				sigmask |= (1 << MONITOR_COMM_RCV);
 				sigmask &=  ~(1 << MONITOR_RX_PIPE);
 			} else {
-				DCC_LOG(LOG_TRACE, "Raw mode RX wait RX_PIPE");
 				/* Wait for RX_PIPE */
 				sigmask &= ~(1 << MONITOR_COMM_RCV);
 				sigmask |= (1 << MONITOR_RX_PIPE);
 			}
-			break;
 #endif
-#else /* THINKOS_ENABLE_CONSOLE */
-			if (monitor_comm_recv(comm, buf, 1) > 0) {
-				/* process the input character */
-				monitor_process_input(comm, buf[0]);
-			}
-#endif
-			DCC_LOG(LOG_TRACE, "COMM_RCV: ----------------");
 			break;
 
-#if (THINKOS_ENABLE_CONSOLE)
 		case MONITOR_COMM_CTL:
 			monitor_clear(MONITOR_COMM_CTL);
-			DCC_LOG(LOG_TRACE, "COMM_CTL !!!!!");
 is_connected:
 			{
 				connected = monitor_comm_isconnected(comm);
@@ -662,7 +631,6 @@ is_connected:
 			break;
 
 		case MONITOR_COMM_EOT:
-			DCC_LOG(LOG_TRACE, "COMM_EOT");
 			/* FALLTHROUGH */
 		case MONITOR_TX_PIPE:
 			if ((cnt = thinkos_console_tx_pipe_ptr(&ptr)) > 0) {
@@ -701,7 +669,6 @@ is_connected:
 				sigmask |= (1 << MONITOR_RX_PIPE);
 			}
 			break;
-#endif
 		}
 	}
 }

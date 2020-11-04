@@ -59,7 +59,7 @@ static struct {
 int jtag_tap_purge(void)
 {	
 	jtag_tap_t * tap;
-	int i;
+	unsigned int i;
 
 	DCC_LOG1(LOG_TRACE, "purging %d TAPs", jtag.tap_cnt);
 	for (i = 0; i < jtag.tap_cnt; i++) {

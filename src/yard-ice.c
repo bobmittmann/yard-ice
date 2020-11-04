@@ -61,6 +61,7 @@
 #define TRACE_ENABLE_VT100    1
 #endif
 
+#define TRACE_LEVEL_DBG
 #include <trace.h>
 
 #if TRACE_ENABLE_VT100
@@ -399,7 +400,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 	}
 }
 
-uint32_t supervisor_stack[512];
+uint32_t __attribute__((aligned(8))) supervisor_stack[512];
 
 const struct thinkos_thread_inf supervisor_inf = {
 	.stack_ptr = supervisor_stack,
@@ -800,18 +801,16 @@ int main(int argc, char ** argv)
 
 #if ENABLE_TELNET
 	INF("* starting TELNET server ... ");
-	DCC_LOG(LOG_TRACE, "24. telnet_shell().");
 	telnet_shell();
 #endif
 
 	INF("* configuring initial target ... ");
-	DCC_LOG(LOG_TRACE, "16. init_target().");
 	init_target();
 
 	for (;;) {
-		thinkos_sleep(500);
-
-		DCC_LOG(LOG_TRACE, "25. stdio_shell().");
+//		INF("* shell... ");
+		DCC_LOG(LOG_TRACE, "tick...");
+		thinkos_sleep(1000);
 		stdio_shell();
 	}
 

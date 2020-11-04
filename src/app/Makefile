@@ -23,10 +23,11 @@
 
 THINKOSDIR = ../../thinkos
 SDKDIR = $(THINKOSDIR)/sdk
+ARCHDIR = $(THINKOSDIR)/arch/stm32
 
-VERSION_DATE = "2019-10-26"
+VERSION_DATE = "2020-11-03"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "42"
+VERSION_MINOR = "43"
 
 PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
@@ -34,9 +35,9 @@ CFILES = ../yard-ice.c ../io.c ../debugger.c ../ice_drv.c\
 	 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
 	 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c 
 
-LIBDIRS = $(SDKDIR)/libcm3 $(SDKDIR)/libstm32f $(SDKDIR)/libutil \
+LIBDIRS = $(SDKDIR)/libcm3 $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
 	  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \
-	  $(SDKDIR)/libstm32drv $(SDKDIR)/libbitvec $(SDKDIR)/libhexdump \
+	  $(ARCHDIR)/libstm32drv $(SDKDIR)/libbitvec $(SDKDIR)/libhexdump \
 	  $(SDKDIR)/libcrc $(SDKDIR)/libtrace $(SDKDIR)/libtty \
 	  $(SDKDIR)/libxmodem $(SDKDIR)/libshell $(SDKDIR)/libthinkos-usr \
 	  ../libopcodes ../libaltera\
@@ -49,16 +50,19 @@ LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
        targets tftp shell thinkos-usr tty gdb vcom telnet crc xmodem comm gcc
 
 CDEFS = CONFIG_H
-#CFLAGS = -g -Os -Wall -Wextra -fomit-frame-pointer -Wno-unused-parameter
-CFLAGS = -g -Os -Wall -fomit-frame-pointer
+CFLAGS = -g -Os -fomit-frame-pointer -Werror -Wall \
+		 -Wno-unused-parameter
+
 OPTIONS = -mno-unaligned-access 
 
 INCPATH = $(SDKDIR)/include ../include
 
 THINKAPP = 0x08020000
-LDSCRIPT = yard-ice.ld
-MACH = stm32f207
-include $(THINKOSDIR)/mk/stm32.mk
+MACH = stm32f207xe
+LDCODE := 0x08020000
+LDDATA := 0x20002000
+THINKAPP := $(LDCODE)
+include $(ARCHDIR)/mk/stm32.mk
 
 help:
 	@echo 'Targets:'

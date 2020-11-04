@@ -36,6 +36,8 @@
 #include <thinkos/bootldr.h>
 #define __THINKOS_CONSOLE__
 #include <thinkos/console.h>
+#define __THINKOS_DEBUG__
+#include <thinkos/debug.h>
 #include <thinkos.h>
 
 #include <stdlib.h>

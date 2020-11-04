@@ -34,9 +34,10 @@
 #include "version.h"
 
 #ifndef RELAY_CHATTER_ENABLE
-#define RELAY_CHATTER_ENABLE 1
+#define RELAY_CHATTER_ENABLE 0
 #endif
 
+#if 1
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 #if DEBUG
@@ -50,6 +51,7 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 	cm3_sysrst();
 #endif
 }
+#endif
 
 void board_init(void)
 {
@@ -177,39 +179,42 @@ void main(int argc, char ** argv)
 	const struct monitor_comm * comm;
 	uint32_t flags = 0;
 	char buf[1];
+	int thread;
 	int i;
 
 	DCC_LOG_INIT();
-#if DEBUG
-	DCC_LOG_CONNECT();
-	udelay(0x10000);
-	DCC_LOG(LOG_INFO, "______________________________________________________");
-	DCC_LOG(LOG_INFO, "_________________ ! Board start up ! _________________");
-	DCC_LOG(LOG_INFO, "______________________________________________________");
-	udelay(0x10000);
-#endif
 
 #ifndef UDELAY_FACTOR 
-	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 #endif
 
 #if DEBUG
+	DCC_LOG_CONNECT();
+	mdelay(100);
+	DCC_LOG(LOG_INFO, "______________________________________________________");
+	DCC_LOG(LOG_INFO, "_________________ ! Board start up ! _________________");
+	DCC_LOG(LOG_INFO, "______________________________________________________");
+	mdelay(100);
+#endif
+
+#if DEBUG
 	DCC_LOG1(LOG_TRACE, "1. udelay_factor=%d.", udelay_factor);
-	udelay(0x10000);
 #endif
 
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "2. thinkos_krn_init().");
 	udelay(0x10000);
 #endif
-	thinkos_krn_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), NULL, NULL);
+	thread = thinkos_krn_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0) |
+	                 THINKOS_OPT_PRIVILEGED, NULL, NULL);
+	(void)thread;
+	DCC_LOG4(LOG_TRACE, "<%d> MSP=%08x PSP=%08x CTRL=%02x", 
+			 thread, cm3_msp_get(), cm3_psp_get(), cm3_control_get());
 
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "3. board_init().");
 	udelay(0x10000);
 #endif
-
 	board_init();
 
 	/* Wait for the other power supply and subsystems to stabilize */
@@ -278,9 +283,8 @@ void main(int argc, char ** argv)
 	/* starts/restarts monitor with autoboot enabled */
 	thinkos_krn_monitor_init(comm, monitor_task, (void *)flags);
 
-#if THINKOS_ENABLE_MPU
-	DCC_LOG(LOG_TRACE, "9. thinkos_userland()");
-	thinkos_userland();
+#if DEBUG
+	__thinkos(&thinkos_rt);
 #endif
 
 	DCC_LOG(LOG_TRACE, "10. thinkos_thread_abort()");
