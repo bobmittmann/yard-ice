@@ -491,8 +491,9 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 #if (THINKOS_ENABLE_CONSOLE_RAW)
 	bool raw_mode = false;
 #endif
-	bool connected = false;
 	struct monitor monitor;
+
+	DCC_LOG(LOG_TRACE, "starting monitor...");
 
 	monitor.flags = (uint32_t)param;
 
@@ -557,15 +558,21 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			break;
 
 		case MONITOR_COMM_RCV:
-#if (THINKOS_ENABLE_CONSOLE_RAW)
-			raw_mode = thinkos_console_is_raw_mode();
+  #if (THINKOS_ENABLE_CONSOLE_MODE)
+			raw_mode = thinkos_krn_console_is_raw_mode();
 			if (raw_mode) {
-				goto raw_mode_recv;
+				sigmask = monitor_on_comm_rcv(comm, sigmask);
+				break;
 			}
-#endif
+  #endif /* THINKOS_ENABLE_CONSOLE_MODE */
+
+			DCC_LOG(LOG_INFO, "COMM_RCV...");
+
 			/* receive from the COMM driver one byte at the time */
 			if ((cnt = monitor_comm_recv(comm, buf, 1)) > 0) {
 				int c = buf[0];
+
+				DCC_LOG1(LOG_INFO, "COMM_RCV: c=0x%02x", c);
 				/* process the input character */
 				if (!monitor_process_input(comm, c)) {
 					int n;
@@ -583,93 +590,43 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 						/* discard */
 					}
 				}
-			}
-			break;
 
-#if (THINKOS_ENABLE_CONSOLE_RAW)
-raw_mode_recv:
-			/* get a pointer to the head of the pipe.
-			   thinkos_console_rx_pipe_ptr() will return the number of 
-			   consecutive spaces in the buffer. */
-			if ((cnt = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
-				int n;
-				/* receive from the COMM driver */
-				if ((n = monitor_comm_recv(comm, ptr, cnt)) > 0) {
-					/* commit the fifo head */
-					thinkos_console_rx_pipe_commit(n);
-				}
-				/* Wait for COMM_RECV */
-				sigmask |= (1 << MONITOR_COMM_RCV);
-				sigmask &=  ~(1 << MONITOR_RX_PIPE);
 			} else {
-				/* Wait for RX_PIPE */
-				sigmask &= ~(1 << MONITOR_COMM_RCV);
-				sigmask |= (1 << MONITOR_RX_PIPE);
+				DCC_LOG1(LOG_INFO, "monitor_comm_recv() = %d", cnt);
 			}
-#endif
 			break;
 
 		case MONITOR_COMM_CTL:
+			DCC_LOG(LOG_MSG, "/!\\ MONITOR_COMM_CTL");
 			monitor_clear(MONITOR_COMM_CTL);
-is_connected:
 			{
-				connected = monitor_comm_isconnected(comm);
-				thinkos_krn_console_connect_set(connected);
-#if (THINKOS_ENABLE_CONSOLE_RAW)
-				raw_mode = thinkos_console_is_raw_mode();
-#endif
-				sigmask &= ~((1 << MONITOR_COMM_EOT) | 
-							 (1 << MONITOR_COMM_RCV) |
-							 (1 << MONITOR_RX_PIPE));
-				if (connected) {
-					sigmask |= ((1 << MONITOR_COMM_EOT) |
-							(1 << MONITOR_COMM_RCV));
+				int status = monitor_comm_status_get(comm);
+
+	        	if (status & COMM_ST_CONNECTED) {
+					DCC_LOG(LOG_TRACE, "connected....");
 				}
 
-				sigmask |= (1 << MONITOR_TX_PIPE);
+	        	if (status & COMM_ST_BREAK_REQ ) {
+					monitor_comm_break_ack(comm);
+					DCC_LOG(LOG_TRACE, "break_req....");
+				}
 			}
+
+is_connected:
+			sigmask = monitor_on_comm_ctl(comm, sigmask);
+			DCC_LOG1(LOG_MSG, "sigmask=%08x", sigmask);
 			break;
 
 		case MONITOR_COMM_EOT:
 			/* FALLTHROUGH */
 		case MONITOR_TX_PIPE:
-			if ((cnt = thinkos_console_tx_pipe_ptr(&ptr)) > 0) {
-				int n;
-				/* send to the COMM driver */
-				if ((n = monitor_comm_send(comm, ptr, cnt)) > 0) {
-					thinkos_console_tx_pipe_commit(n);
-				} 
-				/* Wait for COMM_EOT */
-				sigmask |= (1 << MONITOR_COMM_EOT);
-				sigmask &= ~(1 << MONITOR_TX_PIPE);
-			} else {
-				/* Wait for TX_PIPE */
-				sigmask |= (1 << MONITOR_TX_PIPE);
-				sigmask &= ~(1 << MONITOR_COMM_EOT);
-			}
+			sigmask = monitor_on_tx_pipe(comm, sigmask);
 			break;
 
 		case MONITOR_RX_PIPE:
-			/* get a pointer to the head of the pipe.
-			   thinkos_console_rx_pipe_ptr() will return the number of 
-			   consecutive spaces in the buffer. */
-			if ((cnt = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
-				int n;
-				/* receive from the COMM driver */
-				if ((n = monitor_comm_recv(comm, ptr, cnt)) > 0) {
-					/* commit the fifo head */
-					thinkos_console_rx_pipe_commit(n);
-				}
-				/* Wait for COMM_RECV */
-				sigmask |= (1 << MONITOR_COMM_RCV);
-				sigmask &= ~(1 << MONITOR_RX_PIPE);
-			} else {
-				/* Wait for RX_PIPE */
-				sigmask &= ~(1 << MONITOR_COMM_RCV);
-				sigmask |= (1 << MONITOR_RX_PIPE);
-			}
+			sigmask = monitor_on_rx_pipe(comm, sigmask);
 			break;
+
 		}
 	}
 }
-

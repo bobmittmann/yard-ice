@@ -17,7 +17,7 @@ ${PYTHON} ${TOOLS_DIR}/tftp_load.py -q -i -e -r  -a 0x08000000 \
 
 if [ $? = 0 ] ; then
 	# Collect ".bin" files in the positional parameters
-	set -- `ls ../app/debug/*.bin`
+	set -- `ls ../app/release/*.bin`
 	# Get the last one
 	for APP_BIN; do true; done
 	APP_ELF=${APP_BIN%%.bin}.elf

@@ -38,22 +38,22 @@
 #define THINKOS_ENABLE_PAUSE            0
 #define THINKOS_ENABLE_CANCEL           0
 #define THINKOS_ENABLE_EXIT             0
-#define THINKOS_ENABLE_TERMINATE        1
+#define THINKOS_ENABLE_TERMINATE        0
 #define THINKOS_ENABLE_BREAK            0
 
 #define THINKOS_ENABLE_TIMESHARE        0
 #define THINKOS_SCHED_LIMIT_MAX         32
 #define THINKOS_SCHED_LIMIT_MIN         1
 
-#define THINKOS_MUTEX_MAX               16
+#define THINKOS_MUTEX_MAX               32
 
-#define THINKOS_COND_MAX                16
+#define THINKOS_COND_MAX                32
 
-#define THINKOS_SEMAPHORE_MAX           16
+#define THINKOS_SEMAPHORE_MAX           32
 
-#define THINKOS_EVENT_MAX               2
+#define THINKOS_EVENT_MAX               4
 
-#define THINKOS_FLAG_MAX                16
+#define THINKOS_FLAG_MAX                32
 #define THINKOS_ENABLE_FLAG_WATCH       0
 
 #define THINKOS_GATE_MAX                16
@@ -90,7 +90,7 @@
 #if DEBUG
   #define THINKOS_ENABLE_EXCEPTIONS     1
   #define THINKOS_ENABLE_STACK_INIT     1
-  #define THINKOS_ENABLE_STACK_LIMIT    0
+  #define THINKOS_ENABLE_STACK_LIMIT    1
   #define THINKOS_ENABLE_ARG_CHECK      1
   #define THINKOS_ENABLE_DEADLOCK_CHECK 1
   #define THINKOS_ENABLE_SANITY_CHECK   1
@@ -101,7 +101,8 @@
   #define THINKOS_ENABLE_USAGEFAULT     1
   #define THINKOS_ENABLE_KRNSVC         1
   #define THINKOS_ENABLE_ERROR_TRAP     1
-  #define THINKOS_ENABLE_STACK_ALIGN    0
+  #define THINKOS_ENABLE_STACK_ALIGN    1
+ #define THINKOS_SYSRST_ONFAULT         0
 #else
   #define THINKOS_ENABLE_EXCEPTIONS     0
   #define THINKOS_ENABLE_STACK_INIT     0
@@ -116,10 +117,11 @@
   #define THINKOS_ENABLE_USAGEFAULT     0
   #define THINKOS_ENABLE_KRNSVC         0
   #define THINKOS_ENABLE_ERROR_TRAP     0
+  #define THINKOS_ENABLE_STACK_ALIGN    1
+ #define THINKOS_SYSRST_ONFAULT         1
 #endif
-#define THINKOS_SYSRST_ONFAULT          0
 
-#define THINKOS_EXCEPT_STACK_SIZE       384
+#define THINKOS_EXCEPT_STACK_SIZE       512
 
 #define THINKOS_ENABLE_MONITOR          1
 #define THINKOS_ENABLE_MONITOR_THREADS  0
@@ -152,7 +154,7 @@
 #define DMPRINTF_ENABLE_FAST            1
 #define DMPRINTF_ENABLE_UNSIGNED        0
 #define THINKOS_CONSOLE_RX_FIFO_LEN     64
-#define THINKOS_CONSOLE_TX_FIFO_LEN     256
+#define THINKOS_CONSOLE_TX_FIFO_LEN     512
 
 #define THINKOS_ENABLE_IRQ_CYCCNT       0
 #define THINKOS_ENABLE_IRQ_TIMEDWAIT    0
@@ -166,7 +168,7 @@
 #define THINKOS_ENABLE_PRIVILEGED_THREAD 1
 
 #define THINKOS_ENABLE_OBJ_ALLOC        1
-#define THINKOS_ENABLE_OBJ_FREE         0
+#define THINKOS_ENABLE_OBJ_FREE         1
 
 /* -------------------------------------------------------------------------
  * delay
@@ -177,30 +179,27 @@
 /* -------------------------------------------------------------------------
    Clock 
    -------------------------------------------------------------------------- */
-#define STM32_HSE_HZ          24000000
-//#define STM32_HSE_HZ          12000000
-#define STM32_HCLK_HZ        120000000
-#define STM32_ENABLE_HSE             1
-#define STM32_ENABLE_PLL             1
 
+#define STM32_HSE_HZ           24000000
+#define STM32_HCLK_HZ         120000000
+#define STM32_ENABLE_HSE              1
+#define STM32_ENABLE_PLL              1
 
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
 
-#define STM32_ENABLE_OTG_FS       2
-#define STM32_OTG_FS_INEP_MAX     3
-#define STM32_OTG_FS_OUTEP_MAX    1
-#define STM32_OTG_FS_IO_INIT      0
-#define STM32_OTG_FS_VBUS_SENS    1
-#define STM32_OTG_FS_VBUS_CONNECT 1
-#define STM32_OTG_FS_RX_FIFO_SIZE 192
-#define STM32_OTG_FS_BULK_PKTS    4
+#define STM32_ENABLE_OTG_FS          1
 
-#define CDC_EP_OUT_MAX_PKT_SIZE      64
+#define STM32_OTG_FS_INEP_MAX        3
+#define STM32_OTG_FS_OUTEP_MAX       2
+#define STM32_OTG_FS_IO_INIT         0
+#define STM32_OTG_FS_VBUS_SENS       1
+#define STM32_OTG_FS_VBUS_CONNECT    1
+#define STM32_OTG_FS_RX_FIFO_SIZE    192
+#define STM32_OTG_FS_BULK_PKTS       6
+
 #define CDC_EP_IN_MAX_PKT_SIZE       64
-#define CDC_EP_INT_MAX_PKT_SIZE      8
-
 
 /* -------------------------------------------------------------------------
  * TCP/IP
@@ -216,6 +215,7 @@
 #define TCP_IDLE_DET_SEC             10
 #define TCP_KEEP_ALIVE_PROBE_SEC     10
 #define TCP_MAX_IDLE_SEC             15
+#define TCP_TMR_PRIORITY             32
 
 #define TCP_ENABLE_TIMEWAIT          1
 #define TCP_ENABLE_HEADER_PREDICTION 1
@@ -272,7 +272,7 @@
  * LibC
  * ------------------------------------------------------------------------- */
 
-#define PRINTF_ENABLE_FLOAT 1
+#define PRINTF_ENABLE_FLOAT 0
 
 #endif /* __CONFIG_H__ */
 

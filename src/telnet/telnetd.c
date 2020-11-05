@@ -63,13 +63,13 @@ int telnetd_task(void * arg)
 }
 
 //uint32_t __attribute__((section(".sram1"), aligned(5))) 
-uint32_t __attribute__((aligned(8))) telnet_shell_stack[1408]; 
+uint32_t __attribute__((aligned(8))) telnet_shell_stack[1472]; 
 
 const struct thinkos_thread_inf telnet_shell_inf = {
 	.stack_ptr = telnet_shell_stack, 
 	.stack_size = sizeof(telnet_shell_stack),
-	.priority = 0,
-	.thread_id = 4,
+	.priority = 12,
+	.thread_id = 12,
 	.paused = false,
 	.tag = "TNET_SH"
 };

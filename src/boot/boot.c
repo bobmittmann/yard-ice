@@ -37,30 +37,10 @@
 #define RELAY_CHATTER_ENABLE 0
 #endif
 
-#if 1
-void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
-{
-#if DEBUG
-	DCC_LOG(LOG_ERROR, "!");
-	asm volatile ("mov r3, #0\n"
-				  "1:\n"
-				  "cmp r3, #0\n"
-				  "beq 1b\n"
-				  : : );
-#else
-	cm3_sysrst();
-#endif
-}
-#endif
-
 void board_init(void)
 {
 	struct stm32_gpio * gpio = STM32_GPIOA;
 	struct stm32_rcc * rcc = STM32_RCC;
-//	struct cm3_scb * scb = CM3_SCB;
-
-	/* Disable exceptions */
-//	scb->shcsr = 0;
 
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "Reset all peripherals ...");
@@ -287,8 +267,8 @@ void main(int argc, char ** argv)
 	__thinkos(&thinkos_rt);
 #endif
 
-	DCC_LOG(LOG_TRACE, "10. thinkos_thread_abort()");
-	thinkos_thread_abort(0);
+	DCC_LOG(LOG_TRACE, "10. thinkos_abort()");
+	thinkos_abort();
 
 	DCC_LOG(LOG_ERROR, "11. unreachable code reched!!!");
 }
