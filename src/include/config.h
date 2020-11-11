@@ -85,9 +85,8 @@
 
 #define THINKOS_ENABLE_FPU              0
 
-#define THINKOS_ENABLE_PROFILING        0
-
 #if DEBUG
+  #define THINKOS_ENABLE_PROFILING      1
   #define THINKOS_ENABLE_EXCEPTIONS     1
   #define THINKOS_ENABLE_STACK_INIT     1
   #define THINKOS_ENABLE_STACK_LIMIT    1
@@ -104,6 +103,7 @@
   #define THINKOS_ENABLE_STACK_ALIGN    1
   #define THINKOS_SYSRST_ONFAULT        0
 #else
+  #define THINKOS_ENABLE_PROFILING      0
   #define THINKOS_ENABLE_EXCEPTIONS     0
   #define THINKOS_ENABLE_STACK_INIT     0
   #define THINKOS_ENABLE_STACK_LIMIT    0
@@ -150,7 +150,7 @@
 #define DMPRINTF_ENABLE_FAST              1
 #define DMPRINTF_ENABLE_UNSIGNED          0
 #define THINKOS_CONSOLE_RX_FIFO_LEN       64
-#define THINKOS_CONSOLE_TX_FIFO_LEN       512
+#define THINKOS_CONSOLE_TX_FIFO_LEN       1024
 
 #define THINKOS_ENABLE_IRQ_CYCCNT         0
 #define THINKOS_ENABLE_IRQ_TIMEDWAIT      0
@@ -165,6 +165,8 @@
 
 #define THINKOS_ENABLE_OBJ_ALLOC          1
 #define THINKOS_ENABLE_OBJ_FREE           1
+#define THINKOS_ENABLE_DIV0_TRAP          0
+#define THINKOS_ENABLE_UNALIGN_TRAP       0
 
 /* -------------------------------------------------------------------------
  * delay

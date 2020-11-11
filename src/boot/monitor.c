@@ -244,57 +244,59 @@ void monitor_putuint(uint32_t val, unsigned int witdh,
 void monitor_putint(int32_t val, unsigned int witdh, 
 				   const struct monitor_comm * comm);
 
-#define CYCCNT_MAX THINKOS_THREADS_MAX
-
 int __scan_stack(void * stack, unsigned int size);
 
-static void print_osinfo(const struct monitor_comm * comm)
+
+void print_percent(uint32_t val, const struct monitor_comm * comm)
+{
+	monitor_comm_send_uint(val / 10, 4, comm);
+	monitor_putc('.', comm);
+	monitor_comm_send_uint(val % 10, 1, comm);
+}
+
+static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 {
 	struct thinkos_rt * rt = &thinkos_rt;
 #if (THINKOS_ENABLE_PROFILING)
-	uint32_t cycbuf[CYCCNT_MAX];
-	uint32_t cyccnt;
-	int32_t delta;
+	uint32_t cyc[THINKOS_CTX_CNT];
 	uint32_t cycdiv;
 	uint32_t busy;
 	uint32_t cycsum = 0;
 	uint32_t cycbusy;
 	uint32_t idle;
+	uint32_t dif;
 #endif
 	const char * tag;
 	int i;
 
-#if (THINKOS_ENABLE_PROFILING)
-	cyccnt = CM3_DWT->cyccnt;
-	delta = cyccnt - thinkos_rt.cycref;
-	/* update the reference */
-	thinkos_rt.cycref = cyccnt;
-	/* update active thread's cycle counter */
-	thinkos_rt.cyccnt[thinkos_rt.active] += delta; 
-	/* copy the thread counters to a buffer */
-	__thinkos_memcpy32(cycbuf, rt->cyccnt, sizeof(cycbuf));
-	/* reset cycle counters */
-	__thinkos_memset32(rt->cyccnt, 0, sizeof(cycbuf));
-#endif
-
 	monitor_puts(s_hr, comm);
 #if (THINKOS_ENABLE_PROFILING)
 	cycsum = 0;
-	for (i = 0; i < THINKOS_THREADS_MAX; ++i)
-		cycsum += cycbuf[i];
-	cycbusy = cycsum;
+	for (i = 0; i < THINKOS_CTX_CNT; ++i) {
+		uint32_t cnt = rt->cyccnt[i];
+		uint32_t ref = cycref[i];
+
+		cycref[i] = cnt;
+		dif = cnt - ref; 
+		cycsum += dif;
+		cyc[i] = dif;
+	}
+
+	cycbusy = cycsum - dif;
 
 	cycdiv = (cycsum + 500) / 1000;
-	busy = (cycbusy + cycdiv / 2) / cycdiv;
+
+	busy = cycbusy / cycdiv;
+	if (busy > 1000)
+		busy  = 1000;
+
 	idle = 1000 - busy;
+	(void) idle;
 
 	monitor_puts("CPU: ", comm);
-	monitor_comm_send_uint(busy / 10, 3, comm);
-	monitor_putc('.', comm);
-	monitor_comm_send_uint(busy % 10, 1, comm);
+	print_percent(busy, comm);
 	monitor_puts("% busy, ", comm);
-	monitor_comm_send_uint(idle / 10, 3, comm);
-	monitor_putc('.', comm);
+	print_percent(idle, comm);
 	monitor_comm_send_uint(idle % 10, 1, comm);
 	monitor_puts("% idle\r\n", comm);
 #endif
@@ -306,14 +308,13 @@ static void print_osinfo(const struct monitor_comm * comm)
 #if (MONITOR_LOCKINFO_ENABLE)
 	monitor_puts(" Locks", comm);
 #endif
+	monitor_puts("\r\n", comm);
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (__thinkos_thread_ctx_is_valid(i)) {
 #if (MONITOR_LOCKINFO_ENABLE)
 			int j;
 #endif
-			monitor_puts("\r\n", comm);
-
 			monitor_comm_send_uint(i + 1, 3, comm);
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
@@ -330,10 +331,10 @@ static void print_osinfo(const struct monitor_comm * comm)
 								  "Yes" : " No", 4, comm);
 
 #if (THINKOS_ENABLE_PROFILING)
-			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
-			monitor_comm_send_uint(busy / 10, 3, comm);
-			monitor_putc('.', comm);
-			monitor_comm_send_uint(busy % 10, 1, comm);
+			busy = cyc[i] / cycdiv;
+			if (busy > 1000)
+				busy  = 1000;
+			print_percent(busy, comm);
 #endif
 
 
@@ -343,6 +344,8 @@ static void print_osinfo(const struct monitor_comm * comm)
 					monitor_comm_send_uint(j + THINKOS_MUTEX_BASE, 3, comm);
 			}
 #endif
+
+			monitor_puts("\r\n", comm);
 		}
 	}
 }
@@ -387,7 +390,7 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 #endif
 #if (MONITOR_OSINFO_ENABLE)
 	case CTRL_O:
-		print_osinfo(comm);
+		monitor_signal(MONITOR_USER_EVENT4);
 		break;
 #endif
 	case CTRL_V:
@@ -499,6 +502,9 @@ static bool __monitor_app_exec(uintptr_t addr)
 void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm, 
                                             void * param)
 {
+#if (MONITOR_OSINFO_ENABLE)
+	uint32_t cycref[THINKOS_CTX_CNT];
+#endif
 	uint32_t sigmask = 0;
 	uint8_t buf[4];
 	uint8_t * ptr;
@@ -522,6 +528,9 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	sigmask |= (1 << MONITOR_USER_EVENT1);
 	sigmask |= (1 << MONITOR_USER_EVENT2);
 	sigmask |= (1 << MONITOR_USER_EVENT3);
+#if (MONITOR_OSINFO_ENABLE)
+	sigmask |= (1 << MONITOR_USER_EVENT4);
+#endif
 
 	if (!(monitor.flags & MONITOR_AUTOBOOT)) {
 		monitor_puts(s_hr, comm);
@@ -559,12 +568,20 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 				   &bootloader_magic);
 			break;
 
+
 #if (MONITOR_UPLOAD_CONFIG_ENABLE)
 		case MONITOR_USER_EVENT3:
 			monitor_clear(MONITOR_USER_EVENT3);
 			yflash(CONFIG_BLOCK_OFFS, CONFIG_BLOCK_SIZE, NULL);
 			break;
 #endif
+#endif
+
+#if (MONITOR_OSINFO_ENABLE)
+		case MONITOR_USER_EVENT4:
+			monitor_clear(MONITOR_USER_EVENT4);
+			print_osinfo(comm, cycref);
+			break;
 #endif
 
 		case MONITOR_APP_EXEC:
