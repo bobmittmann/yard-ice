@@ -45,18 +45,18 @@
 #define THINKOS_SCHED_LIMIT_MAX         32
 #define THINKOS_SCHED_LIMIT_MIN         1
 
-#define THINKOS_MUTEX_MAX               32
+#define THINKOS_MUTEX_MAX               24
 
-#define THINKOS_COND_MAX                32
+#define THINKOS_COND_MAX                24
 
-#define THINKOS_SEMAPHORE_MAX           32
+#define THINKOS_SEMAPHORE_MAX           16
 
-#define THINKOS_EVENT_MAX               4
+#define THINKOS_EVENT_MAX               8
 
-#define THINKOS_FLAG_MAX                32
+#define THINKOS_FLAG_MAX                16
 #define THINKOS_ENABLE_FLAG_WATCH       0
 
-#define THINKOS_GATE_MAX                16
+#define THINKOS_GATE_MAX                8
 
 #define THINKOS_ENABLE_TIMED_CALLS      1
 #define THINKOS_ENABLE_CLOCK            1
@@ -102,7 +102,7 @@
   #define THINKOS_ENABLE_KRNSVC         1
   #define THINKOS_ENABLE_ERROR_TRAP     1
   #define THINKOS_ENABLE_STACK_ALIGN    1
- #define THINKOS_SYSRST_ONFAULT         0
+  #define THINKOS_SYSRST_ONFAULT        0
 #else
   #define THINKOS_ENABLE_EXCEPTIONS     0
   #define THINKOS_ENABLE_STACK_INIT     0
@@ -118,7 +118,7 @@
   #define THINKOS_ENABLE_KRNSVC         0
   #define THINKOS_ENABLE_ERROR_TRAP     0
   #define THINKOS_ENABLE_STACK_ALIGN    1
- #define THINKOS_SYSRST_ONFAULT         1
+  #define THINKOS_SYSRST_ONFAULT        1
 #endif
 
 #define THINKOS_EXCEPT_STACK_SIZE       512
@@ -129,46 +129,42 @@
 #define THINKOS_ENABLE_DEBUG_STEP       0
 #define THINKOS_ENABLE_DEBUG_BKPT       0
 #define THINKOS_ENABLE_DEBUG_WPT        0
-#define THINKOS_ENABLE_DEBUG_FAULT      0
-
+#define THINKOS_ENABLE_THREAD_FAULT     0
 #define THINKOS_ENABLE_MEMORY_CLEAR     0
-
 #define THINKOS_ENABLE_OFAST            0
-
 #define THINKOS_ENABLE_FLASH_MEM        0
 #define THINKOS_ENABLE_MEM_MAP          0
-#define THINKOS_ENABLE_KRN_TRACE        0
 
 #if DEBUG
   /* Enable scheduler trace calls */
-  #define THINKOS_ENABLE_SCHED_DEBUG    1
+  #define THINKOS_ENABLE_SCHED_DEBUG      1
   /* Enable scheduler stack error detection */
-  #define THINKOS_ENABLE_SCHED_ERROR    1
+  #define THINKOS_ENABLE_SCHED_ERROR      1
 #else
-  #define THINKOS_ENABLE_SCHED_DEBUG    0
-  #define THINKOS_ENABLE_SCHED_ERROR    0
+  #define THINKOS_ENABLE_SCHED_DEBUG      0
+  #define THINKOS_ENABLE_SCHED_ERROR      0
 #endif
 
-#define THINKOS_MONITOR_STACK_SIZE      512
+#define THINKOS_MONITOR_STACK_SIZE        512
 
-#define DMPRINTF_ENABLE_FAST            1
-#define DMPRINTF_ENABLE_UNSIGNED        0
-#define THINKOS_CONSOLE_RX_FIFO_LEN     64
-#define THINKOS_CONSOLE_TX_FIFO_LEN     512
+#define DMPRINTF_ENABLE_FAST              1
+#define DMPRINTF_ENABLE_UNSIGNED          0
+#define THINKOS_CONSOLE_RX_FIFO_LEN       64
+#define THINKOS_CONSOLE_TX_FIFO_LEN       512
 
-#define THINKOS_ENABLE_IRQ_CYCCNT       0
-#define THINKOS_ENABLE_IRQ_TIMEDWAIT    0
-#define THINKOS_ENABLE_IRQ_PRIORITY_0   0
-#define THINKOS_ENABLE_WQ_IRQ           0
-#define THINKOS_ENABLE_DMA              0
+#define THINKOS_ENABLE_IRQ_CYCCNT         0
+#define THINKOS_ENABLE_IRQ_TIMEDWAIT      0
+#define THINKOS_ENABLE_IRQ_PRIORITY_0     0
+#define THINKOS_ENABLE_WQ_IRQ             0
+#define THINKOS_ENABLE_DMA                0
 
-#define THINKOS_ENABLE_IDLE_HOOKS       0
-#define THINKOS_ENABLE_IDLE_WFI         1
-#define THINKOS_ENABLE_I_CALLS          1
-#define THINKOS_ENABLE_PRIVILEGED_THREAD 1
+#define THINKOS_ENABLE_IDLE_HOOKS         0
+#define THINKOS_ENABLE_IDLE_WFI           1
+#define THINKOS_ENABLE_I_CALLS            1
+#define THINKOS_ENABLE_PRIVILEGED_THREAD  1
 
-#define THINKOS_ENABLE_OBJ_ALLOC        1
-#define THINKOS_ENABLE_OBJ_FREE         1
+#define THINKOS_ENABLE_OBJ_ALLOC          1
+#define THINKOS_ENABLE_OBJ_FREE           1
 
 /* -------------------------------------------------------------------------
  * delay
@@ -194,8 +190,8 @@
 #define STM32_OTG_FS_INEP_MAX        3
 #define STM32_OTG_FS_OUTEP_MAX       2
 #define STM32_OTG_FS_IO_INIT         0
-#define STM32_OTG_FS_VBUS_SENS       1
-#define STM32_OTG_FS_VBUS_CONNECT    1
+#define STM32_OTG_FS_VBUS_SENS       0
+#define STM32_OTG_FS_VBUS_CONNECT    0
 #define STM32_OTG_FS_RX_FIFO_SIZE    192
 #define STM32_OTG_FS_BULK_PKTS       6
 

@@ -23,7 +23,7 @@ THINKOSDIR = ../../thinkos
 SDKDIR = $(THINKOSDIR)/sdk
 ARCHDIR = $(THINKOSDIR)/arch/stm32
 
-VERSION_DATE = "2020-11-03"
+VERSION_DATE = "2020-11-11"
 VERSION_MAJOR = "0"
 VERSION_MINOR = "30"
 
@@ -41,11 +41,12 @@ LIBS = thinkos-krn thinkos-mon stm32f util ice-comm gcc
 
 INCPATH = $(SDKDIR)/include ../include
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
+CDEFS = CONFIG_H 
 
 CFLAGS = -Os -Wall -Wextra -Wpedantic -fno-builtin -ffreestanding -fomit-frame-pointer -Wno-unused-parameter
 OPTIONS = -g -mno-unaligned-access 
 
+RAM_VECTORS = 1
 MACH = stm32f207xe
 KRN_CODE_SIZE = 16384
 KRN_DATA_SIZE = 4096

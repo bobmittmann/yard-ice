@@ -234,7 +234,6 @@ void main(int argc, char ** argv)
 		   and enable the monitor shell. */
 		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 	} else {
-		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 		/* starts monitor with shell enabled */
 		thinkos_krn_monitor_init(comm, monitor_task, (void *)MONITOR_SHELL);
 		flags = MONITOR_AUTOBOOT;
