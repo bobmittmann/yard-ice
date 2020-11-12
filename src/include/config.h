@@ -83,7 +83,7 @@
 
 #define THINKOS_ENABLE_COMM             0
 
-#define THINKOS_ENABLE_FPU              0
+#define THINKOS_ENABLE_FPU              1
 
 #if DEBUG
   #define THINKOS_ENABLE_PROFILING      1
@@ -103,7 +103,7 @@
   #define THINKOS_ENABLE_STACK_ALIGN    1
   #define THINKOS_SYSRST_ONFAULT        0
 #else
-  #define THINKOS_ENABLE_PROFILING      0
+  #define THINKOS_ENABLE_PROFILING      1
   #define THINKOS_ENABLE_EXCEPTIONS     0
   #define THINKOS_ENABLE_STACK_INIT     0
   #define THINKOS_ENABLE_STACK_LIMIT    0

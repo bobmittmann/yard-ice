@@ -153,14 +153,17 @@ void board_reset(void)
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
+#define APPLICATION_BLOCK_OFFS 0x00020000
+#define APPLICATION_BLOCK_SIZE (384 * 1024)
+#define APPLICATION_START_ADDR (0x08000000 + APPLICATION_BLOCK_OFFS)
 
-void main(int argc, char ** argv)
+int boot_run_app(uintptr_t addr);
+
+int main(int argc, char ** argv)
 {
 	const struct monitor_comm * comm;
 	uint32_t flags = 0;
-	char buf[1];
 	int thread;
-	int i;
 
 	DCC_LOG_INIT();
 
@@ -208,32 +211,20 @@ void main(int argc, char ** argv)
 
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-#if THINKOS_ENABLE_CONSOLE
-#if DEBUG
-	DCC_LOG(LOG_TRACE, "6. thinkos_console_init()");
-	udelay(0x40000);
-#endif
-	thinkos_krn_console_init();
-#endif
-
-#if THINKOS_ENABLE_MPU
-#if DEBUG
-	DCC_LOG(LOG_TRACE, "6. thinkos_mpu_init()");
-	udelay(1024);
-#endif
-	thinkos_mpu_init(0x0c00);
-#endif
-
 	board_reset();
 
 	DCC_LOG(LOG_TRACE, "8. thinkos_monitor()");
 
+#if 0
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
 		DCC_LOG(LOG_TRACE, "SHELL | AUTOBOOT");
 		/* If  jumper is inserted between JTRST and GND boot up now
 		   and enable the monitor shell. */
 		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 	} else {
+		char buf[1];
+		int i;
+
 		/* starts monitor with shell enabled */
 		thinkos_krn_monitor_init(comm, monitor_task, (void *)MONITOR_SHELL);
 		flags = MONITOR_AUTOBOOT;
@@ -258,17 +249,15 @@ void main(int argc, char ** argv)
 			}
 		}
 	}
+#endif
 
 	/* starts/restarts monitor with autoboot enabled */
 	thinkos_krn_monitor_init(comm, monitor_task, (void *)flags);
 
-#if DEBUG
-	__thinkos(&thinkos_rt);
-#endif
-
 	DCC_LOG(LOG_TRACE, "10. thinkos_abort()");
-	thinkos_abort();
+//	thinkos_abort();
 
 	DCC_LOG(LOG_ERROR, "11. unreachable code reched!!!");
+	return boot_run_app(APPLICATION_START_ADDR);
 }
 

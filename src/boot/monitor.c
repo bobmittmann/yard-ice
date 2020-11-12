@@ -90,23 +90,27 @@ struct magic {
 #endif
 
 #ifndef MONITOR_APPRESTART_ENABLE
-#define MONITOR_APPRESTART_ENABLE  1
+#define MONITOR_APPRESTART_ENABLE      1
 #endif
 
 #ifndef MONITOR_OSINFO_ENABLE 
-#define MONITOR_OSINFO_ENABLE      1
+#define MONITOR_OSINFO_ENABLE          1
 #endif
 
 #ifndef MONITOR_PAUSE_ENABLE
-#define MONITOR_PAUSE_ENABLE       0
+#define MONITOR_PAUSE_ENABLE           0
 #endif
 
 #ifndef MONITOR_LOCKINFO_ENABLE
-#define MONITOR_LOCKINFO_ENABLE    1
+#define MONITOR_LOCKINFO_ENABLE        1
 #endif
 
 #ifndef MONITOR_UPLOAD_CONFIG_ENABLE
-#define MONITOR_UPLOAD_CONFIG_ENABLE 1
+#define MONITOR_UPLOAD_CONFIG_ENABLE   1
+#endif
+
+#ifndef MONITOR_APP_EXEC
+#define MONITOR_APP_EXEC               0
 #endif
 
 #define BOOTLOADER_BLOCK_OFFS 0x00000000
@@ -436,7 +440,11 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 
 #if (MONITOR_APPRESTART_ENABLE)
 	case CTRL_Z:
+#if (MONITOR_APP_EXEC)
 		monitor_req_app_exec(); 
+#else
+		thinkos_krn_sysrst();
+#endif
 		break;
 #endif
 	default:
@@ -445,6 +453,8 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 
 	return true;
 }
+
+#if (MONITOR_APP_EXEC)
 
 static void __main_thread_exec(int (* func)(void *), void * arg)
 {
@@ -476,7 +486,6 @@ static void __main_thread_exec(int (* func)(void *), void * arg)
 static bool __monitor_app_exec(uintptr_t addr)
 {
 	uint32_t * signature = (uint32_t *)addr;
-	;
 	int i;
 
 	for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
@@ -497,6 +506,28 @@ static bool __monitor_app_exec(uintptr_t addr)
 
 	return false;
 }
+#else
+
+int boot_run_app(uintptr_t addr)
+{
+	uint32_t * signature = (uint32_t *)addr;
+	uintptr_t thumb;
+	int (* app)(void);
+	int i;
+
+	for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
+		if (signature[i] != app_magic.rec[i].comp) {
+			return -1;
+		}
+	}
+
+
+	thumb = ((uintptr_t)addr) + 1;
+	app = (int (*)(void))thumb;
+
+	return app();
+}
+#endif
 
 /* Default Monitor Task */
 void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm, 
@@ -510,13 +541,15 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	uint8_t * ptr;
 	uint32_t sig;
 	int cnt;
-	struct monitor monitor;
 	bool connected;
 	int status;
+#if (MONITOR_APP_EXEC)
+	struct monitor monitor;
 
 	DCC_LOG(LOG_TRACE, "starting monitor...");
 
 	monitor.flags = (uintptr_t)param;
+#endif
 
 	/* unmask events */
 	sigmask |= (1 << MONITOR_SOFTRST);
@@ -532,6 +565,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	sigmask |= (1 << MONITOR_USER_EVENT4);
 #endif
 
+#if (MONITOR_APP_EXEC)
 	if (!(monitor.flags & MONITOR_AUTOBOOT)) {
 		monitor_puts(s_hr, comm);
 		monitor_puts(s_version, comm);
@@ -540,6 +574,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	if (monitor.flags & MONITOR_AUTOBOOT) {
 		monitor_req_app_exec(); 
 	}
+#endif
 
 	for(;;) {
 		switch ((sig = monitor_select(sigmask))) {
@@ -584,12 +619,14 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			break;
 #endif
 
+#if (MONITOR_APP_EXEC)
 		case MONITOR_APP_EXEC:
 			monitor_clear(MONITOR_APP_EXEC);
 			if (!__monitor_app_exec(APPLICATION_START_ADDR)) {
 				monitor_puts("!ERR: app\r\n", comm);
 			}
 			break;
+#endif
 
 		case MONITOR_COMM_RCV:
 
