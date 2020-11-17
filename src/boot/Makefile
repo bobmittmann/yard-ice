@@ -39,16 +39,15 @@ LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libutil\
 
 LIBS = thinkos-krn thinkos-mon stm32f util ice-comm gcc 
 
-INCPATH = $(SDKDIR)/include ../include
+INCPATH = ../include
 
 CDEFS = CONFIG_H 
 
-CFLAGS = -Os -Wall -Wextra -Wpedantic -fno-builtin -ffreestanding -fomit-frame-pointer -Wno-unused-parameter
-OPTIONS = -g -mno-unaligned-access 
+CFLAGS = -Os 
 
 RAM_VECTORS = 1
 MACH = stm32f207xe
 KRN_CODE_SIZE = 16384
 KRN_DATA_SIZE = 4096
-include $(ARCHDIR)/mk/stm32.mk
+include $(ARCHDIR)/mk/stm32-krn.mk
 

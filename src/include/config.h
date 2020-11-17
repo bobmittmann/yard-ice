@@ -168,6 +168,9 @@
 #define THINKOS_ENABLE_DIV0_TRAP          0
 #define THINKOS_ENABLE_UNALIGN_TRAP       0
 
+#define THINKOS_ENABLE_APP                0
+#define THINKOS_MONITOR_ENABLE_COMM_BRK   0
+
 /* -------------------------------------------------------------------------
  * delay
  * ------------------------------------------------------------------------- */
