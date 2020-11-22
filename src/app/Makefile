@@ -35,7 +35,7 @@ CFILES = ../yard-ice.c ../io.c ../debugger.c ../ice_drv.c\
 	 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
 	 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c 
 
-LIBDIRS = $(SDKDIR)/libcm3 $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
+LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
 	  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \
 	  $(ARCHDIR)/libstm32drv $(SDKDIR)/libbitvec $(SDKDIR)/libhexdump \
 	  $(SDKDIR)/libcrc $(SDKDIR)/libtrace $(SDKDIR)/libtty \
@@ -45,24 +45,19 @@ LIBDIRS = $(SDKDIR)/libcm3 $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
 	  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
 	  ../comm 
 
-LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
+LIBS = stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
        altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
        targets tftp shell thinkos-usr tty gdb vcom telnet crc xmodem comm gcc
 
 CDEFS = CONFIG_H
-CFLAGS = -g -Os -fomit-frame-pointer -Werror -Wall \
-		 -Wno-unused-parameter
-
-OPTIONS = -mno-unaligned-access 
+CFLAGS = -g -Os 
 
 INCPATH = $(SDKDIR)/include ../include
 
-THINKAPP = 0x08020000
 MACH = stm32f207xe
 LDCODE := 0x08020000
 LDDATA := 0x20002000
-THINKAPP := $(LDCODE)
-include $(ARCHDIR)/mk/stm32.mk
+include $(ARCHDIR)/mk/stm32-app.mk
 
 help:
 	@echo 'Targets:'

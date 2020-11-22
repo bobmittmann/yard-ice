@@ -34,6 +34,8 @@
 #include <thinkos/monitor.h>
 #define __THINKOS_BOOTLDR__
 #include <thinkos/bootldr.h>
+#define __THINKOS_APP__
+#include <thinkos/app.h>
 #define __THINKOS_CONSOLE__
 #include <thinkos/console.h>
 #define __THINKOS_DEBUG__

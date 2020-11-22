@@ -77,7 +77,7 @@
 #define FLASH_CYCLE ((BOOT_FLASH_TIME_NS + MCLK_NS - 1) / MCLK_NS)
 
 const struct target_sym at91sam9_sym[] = {
-	{0, "", 0} 
+	{0, "", 0, 0} 
 };
 
 static void at91_cs0_init(FILE * f, const struct ice_drv * ice)

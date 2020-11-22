@@ -211,7 +211,7 @@ void * image_ptr(uint32_t addr)
 		}
 	}
 
-	fprintf(stderr, "ERROR: %s(): can't translate pointer %08x\n",
+	fprintf(stderr, "ERROR: %s(): can't translate pointer 0x%08x\n",
 			__func__, addr);
 	return NULL;
 }

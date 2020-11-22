@@ -656,6 +656,8 @@ int default_ice_wr32(ice_ctrl_t * ctrl, uint32_t addr, uint32_t data)
 	return ice_wr16(ice, addr, data >> 16);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 const struct ice_oper null_ice_oper = {
 	/* driver initialization */
 	.open = (ice_open_t)null_ice_success,
@@ -730,6 +732,7 @@ const struct ice_oper null_ice_oper = {
 	/* instruction decoding */	
 	.print_insn = (ice_print_insn_t )null_ice_fail
 };
+#pragma GCC diagnostic pop
 
 const struct ice_drv_info ice_drv_null = {
 	.name = "null",

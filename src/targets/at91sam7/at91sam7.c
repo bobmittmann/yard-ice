@@ -649,7 +649,7 @@ const struct target_sym at91sam7_sym[] = {
 	{0xffffff64, "mc_fcr", 4, _WO_}, 
 	{0xffffff68, "mc_fsr", 4, _RO_}, 
 #endif
-	{0, "", 0} 
+	{0, "", 0, 0} 
 };
 
 static const uint16_t sramsize[16] = {

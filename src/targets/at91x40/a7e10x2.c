@@ -257,9 +257,6 @@ const struct target_info a7e10x2_2m = {
 	/* The preferred reset method is software */
 	.reset_mode = RST_SOFT,
 
-	/* The preferred reset method is software */
-	.reset_mode = RST_SOFT,
-
 	.start_addr = 0x1000000,
 
 	.on_init = (target_script_t)a7e10x2_2m_on_init,

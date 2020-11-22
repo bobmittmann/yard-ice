@@ -42,8 +42,6 @@
 #define THINKOS_ENABLE_BREAK            0
 
 #define THINKOS_ENABLE_TIMESHARE        0
-#define THINKOS_SCHED_LIMIT_MAX         32
-#define THINKOS_SCHED_LIMIT_MIN         1
 
 #define THINKOS_MUTEX_MAX               24
 
@@ -83,61 +81,61 @@
 
 #define THINKOS_ENABLE_COMM             0
 
-#define THINKOS_ENABLE_FPU              1
+#define THINKOS_ENABLE_FPU                0
+#define THINKOS_ENABLE_MPU                0
+#define THINKOS_ENABLE_MEMFAULT           0
 
 #if DEBUG
-  #define THINKOS_ENABLE_PROFILING      1
-  #define THINKOS_ENABLE_EXCEPTIONS     1
-  #define THINKOS_ENABLE_STACK_INIT     1
-  #define THINKOS_ENABLE_STACK_LIMIT    1
-  #define THINKOS_ENABLE_ARG_CHECK      1
-  #define THINKOS_ENABLE_DEADLOCK_CHECK 1
-  #define THINKOS_ENABLE_SANITY_CHECK   1
-  #define THINKOS_ENABLE_HARDFAULT      1
-  #define THINKOS_ENABLE_MPU            0
-  #define THINKOS_ENABLE_MEMFAULT       0
-  #define THINKOS_ENABLE_BUSFAULT       1
-  #define THINKOS_ENABLE_USAGEFAULT     1
-  #define THINKOS_ENABLE_KRNSVC         1
-  #define THINKOS_ENABLE_ERROR_TRAP     1
-  #define THINKOS_ENABLE_STACK_ALIGN    1
-  #define THINKOS_SYSRST_ONFAULT        0
+  #define THINKOS_ENABLE_PROFILING        1
+  #define THINKOS_ENABLE_RUNMASK          1
+  #define THINKOS_ENABLE_EXCEPTIONS       1
+  #define THINKOS_ENABLE_STACK_INIT       1
+  #define THINKOS_ENABLE_STACK_LIMIT      1
+  #define THINKOS_ENABLE_ARG_CHECK        1
+  #define THINKOS_ENABLE_DEADLOCK_CHECK   1
+  #define THINKOS_ENABLE_SANITY_CHECK     1
+  #define THINKOS_ENABLE_HARDFAULT        1
+  #define THINKOS_ENABLE_BUSFAULT         1
+  #define THINKOS_ENABLE_USAGEFAULT       1
+  #define THINKOS_ENABLE_KRNSVC           0
+  #define THINKOS_ENABLE_ERROR_TRAP       1
+  #define THINKOS_ENABLE_THREAD_FAULT     0
+  #define THINKOS_SYSRST_ONFAULT          0
 #else
-  #define THINKOS_ENABLE_PROFILING      1
-  #define THINKOS_ENABLE_EXCEPTIONS     0
-  #define THINKOS_ENABLE_STACK_INIT     0
-  #define THINKOS_ENABLE_STACK_LIMIT    0
-  #define THINKOS_ENABLE_ARG_CHECK      0
-  #define THINKOS_ENABLE_DEADLOCK_CHECK 0
-  #define THINKOS_ENABLE_SANITY_CHECK   0
-  #define THINKOS_ENABLE_HARDFAULT      0
-  #define THINKOS_ENABLE_MPU            0
-  #define THINKOS_ENABLE_MEMFAULT       0
-  #define THINKOS_ENABLE_BUSFAULT       0
-  #define THINKOS_ENABLE_USAGEFAULT     0
-  #define THINKOS_ENABLE_KRNSVC         0
-  #define THINKOS_ENABLE_ERROR_TRAP     0
-  #define THINKOS_ENABLE_STACK_ALIGN    1
-  #define THINKOS_SYSRST_ONFAULT        1
+  #define THINKOS_ENABLE_PROFILING        1
+  #define THINKOS_ENABLE_RUNMASK          0
+  #define THINKOS_ENABLE_EXCEPTIONS       0
+  #define THINKOS_ENABLE_STACK_INIT       0
+  #define THINKOS_ENABLE_STACK_LIMIT      0
+  #define THINKOS_ENABLE_ARG_CHECK        0
+  #define THINKOS_ENABLE_DEADLOCK_CHECK   0
+  #define THINKOS_ENABLE_SANITY_CHECK     0
+  #define THINKOS_ENABLE_HARDFAULT        0
+  #define THINKOS_ENABLE_BUSFAULT         0
+  #define THINKOS_ENABLE_USAGEFAULT       0
+  #define THINKOS_ENABLE_KRNSVC           0
+  #define THINKOS_ENABLE_ERROR_TRAP       0
+  #define THINKOS_ENABLE_THREAD_FAULT     0
+  #define THINKOS_SYSRST_ONFAULT          0
 #endif
 
-#define THINKOS_EXCEPT_STACK_SIZE       512
+#define THINKOS_ENABLE_STACK_ALIGN        1
+#define THINKOS_EXCEPT_STACK_SIZE         512
 
-#define THINKOS_ENABLE_MONITOR          1
-#define THINKOS_ENABLE_MONITOR_THREADS  0
-#define THINKOS_ENABLE_MONITOR_CLOCK    0
-#define THINKOS_ENABLE_DEBUG_STEP       0
-#define THINKOS_ENABLE_DEBUG_BKPT       0
-#define THINKOS_ENABLE_DEBUG_WPT        0
-#define THINKOS_ENABLE_THREAD_FAULT     0
-#define THINKOS_ENABLE_MEMORY_CLEAR     0
-#define THINKOS_ENABLE_OFAST            0
-#define THINKOS_ENABLE_FLASH_MEM        0
-#define THINKOS_ENABLE_MEM_MAP          0
+#define THINKOS_ENABLE_MONITOR            1
+#define THINKOS_ENABLE_MONITOR_THREADS    0
+#define THINKOS_ENABLE_MONITOR_CLOCK      0
+#define THINKOS_ENABLE_DEBUG_STEP         0
+#define THINKOS_ENABLE_DEBUG_BKPT         0
+#define THINKOS_ENABLE_DEBUG_WPT          0
+#define THINKOS_ENABLE_MEMORY_CLEAR       0
+#define THINKOS_ENABLE_OFAST              0
+#define THINKOS_ENABLE_FLASH_MEM          0
+#define THINKOS_ENABLE_MEM_MAP            0
 
 #if DEBUG
   /* Enable scheduler trace calls */
-  #define THINKOS_ENABLE_SCHED_DEBUG      1
+  #define THINKOS_ENABLE_SCHED_DEBUG      0
   /* Enable scheduler stack error detection */
   #define THINKOS_ENABLE_SCHED_ERROR      1
 #else
@@ -150,7 +148,7 @@
 #define DMPRINTF_ENABLE_FAST              1
 #define DMPRINTF_ENABLE_UNSIGNED          0
 #define THINKOS_CONSOLE_RX_FIFO_LEN       64
-#define THINKOS_CONSOLE_TX_FIFO_LEN       1024
+#define THINKOS_CONSOLE_TX_FIFO_LEN       512
 
 #define THINKOS_ENABLE_IRQ_CYCCNT         0
 #define THINKOS_ENABLE_IRQ_TIMEDWAIT      0
@@ -253,11 +251,11 @@
 #define ENABLE_MONITOR  1
 #define ENABLE_NETWORK  1
 #define ENABLE_TFTP     1
-#define ENABLE_NAND     0
+#define ENABLE_NAND     1
 #define ENABLE_COMM     1
-#define ENABLE_GDB      1
+#define ENABLE_GDB      0
 #define ENABLE_VCOM     0
-#define ENABLE_I2C      0
+#define ENABLE_I2C      1
 #define ENABLE_TELNET   1
 
 #define ENABLE_YMODEM   1

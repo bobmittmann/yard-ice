@@ -792,7 +792,8 @@ send_data:
 	}
 }
 
-uint32_t tftpd_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
+#define TFTPD_STACK_SIZE ALIGN(384 * 4 + (MAX_TFTP_SEGSIZE), 64)
+uint32_t tftpd_stack[TFTPD_STACK_SIZE / 4] __attribute__ ((aligned(64)));
 
 const struct thinkos_thread_inf tftpd_inf = {
 	.stack_ptr = tftpd_stack, 

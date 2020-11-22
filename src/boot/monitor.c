@@ -43,15 +43,15 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-static const struct magic_blk app_magic = {
+const struct magic_blk app_magic = {
 	.hdr = {
 		.pos = 0,
 		.cnt = 3
 	},
 	.rec = {
-		{  0xffffffff, 0x0a0de004 },
-		{  0xffffffff, 0x6e696854 },
-		{  0xffffffff, 0x00534f6b }
+		{  0xffffffff, 0x08000041 },
+		{  0xffffffff, 0x20002000 },
+		{  0xffffffff, 0x00004000 }
 	}
 };
 #pragma GCC diagnostic pop
@@ -80,6 +80,12 @@ struct magic {
 	struct magic_hdr hdr;
 	struct magic_rec rec[];
 };
+
+#if (THINKOS_ENABLE_ERROR_TRAP)
+#define MONITOR_FAULT_ENABLE 1
+#else
+#define MONITOR_FAULT_ENABLE 0
+#endif
 
 #ifndef MONITOR_UPGRADE_ENABLE
   #if DEBUG
@@ -239,17 +245,6 @@ static const struct magic_blk bootloader_magic = {
 
 #if (MONITOR_OSINFO_ENABLE)
 
-void monitor_puthex(uint32_t val, unsigned int witdh, 
-				   const struct monitor_comm * comm);
-
-void monitor_putuint(uint32_t val, unsigned int witdh, 
-					const struct monitor_comm * comm);
-
-void monitor_putint(int32_t val, unsigned int witdh, 
-				   const struct monitor_comm * comm);
-
-int __scan_stack(void * stack, unsigned int size);
-
 
 void print_percent(uint32_t val, const struct monitor_comm * comm)
 {
@@ -322,16 +317,16 @@ static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 			monitor_comm_send_uint(i + 1, 3, comm);
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
-			tag = (rt->th_inf[i] != NULL) ? rt->th_inf[i]->tag : "...";
+			tag = __thinkos_thread_tag_get(i);
 			monitor_comm_send_str(tag, 8, comm);
 			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(__thread_sp_get(rt, i), 8, comm);
+			monitor_comm_send_hex(__thinkos_thread_sp_get(i), 8, comm);
 			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(__thread_lr_get(rt, i), 8, comm);
+			monitor_comm_send_hex(__thinkos_thread_lr_get(i), 8, comm);
 			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(__thread_pc_get(rt, i), 8, comm);
-			monitor_comm_send_uint(__thread_wq_get(rt, i), 4, comm);
-			monitor_comm_send_str(__thread_tmw_get(rt, i) ? 
+			monitor_comm_send_hex(__thinkos_thread_pc_get(i), 8, comm);
+			monitor_comm_send_uint(__thinkos_thread_wq_get(i), 4, comm);
+			monitor_comm_send_str(__thinkos_thread_tmw_get(i) ? 
 								  "Yes" : " No", 4, comm);
 
 #if (THINKOS_ENABLE_PROFILING)
@@ -461,7 +456,7 @@ static void __main_thread_exec(int (* func)(void *), void * arg)
 	int thread_id = 0;
 	struct thinkos_context * ctx;
 
-	DCC_LOG2(LOG_TRACE, "__thinkos_thread_ctx_init(func=%p arg=%p)", func, arg);
+	DCC_LOG2(LOG_INFO, "__thinkos_thread_ctx_init(func=%p arg=%p)", func, arg);
 	ctx = __thinkos_thread_ctx_init(thread_id, (uintptr_t)&_stack, 
 									(uintptr_t)func, (uintptr_t)arg);
 
@@ -479,7 +474,7 @@ static void __main_thread_exec(int (* func)(void *), void * arg)
 	DCC_LOG1(LOG_INFO, "thread=%d [ready]", thread_id);
 	__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);
 
-	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
+	DCC_LOG(LOG_INFO, "__thinkos_defer_sched()");
 	__thinkos_defer_sched();
 }
 
@@ -508,25 +503,6 @@ static bool __monitor_app_exec(uintptr_t addr)
 }
 #else
 
-int boot_run_app(uintptr_t addr)
-{
-	uint32_t * signature = (uint32_t *)addr;
-	uintptr_t thumb;
-	int (* app)(void);
-	int i;
-
-	for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
-		if (signature[i] != app_magic.rec[i].comp) {
-			return -1;
-		}
-	}
-
-
-	thumb = ((uintptr_t)addr) + 1;
-	app = (int (*)(void))thumb;
-
-	return app();
-}
 #endif
 
 /* Default Monitor Task */
@@ -546,13 +522,20 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 #if (MONITOR_APP_EXEC)
 	struct monitor monitor;
 
-	DCC_LOG(LOG_TRACE, "starting monitor...");
+	DCC_LOG(LOG_INFO, "starting monitor...");
 
 	monitor.flags = (uintptr_t)param;
 #endif
 
 	/* unmask events */
 	sigmask |= (1 << MONITOR_SOFTRST);
+#if (MONITOR_FAULT_ENABLE)
+	sigmask |= (1 << MONITOR_THREAD_FAULT);
+#endif
+#if (MONITOR_EXCEPTION_ENABLE)
+	sigmask |= (1 << MONITOR_KRN_ABORT);
+	sigmask |= (1 << MONITOR_KRN_FAULT);
+#endif
 	sigmask |= (1 << MONITOR_COMM_RCV);
 	sigmask |= (1 << MONITOR_COMM_CTL);
 	sigmask |= (1 << MONITOR_TX_PIPE);
@@ -585,6 +568,27 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			monitor_puts("\r\n", comm);
 			goto is_connected;
 
+#if (MONITOR_FAULT_ENABLE)
+		case MONITOR_THREAD_FAULT:
+			{
+			int32_t errno;
+			int32_t thread;
+			
+			DCC_LOG(LOG_ERROR, "THREAD_FAULT!!!");
+
+			monitor_clear(MONITOR_THREAD_FAULT);
+			thread = monitor_thread_break_get(&errno);
+
+			monitor_puts("!ERR: thread=", comm);
+			monitor_comm_send_uint(thread, 5, comm);
+			monitor_puts(" rrno=", comm);
+			monitor_comm_send_uint(errno, 5, comm);
+#if (MONITOR_OSINFO_ENABLE)
+			monitor_signal(MONITOR_USER_EVENT4);
+#endif
+			}
+			break;
+#endif
 #if (MONITOR_UPGRADE_ENABLE)
 		case MONITOR_APP_UPLOAD:
 			monitor_clear(MONITOR_APP_UPLOAD);
@@ -670,7 +674,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 is_connected:
 			status = monitor_comm_status_get(comm);
 			if (status & COMM_ST_CONNECTED) {
-				DCC_LOG(LOG_TRACE, "connected....");
+				DCC_LOG(LOG_INFO, "connected....");
 			}
 			connected = (status & COMM_ST_CONNECTED) ? true : false;
 			thinkos_krn_console_connect_set(connected);
@@ -694,7 +698,7 @@ is_connected:
 		case MONITOR_TX_PIPE:
 			if ((cnt = thinkos_console_tx_pipe_ptr(&ptr)) > 0) {
 				int n;
-				DCC_LOG1(LOG_TRACE, "TX Pipe: cnt=%d, send...", cnt);
+				DCC_LOG1(LOG_INFO, "TX Pipe: cnt=%d, send...", cnt);
 				if ((n = monitor_comm_send(comm, ptr, cnt)) > 0) {
 					thinkos_console_tx_pipe_commit(n);
 					if (n == cnt) {
@@ -713,7 +717,7 @@ is_connected:
 				}
 			} else {
 				/* Wait for TX_PIPE */
-				DCC_LOG1(LOG_TRACE, "TX Pipe: cnt=%d, wait....", cnt);
+				DCC_LOG1(LOG_INFO, "TX Pipe: cnt=%d, wait....", cnt);
 				sigmask |= (1 << MONITOR_TX_PIPE);
 				sigmask &= ~(1 << MONITOR_COMM_EOT);
 			}
@@ -732,12 +736,12 @@ is_connected:
 					thinkos_console_rx_pipe_commit(n);
 					if (n == cnt) {
 						/* Wait for RX_PIPE */
-						DCC_LOG(LOG_TRACE, 
+						DCC_LOG(LOG_INFO, 
 								"RX_PIPE: Wait for RX_PIPE && COMM_RECV");
 						sigmask |= (1 << MONITOR_COMM_RCV);
 						sigmask &=  ~(1 << MONITOR_RX_PIPE);
 					} else {
-						DCC_LOG(LOG_TRACE, "RX_PIPE: Wait for COMM_RECV");
+						DCC_LOG(LOG_INFO, "RX_PIPE: Wait for COMM_RECV");
 						/* Wait for COMM_RECV */
 						sigmask |= (1 << MONITOR_COMM_RCV);
 						sigmask &=  ~(1 << MONITOR_RX_PIPE);

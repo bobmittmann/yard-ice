@@ -353,23 +353,25 @@ static int rsp_h_packet(struct gdb_rsp * gdb, char * pkt)
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
 	case 'c':
-		if (thread_id == THREAD_ID_ALL)
+		if (thread_id == THREAD_ID_ALL) {
 			DCC_LOG(LOG_TRACE, "continue all threads");
-		else if (thread_id == THREAD_ID_ANY)
+		} else if (thread_id == THREAD_ID_ANY) {
 			DCC_LOG(LOG_TRACE, "continue any thread");
-		else
+		} else {
 			DCC_LOG1(LOG_INFO, "continue thread %d", thread_id);
+		}
 		gdb->thread_id.c = thread_id;
 		ret = rsp_ok(gdb);
 		break;
 
 	case 'g':
-		if (thread_id == THREAD_ID_ALL)
+		if (thread_id == THREAD_ID_ALL) {
 			DCC_LOG(LOG_TRACE, "get all threads");
-		else if (thread_id == THREAD_ID_ANY)
+		} else if (thread_id == THREAD_ID_ANY) {
 			DCC_LOG(LOG_TRACE, "get any thread");
-		else
+		} else {
 			DCC_LOG1(LOG_INFO, "get thread %d", thread_id);
+		}
 		gdb->thread_id.g = thread_id;
 		ret = rsp_ok(gdb);
 		break;

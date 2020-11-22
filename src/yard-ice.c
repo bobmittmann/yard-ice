@@ -400,7 +400,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 	}
 }
 
-uint32_t __attribute__((aligned(8))) supervisor_stack[512];
+uint32_t supervisor_stack[512] __attribute__((aligned(64)));
 
 const struct thinkos_thread_inf supervisor_inf = {
 	.stack_ptr = supervisor_stack,

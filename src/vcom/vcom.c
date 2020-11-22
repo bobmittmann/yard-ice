@@ -524,8 +524,8 @@ int __attribute__((noreturn)) serial_input_task(struct vcom * vcom)
 	for (;;);
 }
 
-uint32_t tcp_input_stack[128];
-uint32_t serial_input_stack[128];
+uint32_t tcp_input_stack[128] __attribute__ ((aligned(64)));
+uint32_t serial_input_stack[128] __attribute__ ((aligned(64)));
 
 struct vcom serial_vcom;
 

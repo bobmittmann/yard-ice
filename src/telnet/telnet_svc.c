@@ -576,7 +576,7 @@ int telnet_svc_release(struct telnet_svc * tn)
 	return tcp_close(tn->tp);
 }
 
-uint32_t telnet_input_stack[128];
+uint32_t telnet_input_stack[128] __attribute__ ((aligned(64)));
 
 const struct thinkos_thread_inf telnet_srv_inf = {
 	.stack_ptr = telnet_input_stack, 
@@ -619,4 +619,3 @@ struct telnet_svc * telnet_svc_init(int port)
 
 	return tn;
 }
-

@@ -43,7 +43,7 @@ int val_fp32_encode(value_t * val, const char * s)
 
 int val_fp32_decode(const value_t * val, char * s)
 {
-	return sprintf(s, "%f", val->fp32);
+	return sprintf(s, "%f", (double)val->fp32);
 }
 
 const struct type_def type_def_fp32 = {
