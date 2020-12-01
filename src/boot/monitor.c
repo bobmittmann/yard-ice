@@ -255,15 +255,14 @@ void print_percent(uint32_t val, const struct monitor_comm * comm)
 
 static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 {
-	struct thinkos_rt * rt = &thinkos_rt;
 #if (THINKOS_ENABLE_PROFILING)
-	uint32_t cyc[THINKOS_CTX_CNT];
+	int max = thinkos_krn_threads_max();
+	uint32_t cyc[max];
 	uint32_t cycdiv;
 	uint32_t busy;
 	uint32_t cycsum = 0;
 	uint32_t cycbusy;
 	uint32_t idle;
-	uint32_t dif;
 #endif
 	const char * tag;
 	int i;
@@ -271,18 +270,9 @@ static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 	monitor_puts(s_hr, comm);
 #if (THINKOS_ENABLE_PROFILING)
 	cycsum = 0;
-	for (i = 0; i < THINKOS_CTX_CNT; ++i) {
-		uint32_t cnt = rt->cyccnt[i];
-		uint32_t ref = cycref[i];
 
-		cycref[i] = cnt;
-		dif = cnt - ref; 
-		cycsum += dif;
-		cyc[i] = dif;
-	}
-
-	cycbusy = cycsum - dif;
-
+	cycsum = monitor_threads_cyc_sum(cyc, cycref, 0, max); 
+	cycbusy = cycsum - cyc[THINKOS_THREAD_IDLE];
 	cycdiv = (cycsum + 500) / 1000;
 
 	busy = cycbusy / cycdiv;
@@ -309,7 +299,7 @@ static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 #endif
 	monitor_puts("\r\n", comm);
 
-	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
+	for (i = THINKOS_THREAD_FIRST; i <= THINKOS_THREAD_LAST; ++i) {
 		if (__thinkos_thread_ctx_is_valid(i)) {
 #if (MONITOR_LOCKINFO_ENABLE)
 			int j;
@@ -339,8 +329,9 @@ static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 
 #if (MONITOR_LOCKINFO_ENABLE)
 			for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
-				if (rt->lock[j] == i)
-					monitor_comm_send_uint(j + THINKOS_MUTEX_BASE, 3, comm);
+				unsigned int mtx = j + THINKOS_MUTEX_BASE;
+				if (thinkos_dbg_mutex_lock_get(mtx) == i)
+					monitor_comm_send_uint(mtx, 3, comm);
 			}
 #endif
 
@@ -510,15 +501,15 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
                                             void * param)
 {
 #if (MONITOR_OSINFO_ENABLE)
-	uint32_t cycref[THINKOS_CTX_CNT];
+	uint32_t cycref[thinkos_krn_threads_max()];
 #endif
 	uint32_t sigmask = 0;
+	bool connected;
 	uint8_t buf[4];
 	uint8_t * ptr;
 	uint32_t sig;
-	int cnt;
-	bool connected;
 	int status;
+	int cnt;
 #if (MONITOR_APP_EXEC)
 	struct monitor monitor;
 

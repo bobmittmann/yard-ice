@@ -57,7 +57,6 @@
 #define THINKOS_GATE_MAX                8
 
 #define THINKOS_ENABLE_TIMED_CALLS      1
-#define THINKOS_ENABLE_CLOCK            1
 #define THINKOS_ENABLE_ALARM            1
 #define THINKOS_ENABLE_SLEEP            1
 
@@ -156,7 +155,7 @@
 #define THINKOS_ENABLE_WQ_IRQ             0
 #define THINKOS_ENABLE_DMA                0
 
-#define THINKOS_ENABLE_IDLE_HOOKS         0
+#define THINKOS_ENABLE_IDLE_HOOKS         1
 #define THINKOS_ENABLE_IDLE_WFI           1
 #define THINKOS_ENABLE_I_CALLS            1
 #define THINKOS_ENABLE_PRIVILEGED_THREAD  1
@@ -168,6 +167,7 @@
 
 #define THINKOS_ENABLE_APP                0
 #define THINKOS_MONITOR_ENABLE_COMM_BRK   0
+#define THINKOS_ENABLE_UDELAY_CALIBRATE   0
 
 /* -------------------------------------------------------------------------
  * delay
