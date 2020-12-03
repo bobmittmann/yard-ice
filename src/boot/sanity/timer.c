@@ -90,7 +90,7 @@ int timer_test_init(uint32_t freq)
 //	thinkos_thread_create((void *)timer_task, (void *)freq,
 //			      timer_stack, sizeof(timer_stack));
 	/* Start the main application thread */
-	thinkos_thread_create_inf((int (*)(void *))timer_task, (void *)freq,
+	thinkos_thread_create_inf(C_TASK(timer_task), (void *)freq,
 							&timer_thread_inf);
 
 	return 0;

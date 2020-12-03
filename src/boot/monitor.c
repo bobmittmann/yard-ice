@@ -300,23 +300,23 @@ static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 	monitor_puts("\r\n", comm);
 
 	for (i = THINKOS_THREAD_FIRST; i <= THINKOS_THREAD_LAST; ++i) {
-		if (__thinkos_thread_ctx_is_valid(i)) {
+		if (thinkos_dbg_thread_ctx_is_valid(i)) {
 #if (MONITOR_LOCKINFO_ENABLE)
 			int j;
 #endif
-			monitor_comm_send_uint(i + 1, 3, comm);
+			monitor_comm_send_uint(i, 3, comm);
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
-			tag = __thinkos_thread_tag_get(i);
+			tag = thinkos_dbg_thread_tag_get(i);
 			monitor_comm_send_str(tag, 8, comm);
 			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(__thinkos_thread_sp_get(i), 8, comm);
+			monitor_comm_send_hex(thinkos_dbg_thread_sp_get(i), 8, comm);
 			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(__thinkos_thread_lr_get(i), 8, comm);
+			monitor_comm_send_hex(thinkos_dbg_thread_lr_get(i), 8, comm);
 			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(__thinkos_thread_pc_get(i), 8, comm);
-			monitor_comm_send_uint(__thinkos_thread_wq_get(i), 4, comm);
-			monitor_comm_send_str(__thinkos_thread_tmw_get(i) ? 
+			monitor_comm_send_hex(thinkos_dbg_thread_pc_get(i), 8, comm);
+			monitor_comm_send_uint(thinkos_dbg_thread_wq_get(i), 4, comm);
+			monitor_comm_send_str(thinkos_dbg_thread_tmw_get(i) ? 
 								  "Yes" : " No", 4, comm);
 
 #if (THINKOS_ENABLE_PROFILING)
@@ -328,7 +328,7 @@ static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
 
 
 #if (MONITOR_LOCKINFO_ENABLE)
-			for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
+			for (j = 0; j < THINKOS_MUTEX_MAX; ++j) {
 				unsigned int mtx = j + THINKOS_MUTEX_BASE;
 				if (thinkos_dbg_mutex_lock_get(mtx) == i)
 					monitor_comm_send_uint(mtx, 3, comm);

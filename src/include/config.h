@@ -134,7 +134,7 @@
 
 #if DEBUG
   /* Enable scheduler trace calls */
-  #define THINKOS_ENABLE_SCHED_DEBUG      0
+  #define THINKOS_ENABLE_SCHED_DEBUG      1
   /* Enable scheduler stack error detection */
   #define THINKOS_ENABLE_SCHED_ERROR      1
 #else
@@ -155,7 +155,7 @@
 #define THINKOS_ENABLE_WQ_IRQ             0
 #define THINKOS_ENABLE_DMA                0
 
-#define THINKOS_ENABLE_IDLE_HOOKS         1
+#define THINKOS_ENABLE_IDLE_HOOKS         0
 #define THINKOS_ENABLE_IDLE_WFI           1
 #define THINKOS_ENABLE_I_CALLS            1
 #define THINKOS_ENABLE_PRIVILEGED_THREAD  1

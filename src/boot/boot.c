@@ -182,7 +182,7 @@ bool board_integrity_check(void)
 {
     uint32_t tick;
 
-    for (tick = 0; tick < 4; ++tick) {
+    for (tick = 0; tick < 10; ++tick) {
         thinkos_sleep(500);
     }
 
@@ -197,18 +197,18 @@ int main(int argc, char ** argv)
 #if DEBUG
     DCC_LOG_INIT();
     DCC_LOG_CONNECT();
-    mdelay(125);
+    mdelay(25);
 
     DCC_LOG(LOG_TRACE, "\n\n" VT_PSH VT_BRI VT_FBL);
     DCC_LOG(LOG_TRACE, "*************************************************");
     DCC_LOG(LOG_TRACE, "*     YardICE ThinkOS Custom Bootloader         *");
     DCC_LOG(LOG_TRACE, "*************************************************"
             VT_POP "\n\n");
-    mdelay(125);
+    mdelay(25);
 
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
             "* 1. thinkos_krn_init()." VT_POP);
-    mdelay(125);
+    mdelay(25);
 #endif
 
 	thinkos_krn_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0) |
@@ -217,7 +217,7 @@ int main(int argc, char ** argv)
 #if DEBUG
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
             "* 2. board_init()." VT_POP);
-    mdelay(125);
+    mdelay(25);
 #endif
 	board_init();
 	board_reset();
@@ -228,20 +228,12 @@ int main(int argc, char ** argv)
 #endif
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-
 #if DEBUG
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
             "* 4. thinkos_krn_irq_on()." VT_POP);
 #endif
     /* enable interrupts */
     thinkos_krn_irq_on();
-
-#if DEBUG
-    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
-            "* 5. thinkos_sleep()." VT_POP);
-#endif
-	/* Wait for the other power supply and subsystems to stabilize */
-	thinkos_sleep(100);
 
 #if 0
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
@@ -281,15 +273,15 @@ int main(int argc, char ** argv)
 
 #if DEBUG
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
-            "* 6. thinkos_krn_monitor_init()." VT_POP);
+            "* 5. thinkos_krn_monitor_init()." VT_POP);
 #endif
 	/* starts/restarts monitor with autoboot enabled */
 	thinkos_krn_monitor_init(comm, monitor_task, (void *)flags);
 
 #if DEBUG
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
-            "* 7. board_integrity_check()..." VT_POP);
-    mdelay(125);
+            "* 6. board_integrity_check()..." VT_POP);
+    mdelay(25);
 #endif
     if (!board_integrity_check()) {
         DCC_LOG(LOG_ERROR, VT_PSH VT_BRI VT_FRD
@@ -303,7 +295,7 @@ int main(int argc, char ** argv)
 #if DEBUG
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
             "* 8. boot_run_app()..." VT_POP);
-    mdelay(125);
+    mdelay(25);
 #endif
 	boot_run_app(APPLICATION_START_ADDR, &app_magic);
 

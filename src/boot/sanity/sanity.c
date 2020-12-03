@@ -102,17 +102,41 @@ int main(int argc, char ** argv)
 {
 	stdio_init();
 
-	thinkos_sleep(10);
+	printf("1.\n");
+	thinkos_sleep(1000);
+	printf("2.\n");
+	thinkos_sleep(1000);
+	printf("3.\n");
+	thinkos_sleep(1000);
+	printf("4.\n");
+	thinkos_sleep(1000);
+	printf("5.\n");
+	thinkos_sleep(1000);
+	printf("6.\n");
+	thinkos_sleep(1000);
+	printf("7.\n");
+	thinkos_sleep(1000);
+
+	printf("-------------------------------\n");
+	printf("- YARD-ICE Board sanity test! -\n");
+	printf("-------------------------------\n");
+
+	printf("8.\n");
+	thinkos_sleep(1000);
+	printf("9.\n");
+	thinkos_sleep(1000);
+	printf("10.\n");
+	thinkos_sleep(1000);
 
 	timer_test_init(10);
 
 	/* Start the main application thread */
-	thinkos_thread_create_inf((int (*)(void *))app_task, (void *)stdout,
+	thinkos_thread_create_inf(C_TASK(app_task), (void *)stdout,
 							&app_thread_inf);
 
 
 	for (;;) {
-		thinkos_sleep(10);
+		thinkos_sleep(1000);
 	}
 
 

@@ -22,29 +22,25 @@
 PROJECTDIR = ../../../
 THINKOSDIR = $(PROJECTDIR)/thinkos
 SDKDIR = $(THINKOSDIR)/sdk
+ARCHDIR = $(THINKOSDIR)/arch/stm32
 
 PROG = sanity
 
 CFILES = sanity.c timer.c
 
-LIBDIRS = $(SDKDIR)/libcm3 $(SDKDIR)/libthinkos-usr \
+LIBDIRS = $(SDKDIR)/libthinkos-usr \
 		  $(SDKDIR)/libtty $(SDKDIR)/libutil \
-		  $(SDKDIR)/libc $(SDKDIR)/libstm32f 
+		  $(SDKDIR)/libc $(ARCHDIR)/libstm32f 
 
-LIBS = cm3 gcc m util c thinkos-usr tty stm32f
+LIBS = m util c thinkos-usr tty stm32f
 
-INCPATH = $(SDKDIR)/include $(PROJECTDIR)/src/include
+INCPATH = $(PROJECTDIR)/src/include
 
 CDEFS = CONFIG_H 
-CFLAGS = -g -Og -Wall -ffunction-sections -fdata-sections
-OPTIONS = -g -mno-unaligned-access 
-LDFLAGS = -Wl,--gc-sections 
+CFLAGS = -Og
 
-MACH = stm32f207
-
-THINKAPP = 0x08020000
-LDCODE := $(THINKAPP)
-LDDATA := 0x20000c00
-LDSCRIPT = yard-ice.ld
-include $(THINKOSDIR)/mk/stm32.mk
+MACH = stm32f207xe
+LDCODE := 0x08020000
+LDDATA := 0x20002000
+include $(ARCHDIR)/mk/stm32-app.mk
 
