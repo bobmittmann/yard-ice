@@ -300,6 +300,17 @@ jtag3drv_int_wait(unsigned int irq_mask) {
 	return isr;
 }
 
+static inline uint32_t __attribute__((always_inline)) 
+jtag3drv_int_wait_any(void) {
+	struct stm32f_exti * exti = STM32F_EXTI;
+	uint32_t isr;
+	while ((isr = reg_rd(REG_INT_ST)) == 0) {
+		thinkos_irq_wait(JTAG3DRV_IRQ);
+   		exti->pr = (1 << 6); /* clear external interrupt pending flag */
+	}
+	return isr;
+}
+
 static inline void insn_irscan(unsigned int dsc_ptr, unsigned int final_state) {
 	reg_wr(REG_INSN, INSN_IR_SCAN(dsc_ptr, final_state));
 	jtag3drv_int_wait(IRQ_TAP);
@@ -310,25 +321,11 @@ static inline void insn_drscan(unsigned int dsc_ptr, unsigned int final_state) {
 	jtag3drv_int_wait(IRQ_TAP);
 }
 
-static inline void insn_run_test(unsigned int cnt, unsigned int final_state) {
+static inline void insn_run_test(unsigned int cnt, unsigned int final_state) { 
 	reg_wr(REG_INSN, INSN_RUN_TEST(cnt, final_state));
 	jtag3drv_int_wait(IRQ_TAP);
 }
 
-static inline void insn_tap_reset(unsigned int cnt, unsigned int final_state) {
-	reg_wr(REG_INSN, INSN_TAP_RESET(cnt, final_state));
-	jtag3drv_int_wait(IRQ_TAP);
-}
-
-static inline void insn_ir_pause(unsigned int cnt, unsigned int final_state) {
-	reg_wr(REG_INSN, INSN_IR_PAUSE(cnt, final_state));
-	jtag3drv_int_wait(IRQ_TAP);
-}
-
-static inline void insn_dr_pause(unsigned int cnt, unsigned int final_state) {
-	reg_wr(REG_INSN, INSN_DR_PAUSE(cnt, final_state));
-	jtag3drv_int_wait(IRQ_TAP);
-}
 
 struct jtag3drv {
 
@@ -341,8 +338,6 @@ struct jtag3drv {
 };
 
 extern struct jtag3drv jtag3drv;
-
-
 
 
 #ifdef __cplusplus
@@ -398,6 +393,7 @@ void jtag3ctrl_aux_uart(bool enable);
 bool jtag3ctrl_irq_status(void);
 
 bool jtag3ctrl_fpga_probe(void);
+
 
 #ifdef __cplusplus
 }

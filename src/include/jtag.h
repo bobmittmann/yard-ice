@@ -146,9 +146,9 @@ extern "C" {
  */
 int jtag_start(void);
 
-void jtag_tap_reset(void);
+int jtag_tap_reset(void);
 
-void jtag_run_test(int n, unsigned int final_state);
+int jtag_run_test(int n, unsigned int final_state);
 
 int jtag_ir_scan(const jtag_vec_t in, jtag_vec_t out, 
 				 int vlen, unsigned int final_state);
@@ -156,9 +156,9 @@ int jtag_ir_scan(const jtag_vec_t in, jtag_vec_t out,
 int jtag_dr_scan(const jtag_vec_t in, jtag_vec_t out, 
 				 int vlen, unsigned int final_state);
 
-void jtag_ir_pause(int n, unsigned int final_state);
+int jtag_ir_pause(int n, unsigned int final_state);
 
-void jtag_dr_pause(int n, unsigned int final_state);
+int jtag_dr_pause(int n, unsigned int final_state);
 
 int jtag_ir_stop(int state);
 
@@ -307,7 +307,7 @@ int jtag_drv_init(void);
 
 int jtag_drv_done(void);
 
-void jtag_drv_tap_reset(int cnt);
+int jtag_drv_tap_reset(int cnt);
 
 #ifdef __cplusplus
 }

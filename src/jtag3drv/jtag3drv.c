@@ -53,6 +53,19 @@
 const uint8_t * jtag3ctrl_rbf = (uint8_t *)(FPGA_RBF_ADDR);
 struct jtag3drv jtag3drv;
 
+void insn_ir_pause(unsigned int cnt, unsigned int final_state) 
+{
+	reg_wr(REG_INSN, INSN_IR_PAUSE(cnt, final_state));
+	jtag3drv_int_wait(IRQ_TAP);
+}
+
+void insn_dr_pause(unsigned int cnt, unsigned int final_state) 
+{
+	reg_wr(REG_INSN, INSN_DR_PAUSE(cnt, final_state));
+	jtag3drv_int_wait(IRQ_TAP);
+}
+
+
 /***************************************************************************
  *
  * JTAG - generic operations
@@ -158,11 +171,20 @@ int jtag_nrst(bool assert)
 	return JTAG_OK;
 }
 
-void jtag_run_test(int n, unsigned int final_state)
+int jtag_run_test(int n, unsigned int final_state)
 {	
+	unsigned int isr;
+
 	INF("cycles: %d --> %s", n, jtag_state_name[final_state]);
 
-	insn_run_test(n, final_state);
+	reg_wr(REG_INSN, INSN_RUN_TEST(n, final_state));
+	isr = jtag3drv_int_wait(IRQ_TAP);
+	if ((isr & IRQ_TAP) == 0) {
+		WARN("isr:0x%02x", isr);
+		return -1;
+	}
+
+	return JTAG_OK;
 }
 
 int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout, 
@@ -195,14 +217,24 @@ int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	if (vout != NULL)
 		jtag3ctrl_vec_rd(rx_addr, (uint16_t *)vout, vlen);
 
-	return 0;
+	return JTAG_OK;
 }
 
-void jtag_ir_pause(int n, unsigned int final_state)
+int jtag_ir_pause(int n, unsigned int final_state)
 {
+	unsigned int isr;
+
 	INF("cycles: %d --> %s", n, jtag_state_name[final_state]);
 
-	insn_ir_pause(n, final_state);
+	reg_wr(REG_INSN, INSN_IR_PAUSE(n, final_state));
+	isr = jtag3drv_int_wait(IRQ_TAP);
+
+	if ((isr & IRQ_TAP) == 0) {
+		WARN("isr:0x%02x", isr);
+		return -1;
+	}
+
+	return JTAG_OK;
 }
 
 int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout, 
@@ -235,15 +267,25 @@ int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	if (vout != NULL)
 		jtag3ctrl_vec_rd(rx_addr, (uint16_t *)vout, vlen);
 
-	return 0;
+	return JTAG_OK;
 }
 
-void jtag_dr_pause(int n, unsigned int final_state)
+int jtag_dr_pause(int n, unsigned int final_state)
 {
-	INF("cycles: %d --> %s", n, jtag_state_name[final_state]);
+	unsigned int isr;
 
-	insn_dr_pause(n, final_state);
+	INF("cycles: %d --> %s", n, jtag_state_name[final_state]);
+	reg_wr(REG_INSN, INSN_DR_PAUSE(n, final_state));
+	isr = jtag3drv_int_wait(IRQ_TAP);
+
+	if ((isr & IRQ_TAP) == 0) {
+		WARN("isr:0x%02x", isr);
+		return -1;
+	}
+
+	return JTAG_OK;
 }
+
 
 /***************************************************************************
  *
@@ -251,11 +293,30 @@ void jtag_dr_pause(int n, unsigned int final_state)
  *
  ***************************************************************************/
 
-void jtag_drv_tap_reset(int cnt)
+int jtag_drv_tap_reset(int cnt)
 {	
-	INF("[-----]");
-	insn_tap_reset(cnt, JTAG_TAP_RESET);
+	struct stm32f_exti * exti = STM32F_EXTI;
+	uint32_t isr;
+
+	INF("cycles: %d --> TAP_RESET", cnt);
+
+	isr = reg_rd(REG_INT_ST);
+	if (isr != 0) {
+		WARNS("clearing pending irq!");
+   		exti->pr = (1 << 6); /* clear external interrupt pending flag */
+	}
+
+	reg_wr(REG_INSN, INSN_TAP_RESET(cnt, JTAG_TAP_RESET));
+	thinkos_irq_wait(JTAG3DRV_IRQ);
+	isr = reg_rd(REG_INT_ST);
+	if ((isr & IRQ_TAP) == 0) {
+		WARNS("TAP isr!!");
+   		exti->pr = (1 << 6); /* clear external interrupt pending flag */
+	}
+
 	jtag3drv.arm_scan_chain = -1;
+
+	return JTAG_OK;
 }
 
 
@@ -290,7 +351,7 @@ int jtag_drv_init(void)
 
 	INF("JtagDrv: init done.");
 
-	return 0;
+	return JTAG_OK;
 }
 
 int jtag_drv_done(void)

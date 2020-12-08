@@ -154,28 +154,11 @@ void board_init(void)
 #endif
 }
 
-#define APPLICATION_BLOCK_OFFS 0x00020000
-#define APPLICATION_BLOCK_SIZE (384 * 1024)
-#define APPLICATION_START_ADDR (0x08000000 + APPLICATION_BLOCK_OFFS)
+int board_app_err(void)
+{
+	DCC_LOG(LOG_ERROR, "11. boot_app_err!!!");
 
-extern const struct magic_blk app_magic;
-
-	int boot_run_app(uintptr_t addr, const struct magic_blk * magic) {
-	uint32_t * signature = (uint32_t *)addr;
-	struct flat_app  * hdr = (struct flat_app *)addr;
-	int (* app)(void);
-	int i;
-
-	for (i = 0; i < 0; ++i) {
-		if ((signature[i] & magic->rec[i].mask) != magic->rec[i].comp) {
-			DCC_LOG3(LOG_ERROR, "%d  %08x %08x", i, signature[i], 
-					 magic->rec[i].comp);
-			return -1;
-		}
-	}
-	app = (int (*)(void))hdr->entry;
-
-	return app();
+	return 0;
 }
 
 bool board_integrity_check(void)
@@ -189,10 +172,33 @@ bool board_integrity_check(void)
     return true;
 }
 
-int main(int argc, char ** argv)
+uintptr_t board_app_get(void) 
+{
+	uintptr_t addr = APPLICATION_BLOCK_OFFS;
+	const struct magic_blk * magic = &board_app_magic;
+	uint32_t * signature = (uint32_t *)addr;
+	struct flat_app  * hdr = (struct flat_app *)addr;
+	int i;
+
+	for (i = 0; i < magic->hdr.cnt; ++i) {
+		if ((signature[i] & magic->rec[i].mask) != magic->rec[i].comp) {
+			DCC_LOG3(LOG_ERROR, "%d  %08x %08x", i, signature[i], 
+					 magic->rec[i].comp);
+			return (uintptr_t)board_app_err;
+		}
+	}
+
+	return hdr->entry;
+}
+
+//#void __attribute__((noreturn)) 
+void main(int argc, char ** argv)
 {
 	const struct monitor_comm * comm;
 	uint32_t flags = 0;
+	uintptr_t entry;
+	int (* app)(void);
+
 
 #if DEBUG
     DCC_LOG_INIT();
@@ -289,17 +295,19 @@ int main(int argc, char ** argv)
 #if DEBUG
         mdelay(10000);
 #endif
-        thinkos_abort();
-    }
-
+		entry = (uintptr_t)board_app_err;
+    } else {
 #if DEBUG
-    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
-            "* 8. boot_run_app()..." VT_POP);
-    mdelay(25);
+		DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+				"* 8. boot_run_app()..." VT_POP);
+		mdelay(25);
 #endif
-	boot_run_app(APPLICATION_START_ADDR, &app_magic);
+		entry = board_app_get();
+	}
 
-	DCC_LOG(LOG_ERROR, "11. unreachable code reched!!!");
-	for(;;);
+	app = (int (*)(void))(entry);
+
+	app();
+//	for(;;);
 }
 

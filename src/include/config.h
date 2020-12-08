@@ -175,6 +175,9 @@
 
 #define UDELAY_FACTOR     1706
 
+/* Thinkos User library configureation */
+#define THINKOS_USR_CUSTOM_APP_TAG        "YardIce"
+
 /* -------------------------------------------------------------------------
    Clock 
    -------------------------------------------------------------------------- */

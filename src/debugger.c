@@ -2625,112 +2625,168 @@ int target_probe(FILE * f)
 	return ret;
 }
 
+/*
+ * assert the JTAG TRST signal 
+ * Assynchronous operation....
+ *
+ */
+
 int target_tap_trst(unsigned int mode)
 {
 	struct debugger * dbg = &debugger;
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	bool ice_lock;
+	bool tgt_lock;
 	int ret;
 
 	DCC_LOG(LOG_INFO, ".");
 
-	thinkos_mutex_lock(dbg->target_mutex);
+	tgt_lock = (thinkos_mutex_trylock(dbg->target_mutex) < 0) ? false : true;
+	if (!tgt_lock) {
+		WARN("Target mutex is locked!");
+	}
 
-	/* release the target */
 	poll_stop(dbg);
 
-	thinkos_mutex_lock(dbg->ice_mutex);
-	if ((ret = ice_release(ice)) < 0) {
-		DCC_LOG(LOG_WARNING, "drv->release() fail");
+	ice_lock = (thinkos_mutex_trylock(dbg->ice_mutex) < 0) ? false : true;
+	if (ice_lock) {
+		/* release the target */
+		if ((ret = ice_release(ice)) < 0) {
+			DCC_LOG(LOG_WARNING, "drv->release() fail");
+			dbg->state = DBG_ST_OUTOFSYNC;
+			DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
+		} else {
+			dbg->state = DBG_ST_UNCONNECTED;
+			DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+		}
+	} else {
 		dbg->state = DBG_ST_OUTOFSYNC;
 		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
-	} else {
-		dbg->state = DBG_ST_UNCONNECTED;
-		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+		WARN("ICE mutex is locked!");
 	}
+
 
 	switch (mode) {
 	case TARGET_IO_CLR:
 		ret = jtag_trst(true);
+		INFS("JTAG TRST pin low");
 //		jtag_run_test(1, JTAG_TAP_IDLE);
 		break;
 	case TARGET_IO_SET:
 		ret = jtag_trst(false);
+		INFS("JTAG TRST pin high");
 //		jtag_run_test(1, JTAG_TAP_IDLE);
 		break;
 	default:
+		INFS("JTAG TRST pin pulse");
 		if ((ret = jtag_trst(true)) == JTAG_OK) {
 			jtag_run_test(1, JTAG_TAP_IDLE);
 			ret = jtag_trst(false);
 			jtag_tap_reset();
 		}
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
+	if (ice_lock)
+		thinkos_mutex_unlock(dbg->ice_mutex);
 
-	thinkos_mutex_unlock(dbg->target_mutex);
+	if (tgt_lock)
+		thinkos_mutex_unlock(dbg->target_mutex);
 
 	return ret;
 }
 
+/*
+ * Assert the nRST signal 
+ * Assynchronous operation....
+ *
+ */
 int target_nrst(unsigned int mode, unsigned int ms)
 {
 	struct debugger * dbg = &debugger;
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	bool ice_lock;
+	bool tgt_lock;
+
 	int ret;
 
-	DCC_LOG(LOG_INFO, ".");
-
-	thinkos_mutex_lock(dbg->target_mutex);
-
-	/* release the target */
-	poll_stop(dbg);
-
-	thinkos_mutex_lock(dbg->ice_mutex);
-	if ((ret = ice_release(ice)) < 0) {
-		DCC_LOG(LOG_WARNING, "drv->release() fail");
-		dbg->state = DBG_ST_OUTOFSYNC;
-		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
-	} else {
-		dbg->state = DBG_ST_UNCONNECTED;
-		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+	tgt_lock = (thinkos_mutex_trylock(dbg->target_mutex) < 0) ? false : true;
+	if (!tgt_lock) {
+		WARN("Target mutex is locked!");
 	}
 
-	INF("nRST");
+	poll_stop(dbg);
+
+	ice_lock = (thinkos_mutex_trylock(dbg->ice_mutex) < 0) ? false : true;
+	if (ice_lock) {
+		/* release the target */
+		if ((ret = ice_release(ice)) < 0) {
+			DCC_LOG(LOG_WARNING, "drv->release() fail");
+			dbg->state = DBG_ST_OUTOFSYNC;
+			DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
+		} else {
+			dbg->state = DBG_ST_UNCONNECTED;
+			DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+		}
+	} else {
+		dbg->state = DBG_ST_OUTOFSYNC;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
+		WARN("ICE mutex is locked!");
+	}
 
 	switch (mode) {
 	case 0:
+		INFS("JTAG nRST pin low");
 		ret = jtag_nrst(0);
 		break;
 	case 1:
+		INFS("JTAG nRST pin high");
 		ret = jtag_nrst(1);
 		break;
 	default:
+		INFS("JTAG nRST pin pulse");
 		if ((ret = jtag_nrst(1)) == JTAG_OK) {
 			thinkos_sleep(ms);
 			ret = jtag_nrst(0);
 		}
 	}
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
-	thinkos_mutex_unlock(dbg->target_mutex);
+	if (ice_lock) 
+		thinkos_mutex_unlock(dbg->ice_mutex);
+
+	if (tgt_lock)
+		thinkos_mutex_unlock(dbg->target_mutex);
 
 	return ret;
 }
 
+/*
+ * Reset the JTAG TAP ... 
+ * Assynchronous operation....
+ *
+ */
 int target_tap_reset(void)
 {
 	struct debugger * dbg = &debugger;
+	bool ice_lock;
+	bool tgt_lock;
 
-	DCC_LOG(LOG_INFO, ".");
+	tgt_lock = (thinkos_mutex_trylock(dbg->target_mutex) < 0) ? false : true;
+	if (!tgt_lock) {
+		WARN("Target mutex is locked!");
+	}
 
-	thinkos_mutex_lock(dbg->target_mutex);
+	ice_lock = (thinkos_mutex_trylock(dbg->ice_mutex) < 0) ? false : true;
+	if (!ice_lock) {
+		WARN("ICE mutex is locked!");
+	}
 
-	thinkos_mutex_lock(dbg->ice_mutex);
-
-	INF("TAP reset...");
+	INFS("JTAG TAP reset...");
 	jtag_tap_reset();
-	thinkos_mutex_unlock(dbg->ice_mutex);
 
-	thinkos_mutex_unlock(dbg->target_mutex);
+	if (ice_lock) 
+		thinkos_mutex_unlock(dbg->ice_mutex);
+
+	if (tgt_lock) 
+		thinkos_mutex_unlock(dbg->target_mutex);
 
 	return 0;
 }

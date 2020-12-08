@@ -310,7 +310,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
 
 	{ cmd_ice_info, "ice_info", "ice", 
-		"", "show ICE details" },
+		"[1..9]", "show ICE details" },
 
 	{ cmd_unset, "unset", "", 
 		"VAR", "clear environement variable" },

@@ -1149,6 +1149,10 @@ int cm3ice_release(cm3ice_ctrl_t * ctrl)
 	return 0;
 }
 
+/* 
+ * Synchronizes target ....
+ */
+
 int cm3ice_halt(cm3ice_ctrl_t * ctrl)
 {
 	int ret;

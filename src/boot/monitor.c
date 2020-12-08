@@ -43,15 +43,20 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-const struct magic_blk app_magic = {
+const struct magic_blk board_app_magic = {
 	.hdr = {
 		.pos = 0,
 		.cnt = 3
 	},
 	.rec = {
-		{  0xffffffff, 0x08000041 },
-		{  0xffffffff, 0x20002000 },
-		{  0xffffffff, 0x00004000 }
+		{ 0xffffffff, 0x08020041 },
+		{ 0xffffffff, 0x20020000 },
+		{ 0xffffffff, 0x00004000 },
+/*		{ 0xfff00000, 0x000fffff },
+		{ 0xffffffff, 0x6e696854 },
+        { 0xffffffff, 0x00534f6b },
+        { 0xffffffff, 0x64726159 },
+        { 0xffffffff, 0x00656349 } */
 	}
 };
 #pragma GCC diagnostic pop
@@ -65,21 +70,8 @@ extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
 
 void board_reset(void);
+uintptr_t board_app_get(void);
 
-struct magic_hdr {
-	uint16_t pos;
-	uint16_t cnt;
-};
-
-struct magic_rec {
-	uint32_t mask;
-	uint32_t comp;
-};
-
-struct magic {
-	struct magic_hdr hdr;
-	struct magic_rec rec[];
-};
 
 #if (THINKOS_ENABLE_ERROR_TRAP)
 #define MONITOR_FAULT_ENABLE 1
@@ -118,22 +110,6 @@ struct magic {
 #ifndef MONITOR_APP_EXEC
 #define MONITOR_APP_EXEC               0
 #endif
-
-#define BOOTLOADER_BLOCK_OFFS 0x00000000
-#define BOOTLOADER_BLOCK_SIZE (16 * 1024)
-#define BOOTLOADER_START_ADDR (0x08000000 + BOOTLOADER_BLOCK_OFFS)
-
-#define CONFIG_BLOCK_OFFS 0x00008000
-#define CONFIG_BLOCK_SIZE (16 * 1024)
-#define CONFIG_START_ADDR (0x08000000 + CONFIG_BLOCK_OFFS)
-
-#define RBF_BLOCK_OFFS 0x00010000
-#define RBF_BLOCK_SIZE (64 * 1024)
-#define RBF_START_ADDR (0x08000000 + RBF_BLOCK_OFFS)
-
-#define APPLICATION_BLOCK_OFFS 0x00020000
-#define APPLICATION_BLOCK_SIZE (384 * 1024)
-#define APPLICATION_START_ADDR (0x08000000 + APPLICATION_BLOCK_OFFS)
 
 /* ASCII Keyboard codes */
 
@@ -440,6 +416,7 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 	return true;
 }
 
+
 #if (MONITOR_APP_EXEC)
 
 static void __main_thread_exec(int (* func)(void *), void * arg)
@@ -469,28 +446,19 @@ static void __main_thread_exec(int (* func)(void *), void * arg)
 	__thinkos_defer_sched();
 }
 
-static bool __monitor_app_exec(uintptr_t addr)
+static bool __monitor_app_exec(void)
 {
-	uint32_t * signature = (uint32_t *)addr;
+	uintptr_t entry;
+	int (* app)(void *);
 	int i;
 
-	for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
-		if (signature[i] != app_magic.rec[i].comp) {
-			return false;
-		}
-	}
+	if ((entry = board_app_get()) == 0) 
+		return false;
 
-	if (i < 0) {
-		uintptr_t thumb;
-		int (* app)(void *);
+	app = (int (*)(void *))entry;
+	__main_thread_exec(app, NULL);
 
-		thumb = ((uintptr_t)signature) + 1;
-		app = (int (*)(void *))thumb;
-		__main_thread_exec(app, NULL);
-		return true;
-	}
-
-	return false;
+	return true;
 }
 #else
 
@@ -584,7 +552,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 		case MONITOR_APP_UPLOAD:
 			monitor_clear(MONITOR_APP_UPLOAD);
 			yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, 
-				   &app_magic);
+				   &board_app_magic);
 			break;
 
 		case MONITOR_USER_EVENT1:
@@ -597,7 +565,6 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			yflash(BOOTLOADER_BLOCK_OFFS, BOOTLOADER_BLOCK_SIZE, 
 				   &bootloader_magic);
 			break;
-
 
 #if (MONITOR_UPLOAD_CONFIG_ENABLE)
 		case MONITOR_USER_EVENT3:
@@ -617,7 +584,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 #if (MONITOR_APP_EXEC)
 		case MONITOR_APP_EXEC:
 			monitor_clear(MONITOR_APP_EXEC);
-			if (!__monitor_app_exec(APPLICATION_START_ADDR)) {
+			if (!__monitor_app_exec()) {
 				monitor_puts("!ERR: app\r\n", comm);
 			}
 			break;
