@@ -195,9 +195,12 @@ const struct cm3ice_cfg stellaris_cfg = {
 /*
  * stellaris flash
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 const struct ice_mem_oper flash_stellaris_oper = {
 	.read = (ice_mem_read_t)cm3ice_mem_read,
 	.write = (ice_mem_write_t)stellaris_flash_write, 
 	.erase = (ice_mem_erase_t)stellaris_flash_erase
 };
+#pragma GCC diagnostic pop
 

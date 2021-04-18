@@ -270,12 +270,15 @@ static inline void nand_row_addr(const void * arg, nand_chip_t * chip,
 	case 4:
 		io->addr(arg, chip, page);
 		page >>= 8;
+		/* FALLTHROUGH */
 	case 3:
 		io->addr(arg, chip, page);
 		page >>= 8;
+		/* FALLTHROUGH */
 	case 2:
 		io->addr(arg, chip, page);
 		page >>= 8;
+		/* FALLTHROUGH */
 	default:
 		io->addr(arg, chip, page);
 	}

@@ -23,44 +23,20 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdlib.h>
-#include <stdbool.h>
+#include "monitor-i.h"
 
 #include <sys/stm32f.h>
 #include <sys/delay.h>
 
-#define __THINKOS_DBGMON__
-#include <thinkos/dbgmon.h>
-#include <thinkos.h>
-
 #include <sys/dcclog.h>
+#include <vt100.h>
 
 #include "board.h"
 #include "version.h"
 
 #ifndef RELAY_CHATTER_ENABLE
-#define RELAY_CHATTER_ENABLE 1
+#define RELAY_CHATTER_ENABLE 0
 #endif
-
-void monitor_task(const struct dbgmon_comm * comm, void * param);
-
-void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
-{
-#if DEBUG
-	DCC_LOG(LOG_ERROR, "!");
-	asm volatile ("mov r3, #0\n"
-				  "1:\n"
-				  "cmp r3, #0\n"
-				  "beq 1b\n"
-				  : : );
-#else
-	cm3_sysrst();
-#endif
-}
 
 void board_reset(void)
 {
@@ -78,10 +54,6 @@ void board_init(void)
 {
 	struct stm32_gpio * gpio = STM32_GPIOA;
 	struct stm32_rcc * rcc = STM32_RCC;
-//	struct cm3_scb * scb = CM3_SCB;
-
-	/* Disable exceptions */
-//	scb->shcsr = 0;
 
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "Reset all peripherals ...");
@@ -143,7 +115,6 @@ void board_init(void)
 	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 #endif
 
-
 #if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
@@ -164,11 +135,10 @@ void board_init(void)
 	stm32_gpio_mode(IO_UART5_TX, INPUT, SPEED_LOW | PULL_UP);
 #endif
 
-#if RELAY_CHATTER_ENABLE
-  #if DEBUG
+#if DEBUG
+  #if RELAY_CHATTER_ENABLE
 	DCC_LOG(LOG_TRACE, "Relay chatter ...");
 	udelay(0x40000);
-  #endif
 	/* - Relay ------------------------------------------------------------*/
 	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
 	stm32_gpio_clr(IO_RELAY);
@@ -180,94 +150,109 @@ void board_init(void)
 	stm32_gpio_set(IO_RELAY);
 	thinkos_sleep(256);
 	stm32_gpio_clr(IO_RELAY);
+  #endif
 #endif
 }
 
-#define MONITOR_AUTOBOOT 1
-#define MONITOR_SHELL 2
-
-#define CTRL_C  0x03 /* ETX */
-
-void main(int argc, char ** argv)
+int board_app_err(void)
 {
-	const struct dbgmon_comm * comm;
-	uint32_t flags = 0;
-	char buf[1];
+	DCC_LOG(LOG_ERROR, "11. boot_app_err!!!");
+
+	return 0;
+}
+
+bool board_integrity_check(void)
+{
+    uint32_t tick;
+
+    for (tick = 0; tick < 10; ++tick) {
+        thinkos_sleep(500);
+    }
+
+    return true;
+}
+
+uintptr_t board_app_get(void) 
+{
+	uintptr_t addr = APPLICATION_BLOCK_OFFS;
+	const struct magic_blk * magic = &board_app_magic;
+	uint32_t * signature = (uint32_t *)addr;
+	struct flat_app  * hdr = (struct flat_app *)addr;
 	int i;
 
+	for (i = 0; i < magic->hdr.cnt; ++i) {
+		if ((signature[i] & magic->rec[i].mask) != magic->rec[i].comp) {
+			DCC_LOG3(LOG_ERROR, "%d  %08x %08x", i, signature[i], 
+					 magic->rec[i].comp);
+			return (uintptr_t)board_app_err;
+		}
+	}
 
-	DCC_LOG_INIT();
-#if DEBUG
-	DCC_LOG_CONNECT();
-	udelay(0x10000);
-	DCC_LOG(LOG_INFO, "______________________________________________________");
-	DCC_LOG(LOG_INFO, "_________________ ! Board start up ! _________________");
-	DCC_LOG(LOG_INFO, "______________________________________________________");
-	udelay(0x10000);
-#endif
+	return hdr->entry;
+}
 
-#ifndef UDELAY_FACTOR 
-	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
-	cm3_udelay_calibrate();
-#endif
+//#void __attribute__((noreturn)) 
+void main(int argc, char ** argv)
+{
+	const struct monitor_comm * comm;
+	uint32_t flags = 0;
+	uintptr_t entry;
+	int (* app)(void);
 
-#if DEBUG
-	DCC_LOG1(LOG_TRACE, "1. udelay_factor=%d.", udelay_factor);
-	udelay(0x10000);
-#endif
-
-#if DEBUG
-	DCC_LOG(LOG_TRACE, "2. thinkos_krn_init().");
-	udelay(0x10000);
-#endif
-	thinkos_krn_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), NULL, NULL);
 
 #if DEBUG
-	DCC_LOG(LOG_TRACE, "3. board_init().");
-	udelay(0x10000);
+    DCC_LOG_INIT();
+    DCC_LOG_CONNECT();
+    mdelay(25);
+
+    DCC_LOG(LOG_TRACE, "\n\n" VT_PSH VT_BRI VT_FBL);
+    DCC_LOG(LOG_TRACE, "*************************************************");
+    DCC_LOG(LOG_TRACE, "*     YardICE ThinkOS Custom Bootloader         *");
+    DCC_LOG(LOG_TRACE, "*************************************************"
+            VT_POP "\n\n");
+    mdelay(25);
+
+    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+            "* 1. thinkos_krn_init()." VT_POP);
+    mdelay(25);
 #endif
 
+	thinkos_krn_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0) |
+					 THINKOS_OPT_PRIVILEGED, NULL, NULL);
+
+#if DEBUG
+    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+            "* 2. board_init()." VT_POP);
+    mdelay(25);
+#endif
 	board_init();
-
-	/* Wait for the other power supply and subsystems to stabilize */
-	DCC_LOG(LOG_TRACE, "4. thinkos_sleep().");
-	thinkos_sleep(100);
-
-#if DEBUG
-	DCC_LOG(LOG_TRACE, "5. usb_comm_init()");
-	udelay(0x40000);
-#endif
-
-	comm = usb_comm_init(&stm32f_otg_fs_dev);
-
-#if THINKOS_ENABLE_CONSOLE
-#if DEBUG
-	DCC_LOG(LOG_TRACE, "6. thinkos_console_init()");
-	udelay(0x40000);
-#endif
-	thinkos_console_init();
-#endif
-
-#if THINKOS_ENABLE_MPU
-#if DEBUG
-	DCC_LOG(LOG_TRACE, "6. thinkos_mpu_init()");
-	udelay(1024);
-#endif
-	thinkos_mpu_init(0x0c00);
-#endif
-
 	board_reset();
 
-	DCC_LOG(LOG_TRACE, "8. thinkos_dbgmon()");
+#if DEBUG
+	DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+			"* 3. usb_comm_init()." VT_POP);
+#endif
+	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
+#if DEBUG
+    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+            "* 4. thinkos_krn_irq_on()." VT_POP);
+#endif
+    /* enable interrupts */
+    thinkos_krn_irq_on();
+
+#if 0
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
 		DCC_LOG(LOG_TRACE, "SHELL | AUTOBOOT");
 		/* If  jumper is inserted between JTRST and GND boot up now
 		   and enable the monitor shell. */
 		flags = MONITOR_SHELL | MONITOR_AUTOBOOT;
 	} else {
+		char buf[1];
+		int i;
+
 		/* starts monitor with shell enabled */
-		thinkos_dbgmon(monitor_task, comm, (void *)MONITOR_SHELL);
+		thinkos_krn_monitor_init(comm, monitor_task, (void *)MONITOR_SHELL);
 		flags = MONITOR_AUTOBOOT;
 
 		for (i = 0; ; ++i) {
@@ -283,25 +268,46 @@ void main(int argc, char ** argv)
 				}
 			} else if (flags & MONITOR_AUTOBOOT) {
 				if (i < 9) {
-					if (dbgmon_comm_isconnected(comm))
+					if (monitor_comm_isconnected(comm))
 						thinkos_console_write(".", 1);
 				} else
 					break;
 			}
 		}
 	}
-
-#if THINKOS_ENABLE_MPU
-	DCC_LOG(LOG_TRACE, "9. thinkos_userland()");
-	thinkos_userland();
 #endif
 
+#if DEBUG
+    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+            "* 5. thinkos_krn_monitor_init()." VT_POP);
+#endif
 	/* starts/restarts monitor with autoboot enabled */
-	thinkos_dbgmon(monitor_task, comm, (void *)flags);
+	thinkos_krn_monitor_init(comm, monitor_task, (void *)flags);
 
-	DCC_LOG(LOG_TRACE, "10. thinkos_thread_abort()");
-	thinkos_thread_abort(0);
+#if DEBUG
+    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+            "* 6. board_integrity_check()..." VT_POP);
+    mdelay(25);
+#endif
+    if (!board_integrity_check()) {
+        DCC_LOG(LOG_ERROR, VT_PSH VT_BRI VT_FRD
+                "**** board_integrity_check() failed." VT_POP);
+#if DEBUG
+        mdelay(10000);
+#endif
+		entry = (uintptr_t)board_app_err;
+    } else {
+#if DEBUG
+		DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
+				"* 8. boot_run_app()..." VT_POP);
+		mdelay(25);
+#endif
+		entry = board_app_get();
+	}
 
-	DCC_LOG(LOG_ERROR, "11. unreachable code reched!!!");
+	app = (int (*)(void))(entry);
+
+	app();
+//	for(;;);
 }
 

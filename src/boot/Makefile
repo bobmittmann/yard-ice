@@ -21,30 +21,33 @@
 
 THINKOSDIR = ../../thinkos
 SDKDIR = $(THINKOSDIR)/sdk
+ARCHDIR = $(THINKOSDIR)/arch/stm32
 
-VERSION_DATE = "2019-10-12"
+VERSION_DATE = "2020-12-08"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "28"
+VERSION_MINOR = "32"
 
 PROG = thinkos-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 CFILES = boot.c monitor.c otg_xflash_pic.c
 
-LIBDIRS = $(SDKDIR)/libstm32f $(SDKDIR)/libcm3 $(SDKDIR)/libutil\
+LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libutil\
 		  $(SDKDIR)/libice-comm \
-		  $(SDKDIR)/libthinkos-krn $(SDKDIR)/libthinkos-dbg 
+		  $(SDKDIR)/libthinkos-krn $(SDKDIR)/libthinkos-mon
 		  
 # $(SDKDIR)/libice-comm ice-comm 
 
-LIBS = cm3 stm32f util thinkos-krn thinkos-dbg ice-comm gcc 
+LIBS = thinkos-krn thinkos-mon stm32f util ice-comm gcc 
 
-INCPATH = $(SDKDIR)/include ../include
+INCPATH = ../include
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
+CDEFS = CONFIG_H 
 
-CFLAGS = -Os -Wall -Wextra -fno-builtin -ffreestanding -fomit-frame-pointer -Wno-unused-parameter
-OPTIONS = -g -mno-unaligned-access 
+CFLAGS = -Os 
 
-MACH = stm32f207
-include $(THINKOSDIR)/mk/stm32.mk
+RAM_VECTORS = 1
+MACH = stm32f207xe
+KRN_CODE_SIZE = 16384
+KRN_DATA_SIZE = 4096
+include $(ARCHDIR)/mk/stm32-krn.mk
 

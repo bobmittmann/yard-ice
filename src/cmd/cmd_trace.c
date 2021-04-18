@@ -74,29 +74,34 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 	}
 
 	if (dump || flush) {
-		struct trace_entry trace;
-		struct timeval tv;
-		char s[80];
+		struct trace_iterator trace_it;
+		struct trace_entry * trace;
 
 		fprintf(f, "---------\n");
 
-		trace_tail(&trace);
+		trace_tail(&trace_it);
 
-		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
-			trace_ts2timeval(&tv, trace.dt);
-			if (trace.ref->lvl <= TRACE_LVL_WARN)
+		while ((trace = trace_getnext(&trace_it)) != NULL) {
+			struct timeval tv;
+			unsigned int lvl;
+			char s[80];
+
+			trace_fmt(trace, s, sizeof(s));
+			trace_ts2timeval(&tv, trace->dt);
+
+			if ((lvl = trace->ref->lvl) <= TRACE_LVL_WARN)
 				fprintf(f, "%s %2d.%06d: %s,%d: %s\n",
-						trace_lvl_nm[trace.ref->lvl],
+						trace_lvl_nm[lvl],
 						(int)tv.tv_sec, (int)tv.tv_usec,
-						trace.ref->func, trace.ref->line, s);
+						trace->ref->func, trace->ref->line, s);
 			else
 				fprintf(f, "%s %2d.%06d: %s\n",
-						trace_lvl_nm[trace.ref->lvl],
+						trace_lvl_nm[lvl],
 						(int)tv.tv_sec, (int)tv.tv_usec, s);
 		}
 
 		if (flush)
-			trace_flush(&trace);
+			trace_flush(&trace_it);
 	}
 
 	return 0;

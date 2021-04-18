@@ -66,7 +66,7 @@
 #define AT91_BASE_WDTC      0xfffffd40
 #define AT91_BASE_GPBR      0xfffffd50
 
-#define AT91SAM9260_CHIP_ID 0x019803A2
+#define AT91SAM9260_CHIP_ID      0x019803A0
 #define AT91SAM9260_CHIP_ID_MASK 0xfffffff0
 
 #define AT91SAM9260_JTAG_ID 0x05B1303F
@@ -77,7 +77,7 @@
 #define FLASH_CYCLE ((BOOT_FLASH_TIME_NS + MCLK_NS - 1) / MCLK_NS)
 
 const struct target_sym at91sam9_sym[] = {
-	{0, "", 0} 
+	{0, "", 0, 0} 
 };
 
 static void at91_cs0_init(FILE * f, const struct ice_drv * ice)

@@ -161,7 +161,8 @@ int dm365_nand_ecc_correct(const void * arg, nand_chip_t * chip,
 		errval = AEMIF_REG_RD(AEMIF_NANDERRVAL2);
 		fixval = (errval & 0x03ff0000) >> 16;
 		data[offs] ^= (uint8_t)fixval;
-		/* Fall through to case 2 */
+		/* Fall-through to case 2 */
+		/* FALLTHROUGH */
 	case 2: /* Three errors */
 		addr = AEMIF_REG_RD(AEMIF_NANDERRADD2);
 		offs = 519 - (addr & 0x000003ff);
@@ -171,6 +172,7 @@ int dm365_nand_ecc_correct(const void * arg, nand_chip_t * chip,
 		fixval = errval & 0x000003ff;
 		data[offs] ^= (uint8_t)fixval;
 		/* Fall through to case 1 */
+		/* FALLTHROUGH */
 	case 1: /* Two errors */
 		addr = AEMIF_REG_RD(AEMIF_NANDERRADD1);
 		offs = 519 - ((addr & 0x03ff0000) >> 16 );
@@ -180,6 +182,7 @@ int dm365_nand_ecc_correct(const void * arg, nand_chip_t * chip,
 		fixval = (errval & 0x03ff0000) >> 16;
 		data[offs] ^= (uint8_t)fixval;        
 		/* Fall through to case 0 */
+		/* FALLTHROUGH */
 	case 0: /* One error */
 		addr = AEMIF_REG_RD(AEMIF_NANDERRADD1);
 		offs = 519 - (addr & 0x000003ff);

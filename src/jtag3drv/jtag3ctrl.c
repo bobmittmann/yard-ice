@@ -328,11 +328,10 @@ int jtag3ctrl_init(const void * rbf, int size)
 	jtag3ctrl_bus_init(NULL);
 	
 	if ((ret = altera_configure(rbf, size)) < 0) {
-		DCC_LOG1(LOG_ERROR, "altera_configure() failed: %d!", ret);
-		INF(" # altera_configure() failed: %d!", ret);
+		ERR(" # altera_configure() failed: %d!", ret);
 		return ret;
 	} else {
-		INF("- FPGA configuration done (%d bytes)", ret);
+		INF("FPGA configuration done (%d bytes)", ret);
 	}
 
 	/* Enable clock output */
@@ -354,33 +353,37 @@ bool jtag3ctrl_irq_status(void)
 
 bool jtag3ctrl_fpga_probe(void)
 {
+	uint32_t clk1;
+	uint32_t clk0;
+	int32_t dt;
 	int cnt;
 	int j;
+
+	clk0 = thinkos_clock();
+	INF("FPGA IRQ probe start");
 
 	/* check whether the interrupts are working or not */
 	reg_wr(REG_TMR, 0);
 	/* enable timer interrupts */
 	reg_wr(REG_INT_EN, IRQ_TMR);
 
-	for (j = 0; j < 64; ++j) {
-		cnt = 100;
+	for (j = 0; j < 2048; ++j) {
+		cnt = 8192;
 		while (jtag3ctrl_irq_status()) {
 			/* clear interrupts */
 			reg_wr(REG_INT_ST, 0xffff);
 			if (--cnt == 0) {
-				DCC_LOG1(LOG_WARNING, "IRQ line stuck at high! %d", j);
-				INF("- FPGA IRQ probe failed. Stuck at high!");
+				WARN("FPGA IRQ probe failed. Stuck at high (%d)!", j);
 				return false;
 			}
 		}
 
 		reg_wr(REG_TMR, 4);
 
-		cnt = 100;
+		cnt = 8192;
 		while (!jtag3ctrl_irq_status()) {
 			if (--cnt == 0) {
-				DCC_LOG(LOG_WARNING, "IRQ line stuck at low!");
-				INF("- FPGA IRQ probe failed. Stuck at low.");
+				WARN("FPGA IRQ probe failed. Stuck at low.");
 				return false;
 			}
 		}
@@ -390,7 +393,11 @@ bool jtag3ctrl_fpga_probe(void)
 		reg_wr(REG_INT_ST, 0xffff);
 	}
 
-	INF("- FPGA IRQ probe OK.");
+	clk1 = thinkos_clock();
+
+	dt = (clk1 - clk0);
+
+	INF("FPGA IRQ probe, dt=%dms", dt);
 
 	return true;
 }

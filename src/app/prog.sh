@@ -3,7 +3,7 @@
 TOOLS_DIR=../../tools
 PYTHON=python
 if [ -z "$JTAGTOOL_ADDR" ]; then
-	JTAGTOOL_ADDR=192.168.0.51
+	JTAGTOOL_ADDR=192.168.1.51
 fi
 # Collect ".bin" files in the positional parameters
 set -- `ls release/*.bin`

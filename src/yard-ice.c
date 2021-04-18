@@ -53,7 +53,6 @@
 #include <sys/tty.h>
 
 #include <jtag.h>
-#include <trace.h>
 #include <ctype.h>
 
 #include <yard-ice/drv.h>
@@ -62,6 +61,7 @@
 #define TRACE_ENABLE_VT100    1
 #endif
 
+#define TRACE_LEVEL_DBG
 #include <trace.h>
 
 #if TRACE_ENABLE_VT100
@@ -279,8 +279,9 @@ int trace_syslog_encode(char * buf, struct trace_entry * entry,
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
+	struct trace_iterator trace_it;
 	struct udp_pcb * udp = NULL;
-	struct trace_entry trace;
+	struct trace_entry * trace;
 	bool eth_link_up = false;
 	uint32_t eth_tmo;
 	uint32_t clk;
@@ -288,14 +289,10 @@ void __attribute__((noreturn)) supervisor_task(void)
 	struct sockaddr_in sin;
 	bool autoflush;
 
-	DCC_LOG(LOG_TRACE, "1.");
 	INF("<%d> started...", thinkos_thread_self());
 
-	DCC_LOG(LOG_TRACE, "2.");
-	trace_tail(&trace);
+	trace_tail(&trace_it);
 
-
-	DCC_LOG(LOG_TRACE, "3.");
 	clk = thinkos_clock();
 	eth_tmo = clk + 100;
 	for (;;) {
@@ -319,15 +316,16 @@ void __attribute__((noreturn)) supervisor_task(void)
 		autoflush = trace_autoflush;
 
 		if ((udp != NULL) || (file != NULL)) {
-			while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+			while ((trace = trace_getnext(&trace_it)) != NULL) {
 				unsigned int n;
 				unsigned int lvl;
 				struct timeval tv;
 
-				trace_ts2timeval(&tv, trace.dt);
+				n = trace_fmt(trace, s, sizeof(s));
+				trace_ts2timeval(&tv, trace->dt);
 
 				if (file != NULL) {
-					if ((lvl = trace.ref->lvl) <= TRACE_LVL_WARN)
+					if ((lvl = trace->ref->lvl) <= TRACE_LVL_WARN)
 #if TRACE_ENABLE_VT100
 						/* extra info */
 						n = sprintf(line, _ATTR_PUSH_ "%s "
@@ -335,13 +333,13 @@ void __attribute__((noreturn)) supervisor_task(void)
 									_ATTR_POP_ "\n",
 									lvl_attr_nm[lvl],
 									(int) tv.tv_sec, (int) tv.tv_usec, 
-									trace.ref->func, trace.ref->line,
+									trace->ref->func, trace->ref->line,
 									txt_attr[lvl], s);
 
 #else
 					n = sprintf(line, "%2d.%06d: %s,%d: %s%s\n",
 								(int) tv.tv_sec, (int) tv.tv_usec, 
-								trace.ref->func, trace.ref->line,
+								trace->ref->func, trace->ref->line,
 								s);
 #endif
 					else
@@ -356,7 +354,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 									s);
 #else
 						n = sprintf(line, "%s %2d.%06d: %s\n",
-									trace_lvl_nm[trace.ref->lvl],
+									trace_lvl_nm[trace->ref->lvl],
 									(int)tv.tv_sec, (int)tv.tv_usec, s);
 
 #endif
@@ -366,16 +364,15 @@ void __attribute__((noreturn)) supervisor_task(void)
 
 				if (udp != NULL)  {
 					/* send log to remote station */
-					trace_tm2timeval(&tv, trace.tm);
-					n = trace_syslog_encode(line, &trace, &tv, s);
-					printf(line);
+					trace_tm2timeval(&tv, trace->tm);
+					n = trace_syslog_encode(line, trace, &tv, s);
 					udp_sendto(udp, line, n, &sin);
 					//				udp_send(udp, line, n);
 				}
 			}
 
 			if (autoflush)
-				trace_flush(&trace);
+				trace_flush(&trace_it);
 		}
 
 		if ((int32_t)(clk - eth_tmo) >= 0) {
@@ -403,7 +400,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 	}
 }
 
-uint32_t supervisor_stack[512];
+uint32_t supervisor_stack[512] __attribute__((aligned(64)));
 
 const struct thinkos_thread_inf supervisor_inf = {
 	.stack_ptr = supervisor_stack,
@@ -512,7 +509,6 @@ int network_config(void)
 	ethaddr[0] = (ethaddr[0] & 0xfc) | 0x02; /* Locally administered MAC */
 
 
-	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
 
 	if ((env = getenv("IPCFG")) == NULL) {
@@ -529,7 +525,6 @@ int network_config(void)
 		eth_strtomac(ethaddr, env);
 	} else {
 		INF("Ethernet MAC address not set, using defaults!");
-		DCC_LOG(LOG_WARNING, "Ethernet MAC address not set.");
 	}
 
     INF("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x",
@@ -537,7 +532,6 @@ int network_config(void)
 		   ethaddr[3], ethaddr[4], ethaddr[5]);
 
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
-		DCC_LOG(LOG_WARNING, "inet_aton() failed.");
 		return -1;
 	}
 
@@ -613,8 +607,7 @@ int init_target(void)
 
 	/* TODO: ice driver selection */
 	if (target_ice_configure(stdout, target, 1) < 0) {
-		INF("ERROR: target_ice_configure()!");
-		DCC_LOG(LOG_WARNING, "target_ice_configure() failed!");
+		WARN("ERROR: target_ice_configure()!");
 		return -1;
 	}
 
@@ -624,8 +617,7 @@ int init_target(void)
 		   target->arch->cpu->vendor);
 
 	if (target_config(stdout) < 0) {
-		INF("ERROR: target_config()!");
-		DCC_LOG(LOG_WARNING, "target_config() failed!");
+		WARN("ERROR: target_config()!");
 		return -1;
 	}
 
@@ -657,10 +649,10 @@ int sys_start(void);
 int main(int argc, char ** argv)
 {
 	int ret;
+
 	io_init();
 
 #ifdef THINKAPP
-	DCC_LOG(LOG_TRACE, " 1. thinkos_udelay_factor().");
 	thinkos_udelay_factor(&udelay_factor);
 #else
 	DCC_LOG_INIT();
@@ -684,11 +676,16 @@ int main(int argc, char ** argv)
 
 #endif
 
-	DCC_LOG(LOG_TRACE, " 5. stdio_init().");
 	stdio_init();
 	printf("\n---\n");
+	printf("YARD-ICE " VERSION_NUM " - " VERSION_DATE "\n");
 
-	DCC_LOG(LOG_TRACE, " 6. trace_init().");
+	DCC_LOG(LOG_TRACE, " 8. stm32f_nvram_env_init().");
+	stm32f_nvram_env_init();
+
+	DCC_LOG(LOG_TRACE, " 9. rtc_init().");
+	rtc_init();
+
 	trace_init();
 
 	INF("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
@@ -696,11 +693,20 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, " 7. supervisor_init().");
 	supervisor_init();
 
-	DCC_LOG(LOG_TRACE, " 8. stm32f_nvram_env_init().");
-	stm32f_nvram_env_init();
+#if 0
+	char * env;
 
-	DCC_LOG(LOG_TRACE, " 9. rtc_init().");
-	rtc_init();
+	if ((env = getenv("TRACE")) != NULL) {
+		INF("TRACE='%s'", env);
+		if (strcmp(env, "stderr") == 0) {
+			trace_file_set(stderr);
+			trace_autoflush_set(true);
+		}
+	} else {
+		trace_file_set(stderr);
+		INFS("TRACE environment not set.");
+	}
+#endif
 
 	DCC_LOG(LOG_TRACE, " 10. modules_init().");
 	modules_init();
@@ -716,7 +722,7 @@ int main(int argc, char ** argv)
 	INF("* Initializing JTAG module ...");
 	DCC_LOG(LOG_TRACE, " 13. jtag_start().");
 	if ((ret = jtag_start()) < 0) {
-		INF("jtag_start() failed! [ret=%d]", ret);
+		ERR("jtag_start() failed! [ret=%d]", ret);
 		debugger_except("JTAG driver fault");
 	}
 
@@ -736,7 +742,7 @@ int main(int argc, char ** argv)
 #endif
 
 #if ENABLE_NETWORK
-	DCC_LOG(LOG_TRACE, " 17. network_config().");
+	DCC_LOG(LOG_TRACE, " 16. network_config().");
 	INF("* Initializing network...");
 	network_config();
 #endif
@@ -745,19 +751,18 @@ int main(int argc, char ** argv)
 	INF("* starting VCOM daemon ... ");
 	/* connect the UART to the JTAG auxiliary pins */
 	jtag3ctrl_aux_uart(true);
-	DCC_LOG(LOG_TRACE, "18. vcom_start().");
 	vcom_start();
 #endif
 
 #if (ENABLE_COMM)
 	INF("* starting COMM daemon ... ");
-	DCC_LOG(LOG_TRACE, "19. comm_tcp_start().");
+	DCC_LOG(LOG_TRACE, "18. comm_tcp_start().");
 	comm_tcp_start(&debugger.comm);
 #endif
 
 #if (ENABLE_TFTP)
 	INF("* starting TFTP server ... ");
-	DCC_LOG(LOG_TRACE, "20. tftpd_start().");
+	DCC_LOG(LOG_TRACE, "19. tftpd_start().");
 	tftpd_start();
 #endif
 
@@ -796,18 +801,16 @@ int main(int argc, char ** argv)
 
 #if ENABLE_TELNET
 	INF("* starting TELNET server ... ");
-	DCC_LOG(LOG_TRACE, "24. telnet_shell().");
 	telnet_shell();
 #endif
 
 	INF("* configuring initial target ... ");
-	DCC_LOG(LOG_TRACE, "16. init_target().");
 	init_target();
 
 	for (;;) {
-		thinkos_sleep(500);
-
-		DCC_LOG(LOG_TRACE, "25. stdio_shell().");
+//		INF("* shell... ");
+		DCC_LOG(LOG_TRACE, "tick...");
+		thinkos_sleep(1000);
 		stdio_shell();
 	}
 

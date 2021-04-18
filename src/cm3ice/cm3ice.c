@@ -1149,6 +1149,10 @@ int cm3ice_release(cm3ice_ctrl_t * ctrl)
 	return 0;
 }
 
+/* 
+ * Synchronizes target ....
+ */
+
 int cm3ice_halt(cm3ice_ctrl_t * ctrl)
 {
 	int ret;
@@ -2087,6 +2091,8 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which);
 int cm3ice_test(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t req, 
 				uint32_t argc, uint32_t argv[]);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 const struct ice_oper cm3ice_oper = {
 
 	.open = (ice_open_t)cm3ice_open,
@@ -2154,6 +2160,7 @@ const struct ice_oper cm3ice_oper = {
 
 	.print_insn = (ice_print_insn_t)cm3_print_insn
 };
+#pragma GCC diagnostic pop
 
 
 const struct ice_drv_info cm3ice_drv = {

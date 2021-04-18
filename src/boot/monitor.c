@@ -26,9 +26,8 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#include "monitor-i.h"
+#include "version.h"
 
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
@@ -37,83 +36,80 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define __THINKOS_DBGMON__
-#include <thinkos/dbgmon.h>
 #define __THINKOS_BOOTLDR__
 #include <thinkos/bootldr.h>
-#include <thinkos.h>
-#include <sys/dcclog.h>
-#include <sys/delay.h>
-#include "version.h"
 
-static const struct magic_blk app_magic = {
+#include <sys/dcclog.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+const struct magic_blk board_app_magic = {
 	.hdr = {
 		.pos = 0,
 		.cnt = 3
 	},
 	.rec = {
-		{  0xffffffff, 0x0a0de004 },
-		{  0xffffffff, 0x6e696854 },
-		{  0xffffffff, 0x00534f6b }
+		{ 0xffffffff, 0x08020041 },
+		{ 0xffffffff, 0x20020000 },
+		{ 0xffffffff, 0x00004000 },
+/*		{ 0xfff00000, 0x000fffff },
+		{ 0xffffffff, 0x6e696854 },
+        { 0xffffffff, 0x00534f6b },
+        { 0xffffffff, 0x64726159 },
+        { 0xffffffff, 0x00656349 } */
 	}
 };
+#pragma GCC diagnostic pop
 
 extern int __heap_end;
 const void * heap_end = &__heap_end; 
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
-void board_reset(void);
-
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
 
-struct magic_hdr {
-	uint16_t pos;
-	uint16_t cnt;
-};
+void board_reset(void);
+uintptr_t board_app_get(void);
 
-struct magic_rec {
-	uint32_t mask;
-	uint32_t comp;
-};
 
-struct magic {
-	struct magic_hdr hdr;
-	struct magic_rec rec[];
-};
+#if (THINKOS_ENABLE_ERROR_TRAP)
+#define MONITOR_FAULT_ENABLE 1
+#else
+#define MONITOR_FAULT_ENABLE 0
+#endif
 
 #ifndef MONITOR_UPGRADE_ENABLE
-#if DEBUG
-#define MONITOR_UPGRADE_ENABLE     0
-#else
-#define MONITOR_UPGRADE_ENABLE     1
-#endif
+  #if DEBUG
+    #define MONITOR_UPGRADE_ENABLE     0
+  #else
+    #define MONITOR_UPGRADE_ENABLE     1
+  #endif
 #endif
 
 #ifndef MONITOR_APPRESTART_ENABLE
-#define MONITOR_APPRESTART_ENABLE  1
+#define MONITOR_APPRESTART_ENABLE      1
 #endif
 
 #ifndef MONITOR_OSINFO_ENABLE 
-#define MONITOR_OSINFO_ENABLE      1
+#define MONITOR_OSINFO_ENABLE          1
 #endif
 
 #ifndef MONITOR_PAUSE_ENABLE
-#define MONITOR_PAUSE_ENABLE       1
+#define MONITOR_PAUSE_ENABLE           0
 #endif
 
 #ifndef MONITOR_LOCKINFO_ENABLE
-#define MONITOR_LOCKINFO_ENABLE    1
+#define MONITOR_LOCKINFO_ENABLE        1
 #endif
 
-#define RBF_BLOCK_OFFS 0x00010000
-#define RBF_BLOCK_SIZE (64 * 1024)
-#define RBF_START_ADDR (0x08000000 + RBF_BLOCK_OFFS)
+#ifndef MONITOR_UPLOAD_CONFIG_ENABLE
+#define MONITOR_UPLOAD_CONFIG_ENABLE   1
+#endif
 
-#define APPLICATION_BLOCK_OFFS 0x00020000
-#define APPLICATION_BLOCK_SIZE (384 * 1024)
-#define APPLICATION_START_ADDR (0x08000000 + APPLICATION_BLOCK_OFFS)
+#ifndef MONITOR_APP_EXEC
+#define MONITOR_APP_EXEC               0
+#endif
 
 /* ASCII Keyboard codes */
 
@@ -153,6 +149,9 @@ struct magic {
 static const char s_version[] = "ThinkOS " VERSION_NUM "\r\n";
 
 static const char s_help[] = 
+#if (MONITOR_UPLOAD_CONFIG_ENABLE)
+" ^F - Upload Config\r\n"
+#endif
 #if (MONITOR_OSINFO_ENABLE)
 " ^O - OS Info\r\n"
 #endif
@@ -163,9 +162,6 @@ static const char s_help[] =
 " ^R - Upload FPGA\r\n"
 #endif
 " ^V - Help\r\n"
-#if (MONITOR_APPWIPE_ENABLE)
-" ^W - Wipe App\r\n"
-#endif
 #if (MONITOR_UPGRADE_ENABLE)
 " ^Y - Upload YARD-ICE\r\n"
 #endif
@@ -186,29 +182,29 @@ static const char s_hr[] =
 static const char s_confirm[] = "Confirm [y]?";
 #endif
 
-#if (MONITOR_OSINFO_ENABLE)
-#define PUTS(S) dbgmon_printf(comm, S) 
-#else
-#define PUTS(S) dmputs(S, comm) 
-#endif
-
 #if (MONITOR_UPGRADE_ENABLE)
+/* Receies a file using YMODEM protocol and writes into Flash. */
 static int yflash(uint32_t blk_offs, uint32_t blk_size,
 		   const struct magic_blk * magic)
 {
 	uintptr_t yflash_code = (uintptr_t)(0x20001000);
 	int (* yflash_ram)(uint32_t, uint32_t, const struct magic_blk *);
+	uintptr_t thumb;
 	int ret;
 
-	yflash_ram = (void *)(yflash_code | 0x0001); /* thumb call */
 	cm3_primask_set(1);
 	__thinkos_memcpy((void *)yflash_code, otg_xflash_pic, 
 					 sizeof_otg_xflash_pic);
+
+    thumb = yflash_code | 0x00000001; /* thumb call */
+	yflash_ram = (int (*)(uint32_t, uint32_t, const struct magic_blk *))thumb;
 	ret = yflash_ram(blk_offs, blk_size, magic);
 
 	return ret;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 static const struct magic_blk bootloader_magic = {
 	.hdr = {
 		.pos = 0,
@@ -219,26 +215,25 @@ static const struct magic_blk bootloader_magic = {
 		{  0xffff0000, 0x08000000 },
 	}
 };
+#pragma GCC diagnostic pop
 
 #endif
 
 #if (MONITOR_OSINFO_ENABLE)
 
-#if THINKOS_ENABLE_THREAD_VOID
-#define CYCCNT_MAX ((THINKOS_THREADS_MAX) + 2) /* extra slot for void thread */
-#else
-#define CYCCNT_MAX ((THINKOS_THREADS_MAX) + 1)
-#endif
 
-int __scan_stack(void * stack, unsigned int size);
-
-static void print_osinfo(struct dbgmon_comm * comm)
+void print_percent(uint32_t val, const struct monitor_comm * comm)
 {
-	struct thinkos_rt * rt = &thinkos_rt;
-#if THINKOS_ENABLE_PROFILING
-	uint32_t cycbuf[CYCCNT_MAX];
-	uint32_t cyccnt;
-	int32_t delta;
+	monitor_comm_send_uint(val / 10, 4, comm);
+	monitor_putc('.', comm);
+	monitor_comm_send_uint(val % 10, 1, comm);
+}
+
+static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
+{
+#if (THINKOS_ENABLE_PROFILING)
+	int max = thinkos_krn_threads_max();
+	uint32_t cyc[max];
 	uint32_t cycdiv;
 	uint32_t busy;
 	uint32_t cycsum = 0;
@@ -248,95 +243,80 @@ static void print_osinfo(struct dbgmon_comm * comm)
 	const char * tag;
 	int i;
 
-#if THINKOS_ENABLE_PROFILING
-	cyccnt = CM3_DWT->cyccnt;
-	delta = cyccnt - thinkos_rt.cycref;
-	/* update the reference */
-	thinkos_rt.cycref = cyccnt;
-	/* update active thread's cycle counter */
-	thinkos_rt.cyccnt[thinkos_rt.active] += delta; 
-	/* copy the thread counters to a buffer */
-	__thinkos_memcpy32(cycbuf, rt->cyccnt, sizeof(cycbuf));
-	/* reset cycle counters */
-	__thinkos_memset32(rt->cyccnt, 0, sizeof(cycbuf));
-#endif
-
-	dbgmon_printf(comm, s_hr);
-#if THINKOS_ENABLE_PROFILING
+	monitor_puts(s_hr, comm);
+#if (THINKOS_ENABLE_PROFILING)
 	cycsum = 0;
-	for (i = 0; i < THINKOS_THREADS_MAX; ++i)
-		cycsum += cycbuf[i];
-	cycbusy = cycsum;
-	cycsum += cycbuf[THINKOS_CYCCNT_IDLE];
 
+	cycsum = monitor_threads_cyc_sum(cyc, cycref, 0, max); 
+	cycbusy = cycsum - cyc[THINKOS_THREAD_IDLE];
 	cycdiv = (cycsum + 500) / 1000;
-	busy = (cycbusy + cycdiv / 2) / cycdiv;
+
+	busy = cycbusy / cycdiv;
+	if (busy > 1000)
+		busy  = 1000;
+
 	idle = 1000 - busy;
-	dbgmon_printf(comm, "CPU: %d.%d%% busy, %d.%d%% idle\r\n", 
-			 busy / 10, busy % 10, idle / 10, idle % 10);
+	(void) idle;
+
+	monitor_puts("CPU: ", comm);
+	print_percent(busy, comm);
+	monitor_puts("% busy, ", comm);
+	print_percent(idle, comm);
+	monitor_comm_send_uint(idle % 10, 1, comm);
+	monitor_puts("% idle\r\n", comm);
 #endif
 
-	dbgmon_printf(comm, " Th     Tag       SP       LR       PC  WQ TmW");
-#if THINKOS_ENABLE_PROFILING
-	dbgmon_printf(comm, " CPU %% ");
+	monitor_puts( " Th     Tag       SP       LR       PC  WQ TmW", comm);
+#if (THINKOS_ENABLE_PROFILING)
+	monitor_puts(" CPU % ", comm);
 #endif
 #if (MONITOR_LOCKINFO_ENABLE)
-	dbgmon_printf(comm, " Locks");
+	monitor_puts(" Locks", comm);
 #endif
-	dbgmon_printf(comm, "\r\n");
+	monitor_puts("\r\n", comm);
 
-	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
-		if (rt->ctx[i] != NULL) {
+	for (i = THINKOS_THREAD_FIRST; i <= THINKOS_THREAD_LAST; ++i) {
+		if (thinkos_dbg_thread_ctx_is_valid(i)) {
 #if (MONITOR_LOCKINFO_ENABLE)
 			int j;
 #endif
+			monitor_comm_send_uint(i, 3, comm);
 			/* Internal thread ids start form 0 whereas user
 			   thread numbers start form one ... */
-			tag = (rt->th_inf[i] != NULL) ? rt->th_inf[i]->tag : "...";
-			dbgmon_printf(comm, "%3d %7s %08x %08x %08x %3d %s", i + 1, tag,
-					 (uint32_t)rt->ctx[i], rt->ctx[i]->lr, rt->ctx[i]->pc, 
-					 rt->th_stat[i] >> 1, rt->th_stat[i] & 1 ? "Yes" : " No");
+			tag = thinkos_dbg_thread_tag_get(i);
+			monitor_comm_send_str(tag, 8, comm);
+			monitor_comm_send_blanks(1, comm);
+			monitor_comm_send_hex(thinkos_dbg_thread_sp_get(i), 8, comm);
+			monitor_comm_send_blanks(1, comm);
+			monitor_comm_send_hex(thinkos_dbg_thread_lr_get(i), 8, comm);
+			monitor_comm_send_blanks(1, comm);
+			monitor_comm_send_hex(thinkos_dbg_thread_pc_get(i), 8, comm);
+			monitor_comm_send_uint(thinkos_dbg_thread_wq_get(i), 4, comm);
+			monitor_comm_send_str(thinkos_dbg_thread_tmw_get(i) ? 
+								  "Yes" : " No", 4, comm);
 
-#if THINKOS_ENABLE_PROFILING
-			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
-			dbgmon_printf(comm, " %3d.%d", busy / 10, busy % 10);
+#if (THINKOS_ENABLE_PROFILING)
+			busy = cyc[i] / cycdiv;
+			if (busy > 1000)
+				busy  = 1000;
+			print_percent(busy, comm);
 #endif
 
 
 #if (MONITOR_LOCKINFO_ENABLE)
-			for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
-				if (rt->lock[j] == i)
-					dbgmon_printf(comm, " %d", j + THINKOS_MUTEX_BASE);
+			for (j = 0; j < THINKOS_MUTEX_MAX; ++j) {
+				unsigned int mtx = j + THINKOS_MUTEX_BASE;
+				if (thinkos_dbg_mutex_lock_get(mtx) == i)
+					monitor_comm_send_uint(mtx, 3, comm);
 			}
 #endif
-			dbgmon_printf(comm, "\r\n");
+
+			monitor_puts("\r\n", comm);
 		}
 	}
 }
 
 #endif /* MONITOR_OSINFO_ENABLE */
-
-static void __main_thread_exec(int (* func)(void *))
-{
-	int thread_id = 0;
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
-	__thinkos_thread_abort(thread_id);
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
-								(int (*)(void *))func, (void *)NULL);
-
-#if THINKOS_ENABLE_THREAD_INFO
-	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
-#endif
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
-	__thinkos_thread_resume(thread_id);
-
-	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
-	__thinkos_defer_sched();
-}
 
 #if (MONITOR_PAUSE_ENABLE)
 static void pause_all(void)
@@ -362,61 +342,71 @@ static void pause_all(void)
 }
 #endif
 
-static bool monitor_process_input(struct dbgmon_comm * comm, int c)
+bool monitor_process_input(const struct monitor_comm * comm, int c)
 {
 	switch (c) {
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_FS:
-		PUTS(s_confirm);
-		if (dbgmon_getc(comm) == 'y') {
-			dbgmon_soft_reset();
-			dbgmon_signal(DBGMON_USER_EVENT2);
+		monitor_puts(s_confirm, comm);
+		if (monitor_getc(comm) == 'y') {
+			monitor_soft_reset();
+			monitor_signal(MONITOR_USER_EVENT2);
 		}
 		break;
 #endif
 #if (MONITOR_OSINFO_ENABLE)
 	case CTRL_O:
-		print_osinfo(comm);
+		monitor_signal(MONITOR_USER_EVENT4);
 		break;
 #endif
 	case CTRL_V:
-		PUTS(s_hr);
-		PUTS(s_version);
-		PUTS(s_help);
+		monitor_puts(s_hr, comm);
+		monitor_puts(s_version, comm);
+		monitor_puts(s_help, comm);
 		break;
 
 #if (MONITOR_PAUSE_ENABLE)
 	case CTRL_P:
-		PUTS("^P\r\n");
 		pause_all();
 		break;
 #endif
 
 #if (MONITOR_UPGRADE_ENABLE)
 	case CTRL_Y:
-		PUTS(s_confirm);
-		if (dbgmon_getc(comm) == 'y') {
-			dbgmon_req_app_upload(); 
-		} else {
-			PUTS("\r\n");
+		monitor_puts(s_confirm, comm);
+		if (monitor_getc(comm) == 'y') {
+			monitor_req_app_upload(); 
 		}
 
 		break;
 
 	case CTRL_R:
-		PUTS(s_confirm);
-		if (dbgmon_getc(comm) == 'y') {
-			dbgmon_soft_reset();
-			dbgmon_signal(DBGMON_USER_EVENT1);
+		monitor_puts(s_confirm, comm);
+		if (monitor_getc(comm) == 'y') {
+			monitor_soft_reset();
+			monitor_signal(MONITOR_USER_EVENT1);
+		}
+		break;
+
+#if (MONITOR_UPLOAD_CONFIG_ENABLE)
+	case CTRL_F:
+		monitor_puts(s_confirm, comm);
+		if (monitor_getc(comm) == 'y') {
+			monitor_soft_reset();
+			monitor_signal(MONITOR_USER_EVENT3);
 		}
 		break;
 #endif
 
+#endif
 
 #if (MONITOR_APPRESTART_ENABLE)
 	case CTRL_Z:
-		PUTS("^Z\r\n");
-		dbgmon_req_app_exec(); 
+#if (MONITOR_APP_EXEC)
+		monitor_req_app_exec(); 
+#else
+		thinkos_krn_sysrst();
+#endif
 		break;
 #endif
 	default:
@@ -426,154 +416,308 @@ static bool monitor_process_input(struct dbgmon_comm * comm, int c)
 	return true;
 }
 
-/* Default Monitor Task */
-#define MONITOR_AUTOBOOT 1
-#define MONITOR_SHELL 2
 
-void __attribute__((noreturn)) monitor_task(struct dbgmon_comm * comm, void * param)
+#if (MONITOR_APP_EXEC)
+
+static void __main_thread_exec(int (* func)(void *), void * arg)
 {
-	uint32_t sigmask;
-	uint32_t sig;
-	uint8_t buf[1];
-	uint8_t * ptr;
-	int cnt;
-	int len;
-	uint32_t flags = (uint32_t)param;
+	int thread_id = 0;
+	struct thinkos_context * ctx;
 
-	/* unmask events */
-	sigmask = (1 << DBGMON_SOFTRST) | 
-		(1 << DBGMON_COMM_RCV) | (1 << DBGMON_TX_PIPE) | 
-		(1 << DBGMON_RX_PIPE) | (1 << DBGMON_APP_EXEC) |
-		(1 << DBGMON_APP_UPLOAD) | (1 << DBGMON_USER_EVENT1) | 
-		(1 << DBGMON_USER_EVENT2);
+	DCC_LOG2(LOG_INFO, "__thinkos_thread_ctx_init(func=%p arg=%p)", func, arg);
+	ctx = __thinkos_thread_ctx_init(thread_id, (uintptr_t)&_stack, 
+									(uintptr_t)func, (uintptr_t)arg);
 
-#if DEBUG
-	sigmask |= (1 << DBGMON_COMM_CTL);
+#if (THINKOS_ENABLE_THREAD_INFO)
+	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
+#endif
+	
+#if (THINKOS_ENABLE_STACK_LIMIT)
+	__thinkos_thread_sl_set(thread_id, 0);
 #endif
 
-	if (!(flags & MONITOR_AUTOBOOT)) {
-		PUTS(s_hr);
-		PUTS(s_version);
+	/* commit the context to the kernel */ 
+	__thinkos_thread_ctx_set(thread_id, ctx, CONTROL_SPSEL | CONTROL_nPRIV);
+
+	DCC_LOG1(LOG_INFO, "thread=%d [ready]", thread_id);
+	__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);
+
+	DCC_LOG(LOG_INFO, "__thinkos_defer_sched()");
+	__thinkos_defer_sched();
+}
+
+static bool __monitor_app_exec(void)
+{
+	uintptr_t entry;
+	int (* app)(void *);
+	int i;
+
+	if ((entry = board_app_get()) == 0) 
+		return false;
+
+	app = (int (*)(void *))entry;
+	__main_thread_exec(app, NULL);
+
+	return true;
+}
+#else
+
+#endif
+
+/* Default Monitor Task */
+void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm, 
+                                            void * param)
+{
+#if (MONITOR_OSINFO_ENABLE)
+	uint32_t cycref[thinkos_krn_threads_max()];
+#endif
+	uint32_t sigmask = 0;
+	bool connected;
+	uint8_t buf[4];
+	uint8_t * ptr;
+	uint32_t sig;
+	int status;
+	int cnt;
+#if (MONITOR_APP_EXEC)
+	struct monitor monitor;
+
+	DCC_LOG(LOG_INFO, "starting monitor...");
+
+	monitor.flags = (uintptr_t)param;
+#endif
+
+	/* unmask events */
+	sigmask |= (1 << MONITOR_SOFTRST);
+#if (MONITOR_FAULT_ENABLE)
+	sigmask |= (1 << MONITOR_THREAD_FAULT);
+#endif
+#if (MONITOR_EXCEPTION_ENABLE)
+	sigmask |= (1 << MONITOR_KRN_ABORT);
+	sigmask |= (1 << MONITOR_KRN_FAULT);
+#endif
+	sigmask |= (1 << MONITOR_COMM_RCV);
+	sigmask |= (1 << MONITOR_COMM_CTL);
+	sigmask |= (1 << MONITOR_TX_PIPE);
+	sigmask |= (1 << MONITOR_APP_EXEC);
+	sigmask |= (1 << MONITOR_APP_UPLOAD);
+	sigmask |= (1 << MONITOR_USER_EVENT1);
+	sigmask |= (1 << MONITOR_USER_EVENT2);
+	sigmask |= (1 << MONITOR_USER_EVENT3);
+#if (MONITOR_OSINFO_ENABLE)
+	sigmask |= (1 << MONITOR_USER_EVENT4);
+#endif
+
+#if (MONITOR_APP_EXEC)
+	if (!(monitor.flags & MONITOR_AUTOBOOT)) {
+		monitor_puts(s_hr, comm);
+		monitor_puts(s_version, comm);
 	}
 
-	if (flags & MONITOR_AUTOBOOT) {
-		dbgmon_req_app_exec(); 
+	if (monitor.flags & MONITOR_AUTOBOOT) {
+		monitor_req_app_exec(); 
 	}
+#endif
 
 	for(;;) {
-		switch ((sig = dbgmon_select(sigmask))) {
+		switch ((sig = monitor_select(sigmask))) {
 
-		case DBGMON_STARTUP:
-			dbgmon_clear(DBGMON_STARTUP);
-			break;
-
-		case DBGMON_SOFTRST:
-			dbgmon_clear(DBGMON_SOFTRST);
+		case MONITOR_SOFTRST:
+			monitor_clear(MONITOR_SOFTRST);
 			board_reset();
-			PUTS("+RST\r\n");
-			break;
+			monitor_puts("\r\n", comm);
+			goto is_connected;
 
+#if (MONITOR_FAULT_ENABLE)
+		case MONITOR_THREAD_FAULT:
+			{
+			int32_t errno;
+			int32_t thread;
+			
+			DCC_LOG(LOG_ERROR, "THREAD_FAULT!!!");
+
+			monitor_clear(MONITOR_THREAD_FAULT);
+			thread = monitor_thread_break_get(&errno);
+
+			monitor_puts("!ERR: thread=", comm);
+			monitor_comm_send_uint(thread, 5, comm);
+			monitor_puts(" rrno=", comm);
+			monitor_comm_send_uint(errno, 5, comm);
+#if (MONITOR_OSINFO_ENABLE)
+			monitor_signal(MONITOR_USER_EVENT4);
+#endif
+			}
+			break;
+#endif
 #if (MONITOR_UPGRADE_ENABLE)
-		case DBGMON_APP_UPLOAD:
-			dbgmon_clear(DBGMON_APP_UPLOAD);
-			yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, &app_magic);
+		case MONITOR_APP_UPLOAD:
+			monitor_clear(MONITOR_APP_UPLOAD);
+			yflash(APPLICATION_BLOCK_OFFS, APPLICATION_BLOCK_SIZE, 
+				   &board_app_magic);
 			break;
 
-		case DBGMON_USER_EVENT1:
-			dbgmon_clear(DBGMON_USER_EVENT1);
+		case MONITOR_USER_EVENT1:
+			monitor_clear(MONITOR_USER_EVENT1);
 			yflash(RBF_BLOCK_OFFS, RBF_BLOCK_SIZE, NULL);
 			break;
 
-		case DBGMON_USER_EVENT2:
-			dbgmon_clear(DBGMON_USER_EVENT2);
-			yflash(0, 32768, &bootloader_magic);
+		case MONITOR_USER_EVENT2:
+			monitor_clear(MONITOR_USER_EVENT2);
+			yflash(BOOTLOADER_BLOCK_OFFS, BOOTLOADER_BLOCK_SIZE, 
+				   &bootloader_magic);
+			break;
+
+#if (MONITOR_UPLOAD_CONFIG_ENABLE)
+		case MONITOR_USER_EVENT3:
+			monitor_clear(MONITOR_USER_EVENT3);
+			yflash(CONFIG_BLOCK_OFFS, CONFIG_BLOCK_SIZE, NULL);
+			break;
+#endif
+#endif
+
+#if (MONITOR_OSINFO_ENABLE)
+		case MONITOR_USER_EVENT4:
+			monitor_clear(MONITOR_USER_EVENT4);
+			print_osinfo(comm, cycref);
 			break;
 #endif
 
-#if DEBUG
-		case DBGMON_COMM_CTL:
-			dbgmon_clear(DBGMON_COMM_CTL);
-//			if (!dbgmon_comm_isconnected(comm))	
-//				dbgmon_reset();
+#if (MONITOR_APP_EXEC)
+		case MONITOR_APP_EXEC:
+			monitor_clear(MONITOR_APP_EXEC);
+			if (!__monitor_app_exec()) {
+				monitor_puts("!ERR: app\r\n", comm);
+			}
 			break;
 #endif
-		case DBGMON_APP_EXEC: {
-			uint32_t * signature = (uint32_t *)APPLICATION_START_ADDR;
-			int i = app_magic.hdr.cnt;
 
-			dbgmon_clear(DBGMON_APP_EXEC);
+		case MONITOR_COMM_RCV:
 
-			for (i = app_magic.hdr.cnt - 1; i >= 0; --i) {
-				if (signature[i] != app_magic.rec[i].comp) {
-					PUTS("!ERR: magic\r\n");
-					flags |= MONITOR_SHELL;
-					break;
+			DCC_LOG(LOG_INFO, "COMM_RCV...");
+
+			/* receive from the COMM driver one byte at the time */
+			if ((cnt = monitor_comm_recv(comm, buf, 1)) > 0) {
+				int c = buf[0];
+
+				DCC_LOG1(LOG_INFO, "COMM_RCV: c=0x%02x", c);
+				/* process the input character */
+				if (!monitor_process_input(comm, c)) {
+					int n;
+					/* if the character was not consumed by the monitor 
+					   insert into the console pipe */
+					/* get a pointer to the head of the pipe.
+					 thinkos_console_rx_pipe_ptr() will return the number of 
+					 consecutive spaces in the buffer. We need only one. */
+					if ((n = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
+						/* copy the character into the RX fifo */
+						ptr[0] = c;
+						/* commit the fifo head */
+						thinkos_console_rx_pipe_commit(1);
+					} else {
+						/* discard */
+					}
 				}
-			}
 
-			if (i < 0) {
-				__main_thread_exec((void *)(APPLICATION_START_ADDR | 1));
+			} else {
+				DCC_LOG1(LOG_INFO, "monitor_comm_recv() = %d", cnt);
 			}
-		}
 			break;
 #if 0
-		case DBGMON_APP_EXEC:
-			dbgmon_clear(DBGMON_APP_EXEC);
-			if (!dbgmon_app_exec(app, false)) {
-				PUTS("!ERR: app\r\n");
-			}
+		case MONITOR_COMM_BRK:
+			monitor_comm_break_ack(comm);
 			break;
 #endif
+		case MONITOR_COMM_CTL:
+			monitor_clear(MONITOR_COMM_CTL);
 
-		case DBGMON_COMM_RCV:
-			if (flags & MONITOR_SHELL) { 
-				/* receive from the COMM driver one bye at the time */
-				if (dbgmon_comm_recv(comm, buf, 1) > 0) {
-					int c = buf[0];
-					/* process the input character */
-					if (!monitor_process_input(comm, c)) {
-						/* if the character was not consumed by the monitor 
-						   insert into the console pipe */
-						/* get a pointer to the head of the pipe.
-						   __console_rx_pipe_ptr() will return the number of 
-						   consecutive spaces in the buffer. We need only one. */
-						if (__console_rx_pipe_ptr(&ptr) > 0) {
-							/* copy the character into the RX fifo */
-							ptr[0] = c;
-							/* commit the fifo head */
-							__console_rx_pipe_commit(1);
-						}
+is_connected:
+			status = monitor_comm_status_get(comm);
+			if (status & COMM_ST_CONNECTED) {
+				DCC_LOG(LOG_INFO, "connected....");
+			}
+			connected = (status & COMM_ST_CONNECTED) ? true : false;
+			thinkos_krn_console_connect_set(connected);
+
+			sigmask &= ~((1 << MONITOR_COMM_EOT) | 
+						 (1 << MONITOR_COMM_RCV) |
+						 (1 << MONITOR_RX_PIPE));
+			sigmask |= (1 << MONITOR_TX_PIPE);
+
+			if (connected) {
+				sigmask |= ((1 << MONITOR_COMM_EOT) |
+							(1 << MONITOR_COMM_RCV));
+			}
+
+
+			DCC_LOG1(LOG_MSG, "sigmask=%08x", sigmask);
+			break;
+
+		case MONITOR_COMM_EOT:
+			/* FALLTHROUGH */
+		case MONITOR_TX_PIPE:
+			if ((cnt = thinkos_console_tx_pipe_ptr(&ptr)) > 0) {
+				int n;
+				DCC_LOG1(LOG_INFO, "TX Pipe: cnt=%d, send...", cnt);
+				if ((n = monitor_comm_send(comm, ptr, cnt)) > 0) {
+					thinkos_console_tx_pipe_commit(n);
+					if (n == cnt) {
+						/* Wait for TX_PIPE */
+						sigmask |= (1 << MONITOR_TX_PIPE);
+						sigmask &= ~(1 << MONITOR_COMM_EOT);
+					} else {
+						/* Wait for COMM_EOT */
+						sigmask |= (1 << MONITOR_COMM_EOT);
+						sigmask &= ~(1 << MONITOR_TX_PIPE);
 					}
-				} 
-			} else {
-				if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-					if ((len = dbgmon_comm_recv(comm, ptr, cnt)) > 0)
-						__console_rx_pipe_commit(len); 
 				} else {
-					sigmask &= ~(1 << DBGMON_COMM_RCV);
+					/* Wait for COMM_EOT */
+					sigmask |= (1 << MONITOR_COMM_EOT);
+					sigmask &=  ~(1 << MONITOR_TX_PIPE);
 				}
+			} else {
+				/* Wait for TX_PIPE */
+				DCC_LOG1(LOG_INFO, "TX Pipe: cnt=%d, wait....", cnt);
+				sigmask |= (1 << MONITOR_TX_PIPE);
+				sigmask &= ~(1 << MONITOR_COMM_EOT);
 			}
 			break;
 
-		case DBGMON_RX_PIPE:
-			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				sigmask |= (1 << DBGMON_COMM_RCV);
+		case MONITOR_RX_PIPE:
+			/* get a pointer to the head of the pipe.
+			   thinkos_console_rx_pipe_ptr() will return the number of 
+			   consecutive spaces in the buffer. */
+			if ((cnt = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
+				int n;
+
+				/* receive from the COMM driver */
+				if ((n = monitor_comm_recv(comm, ptr, cnt)) > 0) {
+					/* commit the fifo head */
+					thinkos_console_rx_pipe_commit(n);
+					if (n == cnt) {
+						/* Wait for RX_PIPE */
+						DCC_LOG(LOG_INFO, 
+								"RX_PIPE: Wait for RX_PIPE && COMM_RECV");
+						sigmask |= (1 << MONITOR_COMM_RCV);
+						sigmask &=  ~(1 << MONITOR_RX_PIPE);
+					} else {
+						DCC_LOG(LOG_INFO, "RX_PIPE: Wait for COMM_RECV");
+						/* Wait for COMM_RECV */
+						sigmask |= (1 << MONITOR_COMM_RCV);
+						sigmask &=  ~(1 << MONITOR_RX_PIPE);
+					}
+				} else {
+					/* Wait for COMM_RECV */
+					DCC_LOG(LOG_ERROR, "RX_PIPE: Wait for COMM_RECV");
+					sigmask |= (1 << MONITOR_COMM_RCV);
+					sigmask &=  ~(1 << MONITOR_RX_PIPE);
+				}
 			} else {
-				sigmask &= ~(1 << DBGMON_RX_PIPE);
+				DCC_LOG1(LOG_ERROR, "RX_PIPE: RX, cnt=%d", cnt);
+				/* Wait for RX_PIPE */
+				sigmask &= ~(1 << MONITOR_COMM_RCV);
+				sigmask |= (1 << MONITOR_RX_PIPE);
 			}
-//			dbgmon_clear(DBGMON_RX_PIPE);
 			break;
 
-
-		case DBGMON_TX_PIPE:
-			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
-				cnt = dbgmon_comm_send(comm, ptr, cnt);
-				__console_tx_pipe_commit(cnt); 
-			} else {
-				sigmask |= (1 << DBGMON_TX_PIPE);
-				//dbgmon_clear(DBGMON_TX_PIPE);
-			}
 		}
 	}
 }
-

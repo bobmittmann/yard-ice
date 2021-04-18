@@ -2663,7 +2663,7 @@ print_insn_coprocessor(bfd_vma pc,
 
 						/* Is ``imm'' a negative number?  */
 						if (imm & 0x40)
-							imm |= (-1 << 7);
+							imm |= (0xffffffff << 7);
 
 						func(stream, "%d", imm);
 					}
@@ -3737,6 +3737,7 @@ print_insn_arm(bfd_vma pc, struct disassemble_info *info, long given)
 
 					case 'S':
 						allow_unpredictable = TRUE;
+						/* FALLTHROUGH */
 					case 's':
 						if ((given & 0x004f0000) == 0x004f0000) {
 							/* PC relative with immediate offset.  */

@@ -47,7 +47,7 @@ int cmd_let(FILE * f, int argc, char ** argv)
 	argc--;
 	argv++;
 
-	if ((var = var_global_lookup(*argv)) < 0) {
+	if ((var = var_global_lookup(*argv)) == NULL) {
 		fprintf(f, "Variable '%s' not found!\n", *argv);
 		return -2;
 	}

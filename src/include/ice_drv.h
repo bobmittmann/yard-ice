@@ -254,6 +254,8 @@ typedef int (* ice_system_reset_t)(ice_ctrl_t * ctrl);
 
 typedef int (* ice_on_break_t)(ice_ctrl_t * ctrl);
 
+typedef int (* ice_reset_t)(ice_ctrl_t * ctrl);
+
 #if 0
 typedef int (* ice_comm_read_t)(ice_ctrl_t * ctrl, void * buf, int len);
 

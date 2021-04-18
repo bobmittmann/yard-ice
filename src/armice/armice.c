@@ -90,12 +90,12 @@ static int core_on_break(armice_ctrl_t * ctrl, int dbg_status)
 static void core_status_update(armice_ctrl_t * ctrl, int dbg_status)
 {
 	if (dbg_status & ARMICE_ST_DBGACK) {
-		if ((ctrl->dbg_status < 0) || !(ctrl->dbg_status & ARMICE_ST_DBGACK)) {
+		if (!(ctrl->dbg_status & ARMICE_ST_DBGACK)) {
 			DCC_LOG(LOG_TRACE, "---- HALT ---");
 			core_on_break(ctrl, dbg_status);
 		}
 	} else {
-		if ((ctrl->dbg_status < 0) || (ctrl->dbg_status & ARMICE_ST_DBGACK)) {
+		if (ctrl->dbg_status & ARMICE_ST_DBGACK) {
 			DCC_LOG(LOG_TRACE, "++++ RUN ++++");
 		}
 	}
@@ -1780,6 +1780,8 @@ int armice_test(armice_ctrl_t * ctrl, FILE * f, uint32_t val);
 
 int armice_info(armice_ctrl_t * ctrl, FILE * f, uint32_t which);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 const struct ice_oper armice_oper = {
 
 	.open = (ice_open_t)armice_open,
@@ -1839,6 +1841,9 @@ const struct ice_oper armice_oper = {
 	.context_show = (ice_context_show_t)armice_context_show,
 	.print_insn = (ice_print_insn_t)armice_print_insn
 };
+
+#pragma GCC diagnostic pop
+
 
 const struct ice_drv_info armice_drv = {
 	.name = "armice",

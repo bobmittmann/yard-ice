@@ -38,8 +38,10 @@
 #include <sys/shell.h>
 #include <sys/dcclog.h>
 
-#include <trace.h>
 #include "command.h"
+
+#define TRACE_LEVEL TRACE_LVL_DBG
+#include <trace.h>
 
 int telnetd_task(void * arg)
 {
@@ -60,13 +62,14 @@ int telnetd_task(void * arg)
 	}
 }
 
-uint32_t telnet_shell_stack[1360] __attribute__((section (".sram1")));
+//uint32_t __attribute__((section(".sram1"), aligned(5))) 
+uint32_t telnet_shell_stack[1472] __attribute__ ((aligned(64)));
 
 const struct thinkos_thread_inf telnet_shell_inf = {
 	.stack_ptr = telnet_shell_stack, 
 	.stack_size = sizeof(telnet_shell_stack),
-	.priority = 0,
-	.thread_id = 4,
+	.priority = 12,
+	.thread_id = 12,
 	.paused = false,
 	.tag = "TNET_SH"
 };

@@ -179,8 +179,11 @@ void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 	for (;;);
 }
 
-uint32_t comm_write_stack[512 + 128];
-uint32_t comm_read_stack[512 + (COMM_TCP_BUF_SIZE / 4)];
+uint32_t comm_write_stack[512 + 128] __attribute__ ((aligned(64)));
+
+#define COMM_RD_STACK_SIZE (512 * 4 + (COMM_TCP_BUF_SIZE)) 
+uint32_t comm_read_stack[COMM_RD_STACK_SIZE / 4] __attribute__ ((aligned(64)));
+
 struct comm_tcp comm_tcp;
 
 const struct thinkos_thread_inf comm_read_inf = {

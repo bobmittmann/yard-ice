@@ -148,7 +148,7 @@ int shell(FILE * f, const char * (* prompt)(void),
 	struct cmd_history * history;
 	int ret = 0;
 
-	DCC_LOG(LOG_TRACE, "history_init()");
+	DCC_LOG1(LOG_TRACE, "history_init(%d)", sizeof(hist_buf));
 	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 
 	if (greeting)
@@ -310,7 +310,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
 
 	{ cmd_ice_info, "ice_info", "ice", 
-		"", "show ICE details" },
+		"[1..9]", "show ICE details" },
 
 	{ cmd_unset, "unset", "", 
 		"VAR", "clear environement variable" },

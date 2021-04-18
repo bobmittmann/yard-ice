@@ -176,13 +176,13 @@ int cm3_show_fpu_regs(FILE * f, uint32_t * reg)
 
 	for (r = 0; r < 8; r++) {
 		fprintf(f, "%s=%-14.6f ", 
-					  v7m_fpu_reg_name(r), fp[r]);
+					  v7m_fpu_reg_name(r), (double)fp[r]);
 		fprintf(f, "%s=%-14.6f ", 
-					  v7m_fpu_reg_name(r + 8), fp[r + 8]);
+					  v7m_fpu_reg_name(r + 8), (double)fp[r + 8]);
 		fprintf(f, "%s=%-14.6f ", 
-					  v7m_fpu_reg_name(r + 16), fp[r + 16]);
+					  v7m_fpu_reg_name(r + 16), (double)fp[r + 16]);
 		fprintf(f, "%s=%-14.6f\n", 
-					  v7m_fpu_reg_name(r + 24), fp[r + 24]);
+					  v7m_fpu_reg_name(r + 24), (double)fp[r + 24]);
 	}
 
 	return 0;

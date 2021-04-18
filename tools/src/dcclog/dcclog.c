@@ -1109,6 +1109,11 @@ int main(int argc, char *argv[])
 		optind++;
 	}
 
+	if (verbose > 0) {
+		fprintf(stderr, "%s: done loading files\n", prog);
+	}
+
+
 #if defined(WIN32)
 #else
 	signal(SIGINT, sig_quit);

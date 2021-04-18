@@ -521,7 +521,7 @@ int davinci_test(FILE * f, const struct ice_drv * ice,
 #endif /* ENABLE_DAVINCI_TEST */
 
 const struct target_sym davinci_sym[] = {
-	{0, "", 0} 
+	{0, "", 0, 0} 
 };
 
 const struct target_cpu davinci_cpu = {

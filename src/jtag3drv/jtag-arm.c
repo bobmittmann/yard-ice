@@ -865,8 +865,7 @@ int jtag_arm926_cp15_rd(jtag_tap_t * tap, int reg, uint32_t * data)
 	}
 
 	DCC_LOG(LOG_WARNING, "too many retries!"); 
-	insn_tap_reset(5, JTAG_TAP_RESET);
-	jtag3drv.arm_scan_chain = -1;
+	jtag_drv_tap_reset(5);
 
 	return JTAG_ERR_ARM_SYNC_TIMEOUT;
 }
@@ -910,9 +909,7 @@ int jtag_arm926_cp15_wr(jtag_tap_t * tap, int reg, uint32_t data)
 	}
 
 	DCC_LOG(LOG_WARNING, "too many retries!"); 
-
-	insn_tap_reset(5, JTAG_TAP_RESET);
-	jtag3drv.arm_scan_chain = -1;
+	jtag_drv_tap_reset(5);
 
 	return JTAG_ERR_ARM_SYNC_TIMEOUT;
 }
