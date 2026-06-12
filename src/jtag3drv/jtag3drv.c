@@ -295,7 +295,7 @@ int jtag_dr_pause(int n, unsigned int final_state)
 
 int jtag_drv_tap_reset(int cnt)
 {	
-	struct stm32f_exti * exti = STM32F_EXTI;
+	struct stm32_exti * exti = STM32_EXTI;
 	uint32_t isr;
 
 	INF("cycles: %d --> TAP_RESET", cnt);

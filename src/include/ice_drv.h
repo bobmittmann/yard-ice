@@ -433,7 +433,7 @@ typedef struct ice_mem_entry ice_mem_entry_t;
 
 extern const struct ice_mem_oper mem_op_null;
 
-const struct ice_drv_info ice_drv_null;
+extern const struct ice_drv_info ice_drv_null;
 
 static inline int ice_close(const ice_drv_t * ice) {
 	return ice->op.close(ice->ctrl);

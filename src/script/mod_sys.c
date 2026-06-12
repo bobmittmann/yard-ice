@@ -31,7 +31,7 @@
 #include "module.h"
 #include "dbglog.h"
 
-uint32_t eval_ans;
+uint64_t eval_ans;
 
 typedef struct sys_var {
 	char name[11];
@@ -39,7 +39,7 @@ typedef struct sys_var {
 	value_t * val;
 } sys_var_t;
 
-const struct sys_var sys_var_tab[] = {
+const struct sys_var sys_var_tab[1] = {
 	{ .name = "ans",
 	.type = TYPE_UINT32,
 	.val = (value_t *)&eval_ans }

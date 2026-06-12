@@ -313,7 +313,7 @@ int jtag3ctrl_bus_init(void * arg)
 	/* Configure memory controller ... */
 	stm32f_fsmc_init();
 	/* Configure external interrupt ... */
-	stm32f_exti_init(STM32_GPIOD, 6, EXTI_EDGE_RISING);
+	stm32_exti_init(STM32_GPIOD, 6, EXTI_EDGE_RISING);
 	/* Initialize clock output */
 	stm32f_mco2_init();
 

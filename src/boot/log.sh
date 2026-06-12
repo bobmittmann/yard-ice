@@ -3,7 +3,7 @@
 TOOLS_DIR=../../tools
 PYTHON=python
 if [ -z "$JTAGTOOL_ADDR" ]; then
-	JTAGTOOL_ADDR=192.168.0.51
+	JTAGTOOL_ADDR=192.168.10.51
 fi
 # Collect ".bin" files in the positional parameters
 set -- `ls debug/*.bin`
@@ -13,16 +13,16 @@ for PROG_BIN; do true; done
 PROG_ELF=${PROG_BIN%%.bin}.elf
 
 # Collect ".bin" files in the positional parameters
-set -- `ls ../app/debug/*.bin`
+#set -- `ls ../app/debug/*.bin`
 # Get the last one
-for APP_BIN; do true; done
-APP_ELF=${APP_BIN%%.bin}.elf
+#for APP_BIN; do true; done
+#APP_ELF=${APP_BIN%%.bin}.elf
 
 # Disable the halt debug mode by clearing C_DEBUGEN on DHCSR
 ${PYTHON} ${TOOLS_DIR}/tftp_cmd.py -h ${JTAGTOOL_ADDR} \
 'nrst' 'tgt 9 f c' 'run' 'disable debug'
 if [ $? = 0 ] ; then
 # Trace
-${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF} ${APP_ELF}| tee dbg.log
+${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF} | tee dbg.log
 fi
 

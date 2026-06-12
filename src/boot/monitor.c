@@ -107,8 +107,8 @@ uintptr_t board_app_get(void);
 #define MONITOR_UPLOAD_CONFIG_ENABLE   1
 #endif
 
-#ifndef MONITOR_APP_EXEC
-#define MONITOR_APP_EXEC               0
+#ifndef __MONITOR_APP_EXEC
+#define __MONITOR_APP_EXEC               0
 #endif
 
 /* ASCII Keyboard codes */
@@ -303,7 +303,7 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 
 #if (MONITOR_APPRESTART_ENABLE)
 	case CTRL_Z:
-#if (MONITOR_APP_EXEC)
+#if (__MONITOR_APP_EXEC)
 		monitor_req_app_exec(); 
 #else
 		thinkos_krn_sysrst();
@@ -318,7 +318,7 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 }
 
 
-#if (MONITOR_APP_EXEC)
+#if (__MONITOR_APP_EXEC)
 
 static void __main_thread_exec(int (* func)(void *), void * arg)
 {
@@ -361,6 +361,7 @@ static bool __monitor_app_exec(void)
 
 	return true;
 }
+
 #else
 
 #endif
@@ -373,23 +374,27 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 #if (MONITOR_OSINFO_ENABLE)
 	uint32_t cycref[thinkos_krn_threads_max()];
 #endif
-	uint32_t sigmask = 0;
-	bool connected;
-	uint8_t buf[4];
+#if (THINKOS_ENABLE_CONSOLE)
+  #if (THINKOS_ENABLE_CONSOLE_MODE)
+	bool raw_mode = false;
+  #endif 
 	uint8_t * ptr;
-	uint32_t sig;
-	int status;
 	int cnt;
-#if (MONITOR_APP_EXEC)
+#endif
+	uint32_t sigmask = 0;
+//	bool connected;
+	uint8_t buf[4];
+	uint32_t sig;
+#if (__MONITOR_APP_EXEC)
 	struct monitor monitor;
 
-	DCC_LOG(LOG_INFO, "starting monitor...");
+	DCC_LOG(LOG_TRACE, "starting monitor...");
 
 	monitor.flags = (uintptr_t)param;
 #endif
 
 	/* unmask events */
-	sigmask |= (1 << MONITOR_SOFTRST);
+	sigmask |= (1 << MONITOR_TASK_INIT);
 	sigmask |= (1 << MONITOR_ON_CORE_RST);
 #if (MONITOR_FAULT_ENABLE)
 	sigmask |= (1 << MONITOR_THREAD_FAULT);
@@ -398,10 +403,13 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	sigmask |= (1 << MONITOR_KRN_ABORT);
 	sigmask |= (1 << MONITOR_KRN_FAULT);
 #endif
+	sigmask |= (1 << MONITOR_COMM_EOT);
 	sigmask |= (1 << MONITOR_COMM_RCV);
 	sigmask |= (1 << MONITOR_COMM_CTL);
+	sigmask |= (1 << MONITOR_COMM_BRK);
 	sigmask |= (1 << MONITOR_TX_PIPE);
-	sigmask |= (1 << MONITOR_APP_EXEC);
+	sigmask |= (1 << MONITOR_RX_PIPE);
+
 	sigmask |= (1 << MONITOR_APP_UPLOAD);
 	sigmask |= (1 << MONITOR_USER_EVENT1);
 	sigmask |= (1 << MONITOR_USER_EVENT2);
@@ -410,19 +418,21 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	sigmask |= (1 << MONITOR_USER_EVENT4);
 #endif
 
-#if (MONITOR_APP_EXEC)
-	if (!(monitor.flags & MONITOR_AUTOBOOT)) {
-		monitor_puts(s_hr, comm);
-		monitor_puts(s_version, comm);
-	}
+	sigmask |= (1 << MONITOR_ALARM);
+	monitor_alarm(5000);
 
-	if (monitor.flags & MONITOR_AUTOBOOT) {
-		monitor_req_app_exec(); 
-	}
-#endif
+	monitor_unmask(MONITOR_COMM_BRK);
+	monitor_unmask(MONITOR_COMM_CTL);
 
 	for(;;) {
 		switch ((sig = monitor_select(sigmask))) {
+
+		case MONITOR_ALARM:
+			monitor_clear(MONITOR_ALARM);
+			DCC_LOG(LOG_TRACE, "Alarm");
+			monitor_alarm(5000);
+			monitor_puts(".\r\n", comm);
+			break;
 
 		case MONITOR_SOFTRST:
 			monitor_clear(MONITOR_SOFTRST);
@@ -430,29 +440,51 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			monitor_puts("\r\n", comm);
 			goto is_connected;
 
+		case MONITOR_COMM_BRK:
+			monitor_clear(MONITOR_COMM_BRK);
+			DCC_LOG(LOG_TRACE, "Line break received");
+			monitor_comm_break_ack(comm);
+			thinkos_krn_req_core_rst(krn);					
+			break;
+
 		case MONITOR_ON_CORE_RST:
+			DCC_LOG(LOG_TRACE, "Core reset received");
 			monitor_clear(MONITOR_ON_CORE_RST);
 			board_reset();
-			monitor_puts("\r\n", comm);
+//			thinkos_krn_thread_init(krn, 1, &shell_thread_init);
 			goto is_connected;
 
 #if (MONITOR_FAULT_ENABLE)
 		case MONITOR_THREAD_FAULT:
 			{
-			int32_t errno;
-			int32_t thread;
-			
-			DCC_LOG(LOG_ERROR, "THREAD_FAULT!!!");
+				int32_t errno;
+				int32_t thread;
 
-			monitor_clear(MONITOR_THREAD_FAULT);
-			thread = monitor_thread_break_get(&errno);
+				DCC_LOG(LOG_ERROR, "THREAD_FAULT!!!");
 
-			monitor_puts("!ERR: thread=", comm);
-			monitor_comm_send_uint(thread, 5, comm);
-			monitor_puts(" rrno=", comm);
-			monitor_comm_send_uint(errno, 5, comm);
+				monitor_clear(MONITOR_THREAD_FAULT);
+
+				/* get the last thread known to be at fault */
+				thread = monitor_thread_break_get(&errno);
+				(void)thread;
+
+				DCC_LOG2(LOG_ERROR, "<%d> error %d !!", thread, errno);
+				if ((errno >= THINKOS_ERR_APP_INVALID) && 
+					(errno <= THINKOS_ERR_APP_BSS_INVALID)) {
+					DCC_LOG(LOG_ERROR, "Invalid application !");
+					monitor_thread_break_clr();
+				}
+				if (errno == THINKOS_ERR_SYSCALL_INVALID) {
+					DCC_LOG(LOG_ERROR, "Invalid System Call!");
+					monitor_thread_break_clr();
+				}
+
+				monitor_puts("!ERR: thread=", comm);
+				monitor_comm_send_uint(thread, 5, comm);
+				monitor_puts(" rrno=", comm);
+				monitor_comm_send_uint(errno, 5, comm);
 #if (MONITOR_OSINFO_ENABLE)
-			monitor_signal(MONITOR_USER_EVENT4);
+				monitor_signal(MONITOR_USER_EVENT4);
 #endif
 			}
 			break;
@@ -490,7 +522,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			break;
 #endif
 
-#if (MONITOR_APP_EXEC)
+#if (__MONITOR_APP_EXEC)
 		case MONITOR_APP_EXEC:
 			monitor_clear(MONITOR_APP_EXEC);
 			if (!__monitor_app_exec()) {
@@ -499,8 +531,9 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			break;
 #endif
 
-		case MONITOR_COMM_RCV:
 
+		case MONITOR_COMM_RCV:
+#if (THINKOS_ENABLE_CONSOLE)
 			DCC_LOG(LOG_INFO, "COMM_RCV...");
 
 			/* receive from the COMM driver one byte at the time */
@@ -530,103 +563,37 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 				DCC_LOG1(LOG_INFO, "monitor_comm_recv() = %d", cnt);
 			}
 			break;
-#if 0
-		case MONITOR_COMM_BRK:
-			monitor_comm_break_ack(comm);
+#else
+			if (monitor_comm_recv(comm, buf, 1) > 0) {
+				/* process the input character */
+				monitor_process_input(&monitor, buf[0]);
+			}
+#endif /* THINKOS_ENABLE_CONSOLE */
 			break;
-#endif
+
+#if (THINKOS_ENABLE_CONSOLE)
 		case MONITOR_COMM_CTL:
+			DCC_LOG(LOG_MSG, "/!\\ MONITOR_COMM_CTL");
 			monitor_clear(MONITOR_COMM_CTL);
-
 is_connected:
-			status = monitor_comm_status_get(comm);
-			if (status & COMM_ST_CONNECTED) {
-				DCC_LOG(LOG_INFO, "connected....");
-			}
-			connected = (status & COMM_ST_CONNECTED) ? true : false;
-			thinkos_krn_console_connect_set(connected);
-
-			sigmask &= ~((1 << MONITOR_COMM_EOT) | 
-						 (1 << MONITOR_COMM_RCV) |
-						 (1 << MONITOR_RX_PIPE));
-			sigmask |= (1 << MONITOR_TX_PIPE);
-
-			if (connected) {
-				sigmask |= ((1 << MONITOR_COMM_EOT) |
-							(1 << MONITOR_COMM_RCV));
-			}
-
-
+			sigmask = monitor_on_comm_ctl(comm, sigmask);
 			DCC_LOG1(LOG_MSG, "sigmask=%08x", sigmask);
 			break;
 
 		case MONITOR_COMM_EOT:
 			/* FALLTHROUGH */
 		case MONITOR_TX_PIPE:
-			if ((cnt = thinkos_console_tx_pipe_ptr(&ptr)) > 0) {
-				int n;
-				DCC_LOG1(LOG_INFO, "TX Pipe: cnt=%d, send...", cnt);
-				if ((n = monitor_comm_send(comm, ptr, cnt)) > 0) {
-					thinkos_console_tx_pipe_commit(n);
-					if (n == cnt) {
-						/* Wait for TX_PIPE */
-						sigmask |= (1 << MONITOR_TX_PIPE);
-						sigmask &= ~(1 << MONITOR_COMM_EOT);
-					} else {
-						/* Wait for COMM_EOT */
-						sigmask |= (1 << MONITOR_COMM_EOT);
-						sigmask &= ~(1 << MONITOR_TX_PIPE);
-					}
-				} else {
-					/* Wait for COMM_EOT */
-					sigmask |= (1 << MONITOR_COMM_EOT);
-					sigmask &=  ~(1 << MONITOR_TX_PIPE);
-				}
-			} else {
-				/* Wait for TX_PIPE */
-				DCC_LOG1(LOG_INFO, "TX Pipe: cnt=%d, wait....", cnt);
-				sigmask |= (1 << MONITOR_TX_PIPE);
-				sigmask &= ~(1 << MONITOR_COMM_EOT);
-			}
+			sigmask = monitor_on_tx_pipe(comm, sigmask);
 			break;
 
 		case MONITOR_RX_PIPE:
-			/* get a pointer to the head of the pipe.
-			   thinkos_console_rx_pipe_ptr() will return the number of 
-			   consecutive spaces in the buffer. */
-			if ((cnt = thinkos_console_rx_pipe_ptr(&ptr)) > 0) {
-				int n;
-
-				/* receive from the COMM driver */
-				if ((n = monitor_comm_recv(comm, ptr, cnt)) > 0) {
-					/* commit the fifo head */
-					thinkos_console_rx_pipe_commit(n);
-					if (n == cnt) {
-						/* Wait for RX_PIPE */
-						DCC_LOG(LOG_INFO, 
-								"RX_PIPE: Wait for RX_PIPE && COMM_RECV");
-						sigmask |= (1 << MONITOR_COMM_RCV);
-						sigmask &=  ~(1 << MONITOR_RX_PIPE);
-					} else {
-						DCC_LOG(LOG_INFO, "RX_PIPE: Wait for COMM_RECV");
-						/* Wait for COMM_RECV */
-						sigmask |= (1 << MONITOR_COMM_RCV);
-						sigmask &=  ~(1 << MONITOR_RX_PIPE);
-					}
-				} else {
-					/* Wait for COMM_RECV */
-					DCC_LOG(LOG_ERROR, "RX_PIPE: Wait for COMM_RECV");
-					sigmask |= (1 << MONITOR_COMM_RCV);
-					sigmask &=  ~(1 << MONITOR_RX_PIPE);
-				}
-			} else {
-				DCC_LOG1(LOG_ERROR, "RX_PIPE: RX, cnt=%d", cnt);
-				/* Wait for RX_PIPE */
-				sigmask &= ~(1 << MONITOR_COMM_RCV);
-				sigmask |= (1 << MONITOR_RX_PIPE);
-			}
+			sigmask = monitor_on_rx_pipe(comm, sigmask);
 			break;
+#endif /* THINKOS_ENABLE_CONSOLE */
 
+		default:
+			monitor_clear(sig);
+			DCC_LOG1(LOG_ERROR, "Unhandled signal %d", sig);
 		}
 	}
 }

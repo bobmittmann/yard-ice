@@ -109,8 +109,8 @@ int tftp_error(struct udp_pcb * udp, struct sockaddr_in * sin,
 
 	pkt.hdr.th_opcode = htons(TFTP_ERROR);
 	pkt.hdr.th_code = htons(errno);
-	strncpy((char *)pkt.hdr.th_msg, msg, n);
-	pkt.hdr.th_msg[n] = '\0';
+	strncpy((char *)pkt.payload, msg, n);
+	pkt.payload[n] = '\0';
 
 	len = sizeof(struct tftphdr) + n + 1;
 

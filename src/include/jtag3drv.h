@@ -291,7 +291,7 @@ static inline void ptr_wr(unsigned int id, uint16_t ptr) {
 
 static inline uint32_t __attribute__((always_inline)) 
 jtag3drv_int_wait(unsigned int irq_mask) {
-	struct stm32f_exti * exti = STM32F_EXTI;
+	struct stm32_exti * exti = STM32_EXTI;
 	uint32_t isr;
 	while (((isr = reg_rd(REG_INT_ST)) & irq_mask) == 0) {
 		thinkos_irq_wait(JTAG3DRV_IRQ);
@@ -302,7 +302,7 @@ jtag3drv_int_wait(unsigned int irq_mask) {
 
 static inline uint32_t __attribute__((always_inline)) 
 jtag3drv_int_wait_any(void) {
-	struct stm32f_exti * exti = STM32F_EXTI;
+	struct stm32_exti * exti = STM32_EXTI;
 	uint32_t isr;
 	while ((isr = reg_rd(REG_INT_ST)) == 0) {
 		thinkos_irq_wait(JTAG3DRV_IRQ);

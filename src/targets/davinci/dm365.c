@@ -314,8 +314,13 @@ int dm365_ddr2_init(const ice_drv_t * ice)
 	SYS_REG_SET(SYS_VTPIOCR, VTPIOCR_CLRZ);
 	//	SYS_REG_WR(SYS_VTPIOCR, (SYS_REG_RD(SYS_VTPIOCR)) | 0x00002000);
 
+	uint32_t data;
+
+	do {
+		ice_rd32(ice, DM36X_SYSTEM_BASE + (SYS_VTPIOCR), &data);
 	/*  Check VTP READY Status */
-	while (!(SYS_REG_RD(SYS_VTPIOCR) & VTPIOCR_READY));
+	} while ((data & VTPIOCR_READY) == 0);
+//	while ((SYS_REG_RD(SYS_VTPIOCR) & VTPIOCR_READY) == 0);
 
 	/*  Set bit VTP_IOPWRDWN bit 14 for DDR input buffers) */
 	/* SYS_REG_WR(SYS_VTPIOCR, SYS_REG_RD(SYS_VTPIOCR) | 0x00004000); */

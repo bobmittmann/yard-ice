@@ -30,10 +30,13 @@
 
 #include "version.h"
 
+#define __STR__(N) #N
+#define _STR_(N) __STR__(N)
+
 void version_fprint(FILE * f)
 {
 	fprintf(f, "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n" 
-			"(c) Copyright 2013-" VERSION_YEAR 
+			"(c) Copyright 2013-" _STR_(VERSION_YEAR)
 			",  Bob Mittmann (bobmittmann@gmail.com)\n\n");
 }
 

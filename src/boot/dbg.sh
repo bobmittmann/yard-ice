@@ -27,7 +27,8 @@ if [ $? = 0 ] ; then
 		'nrst' 'tgt 9 f c' 'run' 'disable debug'
 	if [ $? = 0 ] ; then
 		# Trace
-		${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF} ${APP_ELF}| tee dbg.log
+#		${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF} ${APP_ELF}| tee dbg.log
+		${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF} | tee dbg.log
 	fi
 fi
 

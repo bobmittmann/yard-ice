@@ -35,14 +35,13 @@
 #include "version.h"
 
 #ifndef RELAY_CHATTER_ENABLE
-#define RELAY_CHATTER_ENABLE 0
+#define RELAY_CHATTER_ENABLE 1
 #endif
 
 void board_reset(void)
 {
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "USB irq configure...");
-	udelay(0x10000);
 #endif
 	/* Adjust USB OTG FS interrupts priority */
 	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, MONITOR_PRIORITY);
@@ -57,7 +56,6 @@ void board_init(void)
 
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "Reset all peripherals ...");
-	udelay(0x10000);
 #endif
 	/* Reset all peripherals except USB_OTG and GPIOA */
 	rcc->ahb1rstr = ~(1 << RCC_GPIOA);
@@ -67,7 +65,6 @@ void board_init(void)
 	/* clear reset bits */
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "Clear reset bits...");
-	udelay(0x10000);
 #endif
 	rcc->ahb1rstr = 0;
 	rcc->ahb2rstr = 0;
@@ -78,17 +75,18 @@ void board_init(void)
 	   GPIOC and GPIOD */
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "Disable peripheral clock sources ...");
-	udelay(0x10000);
 #endif
 	rcc->ahb1enr = (1 << RCC_GPIOA) | (1 << RCC_GPIOB)  |
-				   (1 << RCC_GPIOB) | (1 << RCC_GPIOC) | (1 << RCC_GPIOD); 
+				   (1 << RCC_GPIOB) | (1 << RCC_GPIOC) | (1 << RCC_GPIOD);
+#if 0
+	               | (1 << RCC_CRC); 
+#endif
 	rcc->ahb2enr = (1 << RCC_OTGFS);
 	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;
 
 #if DEBUG
 	DCC_LOG(LOG_TRACE, "Select alternate functions to USB pins...");
-	udelay(0x40000);
 #endif
 
 #if 1
@@ -115,7 +113,7 @@ void board_init(void)
 	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 #endif
 
-#if 0
+#if 1
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
@@ -138,7 +136,6 @@ void board_init(void)
 #if DEBUG
   #if RELAY_CHATTER_ENABLE
 	DCC_LOG(LOG_TRACE, "Relay chatter ...");
-	udelay(0x40000);
 	/* - Relay ------------------------------------------------------------*/
 	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
 	stm32_gpio_clr(IO_RELAY);
@@ -197,8 +194,6 @@ void main(int argc, char ** argv)
 	struct thinkos_rt * krn = &thinkos_rt;
 	const struct monitor_comm * comm;
 	uint32_t flags = 0;
-	uintptr_t entry;
-	int (* app)(void);
 
 #if DEBUG
     DCC_LOG_INIT();
@@ -217,7 +212,7 @@ void main(int argc, char ** argv)
     mdelay(25);
 #endif
 
-	thinkos_krn_init(krn, THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0) |
+	thinkos_krn_init(krn, THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1) |
 					 THINKOS_OPT_PRIVILEGED, NULL);
 
 #if DEBUG
@@ -226,7 +221,6 @@ void main(int argc, char ** argv)
     mdelay(25);
 #endif
 	board_init();
-	board_reset();
 
 #if DEBUG
 	DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
@@ -240,7 +234,6 @@ void main(int argc, char ** argv)
 #endif
     /* enable interrupts */
     thinkos_krn_irq_on();
-
 #if 0
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
 		DCC_LOG(LOG_TRACE, "SHELL | AUTOBOOT");
@@ -284,10 +277,13 @@ void main(int argc, char ** argv)
 	/* starts/restarts monitor with autoboot enabled */
 	thinkos_krn_monitor_init(krn, comm, monitor_task, (void *)flags);
 
+	board_reset();
+	
 #if DEBUG
+    mdelay(1000);
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
             "* 6. board_integrity_check()..." VT_POP);
-    mdelay(25);
+    mdelay(250);
 #endif
     if (!board_integrity_check()) {
         DCC_LOG(LOG_ERROR, VT_PSH VT_BRI VT_FRD
@@ -295,19 +291,19 @@ void main(int argc, char ** argv)
 #if DEBUG
         mdelay(10000);
 #endif
-		entry = (uintptr_t)board_app_err;
     } else {
 #if DEBUG
 		DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
 				"* 8. boot_run_app()..." VT_POP);
 		mdelay(25);
 #endif
-		entry = board_app_get();
 	}
 
-	app = (int (*)(void))(entry);
+//	app = (int (*)(void))(entry);
 
-	app();
-//	for(;;);
+//	app();
+	for(;;) {
+		thinkos_sleep(5000);
+	};
 }
 
