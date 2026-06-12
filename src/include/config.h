@@ -64,7 +64,6 @@
 
 #define THINKOS_ENABLE_PREEMPTION       1
 #define THINKOS_ENABLE_CRITICAL         0
-#define THINKOS_ENABLE_ESCALATE         0
 
 #define THINKOS_IRQ_MAX                 80
 #define THINKOS_ENABLE_IRQ_CTL          1
@@ -96,7 +95,6 @@
   #define THINKOS_ENABLE_HARDFAULT        1
   #define THINKOS_ENABLE_BUSFAULT         1
   #define THINKOS_ENABLE_USAGEFAULT       1
-  #define THINKOS_ENABLE_KRNSVC           0
   #define THINKOS_ENABLE_ERROR_TRAP       1
   #define THINKOS_ENABLE_THREAD_FAULT     0
   #define THINKOS_SYSRST_ONFAULT          0
@@ -112,7 +110,6 @@
   #define THINKOS_ENABLE_HARDFAULT        0
   #define THINKOS_ENABLE_BUSFAULT         0
   #define THINKOS_ENABLE_USAGEFAULT       0
-  #define THINKOS_ENABLE_KRNSVC           0
   #define THINKOS_ENABLE_ERROR_TRAP       0
   #define THINKOS_ENABLE_THREAD_FAULT     0
   #define THINKOS_SYSRST_ONFAULT          0
@@ -274,7 +271,7 @@
  * LibC
  * ------------------------------------------------------------------------- */
 
-#define PRINTF_ENABLE_FLOAT 0
+#define PRINTF_ENABLE_FLOAT   1
 
 #endif /* __CONFIG_H__ */
 

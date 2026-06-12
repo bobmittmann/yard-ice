@@ -11,6 +11,13 @@ AM_CFLAGS =\
 
 bin_PROGRAMS = dcclog
 
+dcclog__SOURCES =  \
+	arm_elf.c \
+	dcc.c \
+	dcclog.c \
+	file.c \
+	net.c
+
 dcclog_SOURCES = \
 	arm_elf.c\
 	hexdump.c\

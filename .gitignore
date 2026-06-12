@@ -47,3 +47,5 @@ RemoteSystemsTempFiles/
 History/
 Project Logs*/
 *.orig
+*.exrc
+*.swo

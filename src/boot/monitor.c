@@ -100,7 +100,7 @@ uintptr_t board_app_get(void);
 #endif
 
 #ifndef MONITOR_LOCKINFO_ENABLE
-#define MONITOR_LOCKINFO_ENABLE        1
+#define MONITOR_LOCKINFO_ENABLE        0
 #endif
 
 #ifndef MONITOR_UPLOAD_CONFIG_ENABLE
@@ -219,105 +219,6 @@ static const struct magic_blk bootloader_magic = {
 
 #endif
 
-#if (MONITOR_OSINFO_ENABLE)
-
-
-void print_percent(uint32_t val, const struct monitor_comm * comm)
-{
-	monitor_comm_send_uint(val / 10, 4, comm);
-	monitor_putc('.', comm);
-	monitor_comm_send_uint(val % 10, 1, comm);
-}
-
-static void print_osinfo(const struct monitor_comm * comm, uint32_t cycref[])
-{
-#if (THINKOS_ENABLE_PROFILING)
-	int max = thinkos_krn_threads_max();
-	uint32_t cyc[max];
-	uint32_t cycdiv;
-	uint32_t busy;
-	uint32_t cycsum = 0;
-	uint32_t cycbusy;
-	uint32_t idle;
-#endif
-	const char * tag;
-	int i;
-
-	monitor_puts(s_hr, comm);
-#if (THINKOS_ENABLE_PROFILING)
-	cycsum = 0;
-
-	cycsum = monitor_threads_cyc_sum(cyc, cycref, 0, max); 
-	cycbusy = cycsum - cyc[THINKOS_THREAD_IDLE];
-	cycdiv = (cycsum + 500) / 1000;
-
-	busy = cycbusy / cycdiv;
-	if (busy > 1000)
-		busy  = 1000;
-
-	idle = 1000 - busy;
-	(void) idle;
-
-	monitor_puts("CPU: ", comm);
-	print_percent(busy, comm);
-	monitor_puts("% busy, ", comm);
-	print_percent(idle, comm);
-	monitor_comm_send_uint(idle % 10, 1, comm);
-	monitor_puts("% idle\r\n", comm);
-#endif
-
-	monitor_puts( " Th     Tag       SP       LR       PC  WQ TmW", comm);
-#if (THINKOS_ENABLE_PROFILING)
-	monitor_puts(" CPU % ", comm);
-#endif
-#if (MONITOR_LOCKINFO_ENABLE)
-	monitor_puts(" Locks", comm);
-#endif
-	monitor_puts("\r\n", comm);
-
-	for (i = THINKOS_THREAD_FIRST; i <= THINKOS_THREAD_LAST; ++i) {
-		if (thinkos_dbg_thread_ctx_is_valid(i)) {
-#if (MONITOR_LOCKINFO_ENABLE)
-			int j;
-#endif
-			monitor_comm_send_uint(i, 3, comm);
-			/* Internal thread ids start form 0 whereas user
-			   thread numbers start form one ... */
-			tag = thinkos_dbg_thread_tag_get(i);
-			monitor_comm_send_str(tag, 8, comm);
-			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(thinkos_dbg_thread_sp_get(i), 8, comm);
-			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(thinkos_dbg_thread_lr_get(i), 8, comm);
-			monitor_comm_send_blanks(1, comm);
-			monitor_comm_send_hex(thinkos_dbg_thread_pc_get(i), 8, comm);
-			monitor_comm_send_uint(thinkos_dbg_thread_wq_get(i), 4, comm);
-			monitor_comm_send_str(thinkos_dbg_thread_tmw_get(i) ? 
-								  "Yes" : " No", 4, comm);
-
-#if (THINKOS_ENABLE_PROFILING)
-			busy = cyc[i] / cycdiv;
-			if (busy > 1000)
-				busy  = 1000;
-			print_percent(busy, comm);
-#endif
-
-
-#if (MONITOR_LOCKINFO_ENABLE)
-			for (j = 0; j < THINKOS_MUTEX_MAX; ++j) {
-				unsigned int mtx = j + THINKOS_MUTEX_BASE;
-				if (thinkos_dbg_mutex_lock_get(mtx) == i)
-					monitor_comm_send_uint(mtx, 3, comm);
-			}
-#endif
-
-			monitor_puts("\r\n", comm);
-		}
-	}
-}
-
-#endif /* MONITOR_OSINFO_ENABLE */
-
 #if (MONITOR_PAUSE_ENABLE)
 static void pause_all(void)
 {
@@ -349,7 +250,7 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 	case CTRL_FS:
 		monitor_puts(s_confirm, comm);
 		if (monitor_getc(comm) == 'y') {
-			monitor_soft_reset();
+			monitor_req_core_rst();
 			monitor_signal(MONITOR_USER_EVENT2);
 		}
 		break;
@@ -383,7 +284,7 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 	case CTRL_R:
 		monitor_puts(s_confirm, comm);
 		if (monitor_getc(comm) == 'y') {
-			monitor_soft_reset();
+			monitor_req_core_rst();
 			monitor_signal(MONITOR_USER_EVENT1);
 		}
 		break;
@@ -392,7 +293,7 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 	case CTRL_F:
 		monitor_puts(s_confirm, comm);
 		if (monitor_getc(comm) == 'y') {
-			monitor_soft_reset();
+			monitor_req_core_rst();
 			monitor_signal(MONITOR_USER_EVENT3);
 		}
 		break;
@@ -466,7 +367,8 @@ static bool __monitor_app_exec(void)
 
 /* Default Monitor Task */
 void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm, 
-                                            void * param)
+											void * param, 
+											struct thinkos_rt * krn)
 {
 #if (MONITOR_OSINFO_ENABLE)
 	uint32_t cycref[thinkos_krn_threads_max()];
@@ -488,6 +390,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 
 	/* unmask events */
 	sigmask |= (1 << MONITOR_SOFTRST);
+	sigmask |= (1 << MONITOR_ON_CORE_RST);
 #if (MONITOR_FAULT_ENABLE)
 	sigmask |= (1 << MONITOR_THREAD_FAULT);
 #endif
@@ -523,6 +426,12 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 
 		case MONITOR_SOFTRST:
 			monitor_clear(MONITOR_SOFTRST);
+			board_reset();
+			monitor_puts("\r\n", comm);
+			goto is_connected;
+
+		case MONITOR_ON_CORE_RST:
+			monitor_clear(MONITOR_ON_CORE_RST);
 			board_reset();
 			monitor_puts("\r\n", comm);
 			goto is_connected;
@@ -577,7 +486,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 #if (MONITOR_OSINFO_ENABLE)
 		case MONITOR_USER_EVENT4:
 			monitor_clear(MONITOR_USER_EVENT4);
-			print_osinfo(comm, cycref);
+			monitor_print_osinfo(comm, cycref);
 			break;
 #endif
 

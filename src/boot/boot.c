@@ -194,11 +194,11 @@ uintptr_t board_app_get(void)
 //#void __attribute__((noreturn)) 
 void main(int argc, char ** argv)
 {
+	struct thinkos_rt * krn = &thinkos_rt;
 	const struct monitor_comm * comm;
 	uint32_t flags = 0;
 	uintptr_t entry;
 	int (* app)(void);
-
 
 #if DEBUG
     DCC_LOG_INIT();
@@ -217,8 +217,8 @@ void main(int argc, char ** argv)
     mdelay(25);
 #endif
 
-	thinkos_krn_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0) |
-					 THINKOS_OPT_PRIVILEGED, NULL, NULL);
+	thinkos_krn_init(krn, THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0) |
+					 THINKOS_OPT_PRIVILEGED, NULL);
 
 #if DEBUG
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
@@ -282,7 +282,7 @@ void main(int argc, char ** argv)
             "* 5. thinkos_krn_monitor_init()." VT_POP);
 #endif
 	/* starts/restarts monitor with autoboot enabled */
-	thinkos_krn_monitor_init(comm, monitor_task, (void *)flags);
+	thinkos_krn_monitor_init(krn, comm, monitor_task, (void *)flags);
 
 #if DEBUG
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR

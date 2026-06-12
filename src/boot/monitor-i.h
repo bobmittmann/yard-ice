@@ -77,7 +77,9 @@ extern const struct magic_blk board_app_magic;
 extern "C" {
 #endif
 
-void monitor_task(const struct monitor_comm * comm, void * param);
+void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm, 
+											void * param, 
+											struct thinkos_rt * krn);
 
 #ifdef __cplusplus
 }

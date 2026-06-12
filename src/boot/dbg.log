@@ -1,0 +1,5 @@
+
+== ARM DCC log viewer 5.0 ==
+ - elf: debug/thinkos-1.41.elf
+ - symbols off: 000887ac  size: 33184  entsize: 16 link 00000018
+ - elf: .elf
