@@ -35,7 +35,7 @@
 #include "version.h"
 
 #ifndef RELAY_CHATTER_ENABLE
-#define RELAY_CHATTER_ENABLE 1
+#define RELAY_CHATTER_ENABLE 0
 #endif
 
 void board_reset(void)
@@ -151,43 +151,6 @@ void board_init(void)
 #endif
 }
 
-int board_app_err(void)
-{
-	DCC_LOG(LOG_ERROR, "11. boot_app_err!!!");
-
-	return 0;
-}
-
-bool board_integrity_check(void)
-{
-    uint32_t tick;
-
-    for (tick = 0; tick < 10; ++tick) {
-        thinkos_sleep(500);
-    }
-
-    return true;
-}
-
-uintptr_t board_app_get(void) 
-{
-	uintptr_t addr = APPLICATION_BLOCK_OFFS;
-	const struct magic_blk * magic = &board_app_magic;
-	uint32_t * signature = (uint32_t *)addr;
-	struct flat_app  * hdr = (struct flat_app *)addr;
-	int i;
-
-	for (i = 0; i < magic->hdr.cnt; ++i) {
-		if ((signature[i] & magic->rec[i].mask) != magic->rec[i].comp) {
-			DCC_LOG3(LOG_ERROR, "%d  %08x %08x", i, signature[i], 
-					 magic->rec[i].comp);
-			return (uintptr_t)board_app_err;
-		}
-	}
-
-	return hdr->entry;
-}
-
 //#void __attribute__((noreturn)) 
 void main(int argc, char ** argv)
 {
@@ -280,30 +243,11 @@ void main(int argc, char ** argv)
 	board_reset();
 	
 #if DEBUG
-    mdelay(1000);
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
             "* 6. board_integrity_check()..." VT_POP);
-    mdelay(250);
 #endif
-    if (!board_integrity_check()) {
-        DCC_LOG(LOG_ERROR, VT_PSH VT_BRI VT_FRD
-                "**** board_integrity_check() failed." VT_POP);
-#if DEBUG
-        mdelay(10000);
-#endif
-    } else {
-#if DEBUG
-		DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
-				"* 8. boot_run_app()..." VT_POP);
-		mdelay(25);
-#endif
-	}
 
-//	app = (int (*)(void))(entry);
-
-//	app();
-	for(;;) {
-		thinkos_sleep(5000);
-	};
+	thinkos_sleep(1000);
+//	for(;;);
 }
 

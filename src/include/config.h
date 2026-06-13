@@ -35,7 +35,7 @@
 /* Maximum IRQ for this board */
 #define THINKOS_IRQ_MAX                     80
 /* Interrupt Vector Table Resides in RAM */
-#define THINKOS_ENABLE_RAM_VECTORS          0
+#define THINKOS_ENABLE_RAM_VECTORS          1
 #define THINKOS_ENABLE_IRQ_CTL              1
 #define THINKOS_ENABLE_IRQ_CYCCNT           0
 #define THINKOS_ENABLE_IRQ_PRIORITY_0       0
@@ -62,7 +62,7 @@
 #define THINKOS_ENABLE_OFAST                0
 #define THINKOS_ENABLE_MPU                  0
 #define THINKOS_ENABLE_FPU                  0
-#define THINKOS_ENABLE_PRIVILEGED_THREAD    1
+#define THINKOS_ENABLE_PRIVILEGED_THREAD    0
 #define THINKOS_ENABLE_CORE_RESET           1
 #define THINKOS_ENABLE_CTL                  0
 #define THINKOS_ENABLE_MEM_MAP              0
@@ -80,7 +80,7 @@
 /* Threads */
 #define THINKOS_THREADS_MAX                32
 #define THINKOS_ENABLE_THREAD_INFO          1
-#define THINKOS_ENABLE_THREAD_STAT          1
+#define THINKOS_ENABLE_THREAD_STAT          0
 #define THINKOS_ENABLE_JOIN                 0
 #define THINKOS_ENABLE_PAUSE                0
 #define THINKOS_ENABLE_CANCEL               0
@@ -126,7 +126,7 @@
 /* Error Handling */
 #define THINKOS_ENABLE_STACK_ALIGN          1
 #define THINKOS_ENABLE_UNALIGN_TRAP         1
-#define THINKOS_ENABLE_DIV0_TRAP            1
+#define THINKOS_ENABLE_DIV0_TRAP            0
 #define THINKOS_EXCEPT_STACK_SIZE         512
 #define THINKOS_ENABLE_STACK_LIMIT          0
 #define THINKOS_ENABLE_ERROR_TRAP           1
@@ -140,7 +140,7 @@
 
 #if DEBUG
 /* Enable scheduler trace calls */
-  #define THINKOS_ENABLE_SCHED_DEBUG        1
+  #define THINKOS_ENABLE_SCHED_DEBUG        0
   /* Enable scheduler stack error detection */
   #define THINKOS_ENABLE_SCHED_ERROR        0
   #define THINKOS_ENABLE_IDLE_WFI           0
@@ -158,7 +158,7 @@
 #define THINKOS_ENABLE_DEBUG_STEP           0
 
 #define THINKOS_ENABLE_OBJ_ALLOC            1
-#define THINKOS_ENABLE_OBJ_FREE             1
+#define THINKOS_ENABLE_OBJ_FREE             0
 
 #define THINKOS_FLASH_MEM_MAX               0
 /* Communication channels */
@@ -167,7 +167,7 @@
 #define THINKOS_ENABLE_APP                  1
 #define THINKOS_ENABLE_APP_FLAT             1
 #define THINKOS_ENABLE_APP_ELF              0
-#define THINKOS_ENABLE_APP_CRC              1
+#define THINKOS_ENABLE_APP_CRC              0
 
 /* Thinkos User library configureation */
 #define THINKOS_CUSTOM_APP_TAG          "YardIce"

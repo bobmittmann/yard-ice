@@ -653,7 +653,11 @@ int main(int argc, char ** argv)
 	io_init();
 
 #ifdef THINKAPP
+#ifndef UDELAY_FACTOR 
 	thinkos_udelay_factor(&udelay_factor);
+#else
+	udelay_factor = UDELAY_FACTOR; 
+#endif
 #else
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();

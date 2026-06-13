@@ -48,6 +48,7 @@
 #include "eval.h"
 
 #include <sys/dcclog.h>
+#include <trace.h>
 
 #if ENABLE_TELNET || ENABLE_TFTP || ENABLE_GDB || ENABLE_DCC || ENABLE_VCOM
 #ifndef ENABLE_NETWORK
@@ -58,7 +59,7 @@
 void yard_ice_greeting(FILE * f) 
 {
 	fprintf(f, "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2011-2016 - Bob Mittmann (bobmittmann@gmail.com)\n\n");
+	"(c) Copyright 2011-2026 - Bob Mittmann (bobmittmann@gmail.com)\n\n");
 }
 
 const char * const prompt_tab[] = {
@@ -95,10 +96,6 @@ int exec(FILE * f, const struct shell_cmd * cmd_tab, char * line)
 	int argc;
 	int n;
 
-/* if ((s = shell_stripline(line)) == NULL) {
-		return 0;
-	} */
-
 	if ((argc = shell_parseline(line, argv, SHELL_ARG_MAX)) == 0) {
 		return 0;
 	}
@@ -110,9 +107,10 @@ int exec(FILE * f, const struct shell_cmd * cmd_tab, char * line)
 	fprintf(f, "\n");
 #endif
 
-	/* */
+	/* Hack to assign variables with an equal sign */
 	if (argc > 2) {
 		if (strcmp(argv[1], "=") == 0) {
+			/* transform "var =" into "let var" */
 			argv[1] = argv[0];
 			argv[0] = "let";
 		}
@@ -124,12 +122,12 @@ int exec(FILE * f, const struct shell_cmd * cmd_tab, char * line)
 
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
 			DCC_LOG(LOG_WARNING, "eval_uint32()");
-			return n;
+			return SHELL_ERR_PARSE;
 		}
 
 		if (n != argc) {
 			DCC_LOG(LOG_WARNING, "parse error");
-			return -2;
+			return SHELL_ERR_PARSE;
 		}
 
 		show_uint32(f, val.uint32);
@@ -191,6 +189,8 @@ int shell(FILE * f, const char * (* prompt)(void),
 			}
 			
 		}
+
+		INF("shell() ret=%d", ret);
 	} while (ret != SHELL_ABORT); 
 
 	return 0;
@@ -222,10 +222,10 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_connect, "connect", "con", 
 		"", "connect to target" },
 
-	{ cmd_show_context, "context", "cpu", 
+	{ cmd_show_context, "cpu", "c", 
 		"", "show target CPU context" },
 
-	{ cmd_show_fpu_context, "float", "fpu", 
+	{ cmd_show_fpu_context, "fpu", "f", 
 		"", "show target FPU context" },
 
 #if 0
@@ -309,8 +309,8 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_ice_test, "icetest", "icet", 
 		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
 
-	{ cmd_ice_info, "ice_info", "ice", 
-		"[1..9]", "show ICE details" },
+	{ cmd_ice_info, "iceinfo", "ice", 
+		"[1..12]", "show ICE details" },
 
 	{ cmd_unset, "unset", "", 
 		"VAR", "clear environement variable" },
@@ -319,7 +319,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"", "show version" },
 
 	{ cmd_watchpoint, "watchpt", "wp", 
-		"", "set/modify watchpoint" },
+		"[set | clr | en | dis] [all | <ADDR [SIZE]>]", "set/modify watchpoint" },
 
 	{ cmd_power, "power", "pwr", 
 		"[on | off | cycle]", "control the target power ..." },
@@ -327,7 +327,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_relay, "relay", "rly", 
 		"[on | off | cycle]", "control on board relay..." },
 
-	{ cmd_mem_write, "write", "mw", 
+	{ cmd_mem_write, "write32", "mw", 
 		"ADDR W0 [W1 .. Wn]", "write into a memory region" },
 
 	{ cmd_tap, "tap", "", 

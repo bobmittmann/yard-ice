@@ -47,12 +47,14 @@ int __attribute__((noreturn)) console_task(FILE * f_tty)
 {
 	for (;;) {
 //		trace_output_set(f_tty, true);
-		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
+		int ret;
+		ret = shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
+		INF("shell ret=%d", ret);
 	}
 }
 
 //uint32_t __attribute__((section(".sram1"), aligned(8))) 
-uint32_t __attribute__((aligned(64))) console_shell_stack[1472]; 
+uint32_t __attribute__((aligned(8))) console_shell_stack[1024 + 512]; 
 
 const struct thinkos_thread_inf console_shell_inf = {
 	.stack_ptr = console_shell_stack, 

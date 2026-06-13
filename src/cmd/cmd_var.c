@@ -39,7 +39,7 @@ int cmd_var(FILE * f, int argc, char ** argv)
 	var_def_t * var = NULL;
 
 	while ((var = var_global_next(var)) != NULL) {
-		fprintf(f, "%3d %8s.%-8s %8s %4d\n", i++,
+		fprintf(f, "%3d %8s.%-12s %8s %4d\n", i++,
 				module_name(var->mod_id), var->name, 
 				type_name(var->type), var->id);
 	}

@@ -1,5 +1,959 @@
 
 == ARM DCC log viewer 5.0 ==
  - elf: debug/thinkos-1.41.elf
- - symbols off: 000887ac  size: 33184  entsize: 16 link 00000018
- - elf: .elf
+ - symbols off: 0006ffdc  size: 23056  entsize: 16 link 00000018
+ - host: 192.168.10.51:1001 (connected).
+ - log date: Sat Jun 13 15:41:23 2026
+
+
+
+  TRACE: main: 
+
+7[1m[34m
+  TRACE: main: *************************************************
+  TRACE: main: *     YardICE ThinkOS Custom Bootloader         *
+  TRACE: main: *************************************************8
+
+
+  TRACE: main: 
+
+7[1m[34m
+  TRACE: main: *************************************************
+  TRACE: main: *     YardICE ThinkOS Custom Bootloader         *
+  TRACE: main: *************************************************8
+
+
+  TRACE: main: 7[1m[32m* 1. thinkos_krn_init().8
+  TRACE: thinkos_krn_irq_off: disabling interrupts...
+  TRACE: thinkos_krn_init: 1. cleanup memory().
+  TRACE: thinkos_krn_init: udelay_factor=1706.
+  TRACE: thinkos_krn_init: SYysTick init...
+  TRACE: thinkos_krn_init: Console init...
+  TRACE: thinkos_krn_init: Memory management init...
+  TRACE: thinkos_krn_init: Interrupts init...
+  TRACE: thinkos_krn_irq_init: copying vectors from 0x08000000->0x20000000, 380
+  TRACE: thinkos_krn_irq_init: remaping vectors to 0x20000000
+  TRACE: thinkos_krn_init: IDLE init...
+  TRACE: thinkos_krn_init: Main thread init...
+  TRACE: __thinkos_init_main: < 1> threads_max=32 ready=00000000
+  TRACE: thinkos_krn_init: Enabling interrupts
+  TRACE: thinkos_krn_init: <1> MSP=20000c08 PSP=2001ff88 CTRL=02
+  TRACE: main: 7[1m[32m* 2. board_init().8
+  TRACE: board_init: Reset all peripherals ...
+  TRACE: board_init: Clear reset bits...
+  TRACE: board_init: Disable peripheral clock sources ...
+  TRACE: board_init: Select alternate functions to USB pins...
+  TRACE: board_init: OTYPER=0x00000000 OSPEEDR=0x03c00000 MODER=0xaa880000
+  TRACE: main: 7[1m[32m* 3. usb_comm_init().8
+  TRACE: main: 7[1m[32m* 4. thinkos_krn_irq_on().8
+  TRACE: main: 7[1m[32m* 5. thinkos_krn_monitor_init().8
+  TRACE: thinkos_krn_monitor_init: mask=00000003
+  TRACE: board_reset: USB irq configure...
+  TRACE: main: 7[1m[32m* 6. board_integrity_check()...8
+  TRACE: monitor_task: starting monitor...
+  ERROR: monitor_task: Unhandled signal 0
+WARNING: stm32f_otg_fs_isr: 7[33m[7m<USBRST> --------------- [DEFAULT]8
+WARNING: monitor_usb_on_reset: ...
+  TRACE: monitor_task: Disconnected!
+WARNING: stm32f_otg_fs_isr: 7[33m[7m<USBRST> --------------- [DEFAULT]8
+WARNING: monitor_usb_on_reset: ...
+  TRACE: monitor_task: Disconnected!
+  TRACE: monitor_usb_on_setup: SetAddr: 34 [ADDRESS]
+  TRACE: monitor_usb_on_setup: [CONFIGURED]
+WARNING: thinkos_krn_core_reset: 7[33m!! Core Reset !!8
+  TRACE: thinkos_krn_core_reset: 1. Disable all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 2. Reset all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 3. Initialize kernel datastructures ...
+  TRACE: monitor_task: Core reset received
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_task: APP_EXEC...
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_app_exec: creating a thread to call app_exec()!
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=0800384d exit=08003835
+  TRACE: thinkos_krn_thread_init:  args: 08020000 00000001 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=200009a8 PSP=2001ff90
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=0800384d ready.
+  TRACE: thinkos_main_thread_create: thread=1
+  TRACE: monitor_app_exec: monitor_thread_exec() = 1!
+  TRACE: __app_exec_task: thinkos_app_exec()!
+  TRACE: thinkos_app_exec_svc: < 1> addr=0x08020000 ...
+  TRACE: thinkos_flat_check: app=0x08020000 pc=0x08020041 sp=0x20020000
+  TRACE: monitor_task: Alarm
+  TRACE: thinkos_krn_app_start: krn stack: 0x2001c000 - 0x2001ffb0
+WARNING: thinkos_krn_app_start: stack collision, moving by 80!
+  TRACE: thinkos_krn_app_start: app stack: 0x2001c000 - 0x2001ffb0
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=08020041 exit=08001589
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000000 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=20000b80 PSP=2001ff88
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=08020041 ready.
+WARNING: thinkos_app_exec_svc: < 1> self == thread_idx, discarding...
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=122
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=123
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=53 isr=0x08026c2d)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=34
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=2
+  TRACE: thinkos_thread_init_svc: < 1> thread=2 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20002b40 base=20002340 size=2048
+  TRACE: thinkos_krn_thread_init:  task: entry=0802020d exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000002 00000002 00000002
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <2> ctx=20002b00 ctrl=0 pc=0802020d ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=35
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=36
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=58
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=59
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=82
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=83
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=32
+  TRACE: thinkos_thread_init_svc: < 1> thread=32 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=20002d40 base=20002b80 size=448
+  TRACE: thinkos_krn_thread_init:  task: entry=08020c75 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000020 00000020 00000020
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <32> ctx=20002d00 ctrl=0 pc=08020c75 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=37
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=106
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=31 isr=0x08022f7d)
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=32 isr=0x08023041)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=38
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=60
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=39
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=61
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=31
+  TRACE: thinkos_thread_init_svc: < 1> thread=31 init=0x2001fea8
+  TRACE: thinkos_krn_thread_init: stack: top=20009bc0 base=20009a40 size=384
+  TRACE: thinkos_krn_thread_init:  task: entry=08024cb1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001f 0000001f 0000001f
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe88
+  TRACE: thinkos_krn_thread_init: <31> ctx=20009b80 ctrl=0 pc=08024cb1 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="EvSet" oid=98
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=30
+  TRACE: thinkos_thread_init_svc: < 1> thread=30 init=0x2001fea0
+  TRACE: thinkos_krn_thread_init: stack: top=20009840 base=20009640 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08024339 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001e 0000001e 0000001e
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe80
+  TRACE: thinkos_krn_thread_init: <30> ctx=20009800 ctrl=0 pc=08024339 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=124
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=61 isr=0x080264e5)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=107
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=29
+  TRACE: thinkos_thread_init_svc: < 1> thread=29 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000e680 base=2000dc80 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036dc1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001d 0000001d 0000001d
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <29> ctx=2000e640 ctrl=0 pc=08036dc1 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=28
+  TRACE: thinkos_thread_init_svc: < 1> thread=28 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000f080 base=2000e680 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036d77 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001c 0000001c 0000001c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <28> ctx=2000f040 ctrl=0 pc=08036d77 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=3
+  TRACE: thinkos_thread_init_svc: < 1> thread=3 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000c140 base=2000b580 size=3008
+  TRACE: thinkos_krn_thread_init:  task: entry=08034a09 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000003 00000003 00000003
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <3> ctx=2000c100 ctrl=0 pc=08034a09 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 15
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=16
+  TRACE: thinkos_thread_init_svc: < 1> thread=16 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20005220 base=20003a28 size=6136
+  TRACE: thinkos_krn_thread_init:  task: entry=08023589 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000f094 00000010 00000010 00000010
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <16> ctx=200051e0 ctrl=0 pc=08023589 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 11
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=12
+  TRACE: thinkos_thread_init_svc: < 1> thread=12 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000d980 base=2000c280 size=5888
+  TRACE: thinkos_krn_thread_init:  task: entry=08036459 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000000c 0000000c 0000000c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <12> ctx=2000d940 ctrl=0 pc=08036459 ready.
+  TRACE: thinkos_obj_alloc_svc: < 3> kind="Cond" oid=62
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Sema" oid=84
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=108
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=109
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Thrd" oid=27
+  TRACE: thinkos_thread_init_svc: <12> thread=27 init=0x2000d928
+  TRACE: thinkos_krn_thread_init: stack: top=2000dc40 base=2000da40 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08036599 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000d980 0000001b 0000001b 0000001b
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2000d908
+  TRACE: thinkos_krn_thread_init: <27> ctx=2000dc00 ctrl=0 pc=08036599 ready.
+  TRACE: thinkos_obj_alloc_svc: <29> kind="Sema" oid=85
+  TRACE: monitor_task: Connected!
+WARNING: thinkos_krn_error_trap: 7[33m[7m Core reset thread=338
+WARNING: thinkos_krn_core_reset: 7[33m!! Core Reset !!8
+  TRACE: thinkos_krn_core_reset: 1. Disable all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 2. Reset all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 3. Initialize kernel datastructures ...
+  TRACE: monitor_task: APP_EXEC...
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_app_exec: creating a thread to call app_exec()!
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=0800384d exit=08003835
+  TRACE: thinkos_krn_thread_init:  args: 08020000 00000001 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=200009a8 PSP=20009b80
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=0800384d ready.
+  TRACE: thinkos_main_thread_create: thread=1
+  TRACE: monitor_app_exec: monitor_thread_exec() = 1!
+  TRACE: __app_exec_task: thinkos_app_exec()!
+  TRACE: thinkos_app_exec_svc: < 1> addr=0x08020000 ...
+  TRACE: thinkos_flat_check: app=0x08020000 pc=0x08020041 sp=0x20020000
+  TRACE: thinkos_krn_app_start: krn stack: 0x2001c000 - 0x2001ffb0
+WARNING: thinkos_krn_app_start: stack collision, moving by 80!
+  TRACE: thinkos_krn_app_start: app stack: 0x2001c000 - 0x2001ffb0
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=08020041 exit=08001589
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000000 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=20000b80 PSP=2001ff88
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=08020041 ready.
+WARNING: thinkos_app_exec_svc: < 1> self == thread_idx, discarding...
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=122
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=123
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=53 isr=0x08026c2d)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=34
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=2
+  TRACE: thinkos_thread_init_svc: < 1> thread=2 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20002b40 base=20002340 size=2048
+  TRACE: thinkos_krn_thread_init:  task: entry=0802020d exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000002 00000002 00000002
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <2> ctx=20002b00 ctrl=0 pc=0802020d ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=35
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=36
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=58
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=59
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=82
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=83
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=32
+  TRACE: thinkos_thread_init_svc: < 1> thread=32 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=20002d40 base=20002b80 size=448
+  TRACE: thinkos_krn_thread_init:  task: entry=08020c75 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000020 00000020 00000020
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <32> ctx=20002d00 ctrl=0 pc=08020c75 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=37
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=106
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=31 isr=0x08022f7d)
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=32 isr=0x08023041)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=38
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=60
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=39
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=61
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=31
+  TRACE: thinkos_thread_init_svc: < 1> thread=31 init=0x2001fea8
+  TRACE: thinkos_krn_thread_init: stack: top=20009bc0 base=20009a40 size=384
+  TRACE: thinkos_krn_thread_init:  task: entry=08024cb1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001f 0000001f 0000001f
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe88
+  TRACE: thinkos_krn_thread_init: <31> ctx=20009b80 ctrl=0 pc=08024cb1 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="EvSet" oid=98
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=30
+  TRACE: thinkos_thread_init_svc: < 1> thread=30 init=0x2001fea0
+  TRACE: thinkos_krn_thread_init: stack: top=20009840 base=20009640 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08024339 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001e 0000001e 0000001e
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe80
+  TRACE: thinkos_krn_thread_init: <30> ctx=20009800 ctrl=0 pc=08024339 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=124
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=61 isr=0x080264e5)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=107
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=29
+  TRACE: thinkos_thread_init_svc: < 1> thread=29 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000e680 base=2000dc80 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036dc1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001d 0000001d 0000001d
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <29> ctx=2000e640 ctrl=0 pc=08036dc1 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=28
+  TRACE: thinkos_thread_init_svc: < 1> thread=28 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000f080 base=2000e680 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036d77 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001c 0000001c 0000001c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <28> ctx=2000f040 ctrl=0 pc=08036d77 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=3
+  TRACE: thinkos_thread_init_svc: < 1> thread=3 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000c140 base=2000b580 size=3008
+  TRACE: thinkos_krn_thread_init:  task: entry=08034a09 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000003 00000003 00000003
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <3> ctx=2000c100 ctrl=0 pc=08034a09 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 15
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=16
+  TRACE: thinkos_thread_init_svc: < 1> thread=16 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20005220 base=20003a28 size=6136
+  TRACE: thinkos_krn_thread_init:  task: entry=08023589 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000f094 00000010 00000010 00000010
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <16> ctx=200051e0 ctrl=0 pc=08023589 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 11
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=12
+  TRACE: thinkos_thread_init_svc: < 1> thread=12 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000d980 base=2000c280 size=5888
+  TRACE: thinkos_krn_thread_init:  task: entry=08036459 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000000c 0000000c 0000000c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <12> ctx=2000d940 ctrl=0 pc=08036459 ready.
+  TRACE: thinkos_obj_alloc_svc: < 3> kind="Cond" oid=62
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Sema" oid=84
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=108
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=109
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Thrd" oid=27
+  TRACE: thinkos_thread_init_svc: <12> thread=27 init=0x2000d928
+  TRACE: thinkos_krn_thread_init: stack: top=2000dc40 base=2000da40 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08036599 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000d980 0000001b 0000001b 0000001b
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2000d908
+  TRACE: thinkos_krn_thread_init: <27> ctx=2000dc00 ctrl=0 pc=08036599 ready.
+  TRACE: thinkos_obj_alloc_svc: <29> kind="Sema" oid=85
+WARNING: thinkos_krn_error_trap: 7[33m[7m Core reset thread=338
+WARNING: thinkos_krn_core_reset: 7[33m!! Core Reset !!8
+  TRACE: thinkos_krn_core_reset: 1. Disable all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 2. Reset all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 3. Initialize kernel datastructures ...
+  TRACE: monitor_task: APP_EXEC...
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_app_exec: creating a thread to call app_exec()!
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=0800384d exit=08003835
+  TRACE: thinkos_krn_thread_init:  args: 08020000 00000001 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=200009a8 PSP=20009b80
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=0800384d ready.
+  TRACE: thinkos_main_thread_create: thread=1
+  TRACE: monitor_app_exec: monitor_thread_exec() = 1!
+  TRACE: __app_exec_task: thinkos_app_exec()!
+  TRACE: thinkos_app_exec_svc: < 1> addr=0x08020000 ...
+  TRACE: thinkos_flat_check: app=0x08020000 pc=0x08020041 sp=0x20020000
+  TRACE: thinkos_krn_app_start: krn stack: 0x2001c000 - 0x2001ffb0
+WARNING: thinkos_krn_app_start: stack collision, moving by 80!
+  TRACE: thinkos_krn_app_start: app stack: 0x2001c000 - 0x2001ffb0
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=08020041 exit=08001589
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000000 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=20000b80 PSP=2001ff88
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=08020041 ready.
+WARNING: thinkos_app_exec_svc: < 1> self == thread_idx, discarding...
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=122
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=123
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=53 isr=0x08026c2d)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=34
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=2
+  TRACE: thinkos_thread_init_svc: < 1> thread=2 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20002b40 base=20002340 size=2048
+  TRACE: thinkos_krn_thread_init:  task: entry=0802020d exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000002 00000002 00000002
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <2> ctx=20002b00 ctrl=0 pc=0802020d ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=35
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=36
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=58
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=59
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=82
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=83
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=32
+  TRACE: thinkos_thread_init_svc: < 1> thread=32 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=20002d40 base=20002b80 size=448
+  TRACE: thinkos_krn_thread_init:  task: entry=08020c75 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000020 00000020 00000020
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <32> ctx=20002d00 ctrl=0 pc=08020c75 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=37
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=106
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=31 isr=0x08022f7d)
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=32 isr=0x08023041)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=38
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=60
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=39
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=61
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=31
+  TRACE: thinkos_thread_init_svc: < 1> thread=31 init=0x2001fea8
+  TRACE: thinkos_krn_thread_init: stack: top=20009bc0 base=20009a40 size=384
+  TRACE: thinkos_krn_thread_init:  task: entry=08024cb1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001f 0000001f 0000001f
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe88
+  TRACE: thinkos_krn_thread_init: <31> ctx=20009b80 ctrl=0 pc=08024cb1 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="EvSet" oid=98
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=30
+  TRACE: thinkos_thread_init_svc: < 1> thread=30 init=0x2001fea0
+  TRACE: thinkos_krn_thread_init: stack: top=20009840 base=20009640 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08024339 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001e 0000001e 0000001e
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe80
+  TRACE: thinkos_krn_thread_init: <30> ctx=20009800 ctrl=0 pc=08024339 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=124
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=61 isr=0x080264e5)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=107
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=29
+  TRACE: thinkos_thread_init_svc: < 1> thread=29 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000e680 base=2000dc80 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036dc1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001d 0000001d 0000001d
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <29> ctx=2000e640 ctrl=0 pc=08036dc1 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=28
+  TRACE: thinkos_thread_init_svc: < 1> thread=28 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000f080 base=2000e680 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036d77 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001c 0000001c 0000001c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <28> ctx=2000f040 ctrl=0 pc=08036d77 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=3
+  TRACE: thinkos_thread_init_svc: < 1> thread=3 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000c140 base=2000b580 size=3008
+  TRACE: thinkos_krn_thread_init:  task: entry=08034a09 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000003 00000003 00000003
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <3> ctx=2000c100 ctrl=0 pc=08034a09 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 15
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=16
+  TRACE: thinkos_thread_init_svc: < 1> thread=16 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20005220 base=20003a28 size=6136
+  TRACE: thinkos_krn_thread_init:  task: entry=08023589 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000f094 00000010 00000010 00000010
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <16> ctx=200051e0 ctrl=0 pc=08023589 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 11
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=12
+  TRACE: thinkos_thread_init_svc: < 1> thread=12 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000d980 base=2000c280 size=5888
+  TRACE: thinkos_krn_thread_init:  task: entry=08036459 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000000c 0000000c 0000000c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <12> ctx=2000d940 ctrl=0 pc=08036459 ready.
+  TRACE: thinkos_obj_alloc_svc: < 3> kind="Cond" oid=62
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Sema" oid=84
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=108
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=109
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Thrd" oid=27
+  TRACE: thinkos_thread_init_svc: <12> thread=27 init=0x2000d928
+  TRACE: thinkos_krn_thread_init: stack: top=2000dc40 base=2000da40 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08036599 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000d980 0000001b 0000001b 0000001b
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2000d908
+  TRACE: thinkos_krn_thread_init: <27> ctx=2000dc00 ctrl=0 pc=08036599 ready.
+  TRACE: thinkos_obj_alloc_svc: <29> kind="Sema" oid=85
+  TRACE: monitor_task: Alarm
+WARNING: thinkos_krn_error_trap: 7[33m[7m Core reset thread=338
+WARNING: thinkos_krn_core_reset: 7[33m!! Core Reset !!8
+  TRACE: thinkos_krn_core_reset: 1. Disable all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 2. Reset all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 3. Initialize kernel datastructures ...
+  TRACE: monitor_task: APP_EXEC...
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_app_exec: creating a thread to call app_exec()!
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=0800384d exit=08003835
+  TRACE: thinkos_krn_thread_init:  args: 08020000 00000001 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=200009a8 PSP=20009b80
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=0800384d ready.
+  TRACE: thinkos_main_thread_create: thread=1
+  TRACE: monitor_app_exec: monitor_thread_exec() = 1!
+  TRACE: __app_exec_task: thinkos_app_exec()!
+  TRACE: thinkos_app_exec_svc: < 1> addr=0x08020000 ...
+  TRACE: thinkos_flat_check: app=0x08020000 pc=0x08020041 sp=0x20020000
+  TRACE: thinkos_krn_app_start: krn stack: 0x2001c000 - 0x2001ffb0
+WARNING: thinkos_krn_app_start: stack collision, moving by 80!
+  TRACE: thinkos_krn_app_start: app stack: 0x2001c000 - 0x2001ffb0
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=08020041 exit=08001589
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000000 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=20000b80 PSP=2001ff88
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=08020041 ready.
+WARNING: thinkos_app_exec_svc: < 1> self == thread_idx, discarding...
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=122
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=123
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=53 isr=0x08026c2d)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=34
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=2
+  TRACE: thinkos_thread_init_svc: < 1> thread=2 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20002b40 base=20002340 size=2048
+  TRACE: thinkos_krn_thread_init:  task: entry=0802020d exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000002 00000002 00000002
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <2> ctx=20002b00 ctrl=0 pc=0802020d ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=35
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=36
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=58
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=59
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=82
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=83
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=32
+  TRACE: thinkos_thread_init_svc: < 1> thread=32 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=20002d40 base=20002b80 size=448
+  TRACE: thinkos_krn_thread_init:  task: entry=08020c75 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000020 00000020 00000020
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <32> ctx=20002d00 ctrl=0 pc=08020c75 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=37
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=106
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=31 isr=0x08022f7d)
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=32 isr=0x08023041)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=38
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=60
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=39
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=61
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=31
+  TRACE: thinkos_thread_init_svc: < 1> thread=31 init=0x2001fea8
+  TRACE: thinkos_krn_thread_init: stack: top=20009bc0 base=20009a40 size=384
+  TRACE: thinkos_krn_thread_init:  task: entry=08024cb1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001f 0000001f 0000001f
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe88
+  TRACE: thinkos_krn_thread_init: <31> ctx=20009b80 ctrl=0 pc=08024cb1 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="EvSet" oid=98
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=30
+  TRACE: thinkos_thread_init_svc: < 1> thread=30 init=0x2001fea0
+  TRACE: thinkos_krn_thread_init: stack: top=20009840 base=20009640 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08024339 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001e 0000001e 0000001e
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe80
+  TRACE: thinkos_krn_thread_init: <30> ctx=20009800 ctrl=0 pc=08024339 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=124
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=61 isr=0x080264e5)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=107
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=29
+  TRACE: thinkos_thread_init_svc: < 1> thread=29 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000e680 base=2000dc80 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036dc1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001d 0000001d 0000001d
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <29> ctx=2000e640 ctrl=0 pc=08036dc1 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=28
+  TRACE: thinkos_thread_init_svc: < 1> thread=28 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000f080 base=2000e680 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036d77 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001c 0000001c 0000001c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <28> ctx=2000f040 ctrl=0 pc=08036d77 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=3
+  TRACE: thinkos_thread_init_svc: < 1> thread=3 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000c140 base=2000b580 size=3008
+  TRACE: thinkos_krn_thread_init:  task: entry=08034a09 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000003 00000003 00000003
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <3> ctx=2000c100 ctrl=0 pc=08034a09 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 15
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=16
+  TRACE: thinkos_thread_init_svc: < 1> thread=16 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20005220 base=20003a28 size=6136
+  TRACE: thinkos_krn_thread_init:  task: entry=08023589 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000f094 00000010 00000010 00000010
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <16> ctx=200051e0 ctrl=0 pc=08023589 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 11
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=12
+  TRACE: thinkos_thread_init_svc: < 1> thread=12 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000d980 base=2000c280 size=5888
+  TRACE: thinkos_krn_thread_init:  task: entry=08036459 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000000c 0000000c 0000000c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <12> ctx=2000d940 ctrl=0 pc=08036459 ready.
+  TRACE: thinkos_obj_alloc_svc: < 3> kind="Cond" oid=62
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Sema" oid=84
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=108
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=109
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Thrd" oid=27
+  TRACE: thinkos_thread_init_svc: <12> thread=27 init=0x2000d928
+  TRACE: thinkos_krn_thread_init: stack: top=2000dc40 base=2000da40 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08036599 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000d980 0000001b 0000001b 0000001b
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2000d908
+  TRACE: thinkos_krn_thread_init: <27> ctx=2000dc00 ctrl=0 pc=08036599 ready.
+  TRACE: thinkos_obj_alloc_svc: <29> kind="Sema" oid=85
+WARNING: thinkos_krn_error_trap: 7[33m[7m Core reset thread=338
+WARNING: thinkos_krn_core_reset: 7[33m!! Core Reset !!8
+  TRACE: thinkos_krn_core_reset: 1. Disable all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 2. Reset all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 3. Initialize kernel datastructures ...
+  TRACE: monitor_task: APP_EXEC...
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_app_exec: creating a thread to call app_exec()!
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=0800384d exit=08003835
+  TRACE: thinkos_krn_thread_init:  args: 08020000 00000001 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=200009a8 PSP=20009b80
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=0800384d ready.
+  TRACE: thinkos_main_thread_create: thread=1
+  TRACE: monitor_app_exec: monitor_thread_exec() = 1!
+  TRACE: __app_exec_task: thinkos_app_exec()!
+  TRACE: thinkos_app_exec_svc: < 1> addr=0x08020000 ...
+  TRACE: thinkos_flat_check: app=0x08020000 pc=0x08020041 sp=0x20020000
+  TRACE: thinkos_krn_app_start: krn stack: 0x2001c000 - 0x2001ffb0
+WARNING: thinkos_krn_app_start: stack collision, moving by 80!
+  TRACE: thinkos_krn_app_start: app stack: 0x2001c000 - 0x2001ffb0
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=08020041 exit=08001589
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000000 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=20000b80 PSP=2001ff88
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=08020041 ready.
+WARNING: thinkos_app_exec_svc: < 1> self == thread_idx, discarding...
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=122
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=123
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=53 isr=0x08026c2d)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=34
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=2
+  TRACE: thinkos_thread_init_svc: < 1> thread=2 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20002b40 base=20002340 size=2048
+  TRACE: thinkos_krn_thread_init:  task: entry=0802020d exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000002 00000002 00000002
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <2> ctx=20002b00 ctrl=0 pc=0802020d ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=35
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=36
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=58
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=59
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=82
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=83
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=32
+  TRACE: thinkos_thread_init_svc: < 1> thread=32 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=20002d40 base=20002b80 size=448
+  TRACE: thinkos_krn_thread_init:  task: entry=08020c75 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000020 00000020 00000020
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <32> ctx=20002d00 ctrl=0 pc=08020c75 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=37
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=106
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=31 isr=0x08022f7d)
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=32 isr=0x08023041)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=38
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=60
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=39
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=61
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=31
+  TRACE: thinkos_thread_init_svc: < 1> thread=31 init=0x2001fea8
+  TRACE: thinkos_krn_thread_init: stack: top=20009bc0 base=20009a40 size=384
+  TRACE: thinkos_krn_thread_init:  task: entry=08024cb1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001f 0000001f 0000001f
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe88
+  TRACE: thinkos_krn_thread_init: <31> ctx=20009b80 ctrl=0 pc=08024cb1 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="EvSet" oid=98
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=30
+  TRACE: thinkos_thread_init_svc: < 1> thread=30 init=0x2001fea0
+  TRACE: thinkos_krn_thread_init: stack: top=20009840 base=20009640 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08024339 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001e 0000001e 0000001e
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe80
+  TRACE: thinkos_krn_thread_init: <30> ctx=20009800 ctrl=0 pc=08024339 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=124
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=61 isr=0x080264e5)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=107
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=29
+  TRACE: thinkos_thread_init_svc: < 1> thread=29 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000e680 base=2000dc80 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036dc1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001d 0000001d 0000001d
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <29> ctx=2000e640 ctrl=0 pc=08036dc1 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=28
+  TRACE: thinkos_thread_init_svc: < 1> thread=28 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000f080 base=2000e680 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036d77 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001c 0000001c 0000001c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <28> ctx=2000f040 ctrl=0 pc=08036d77 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=3
+  TRACE: thinkos_thread_init_svc: < 1> thread=3 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000c140 base=2000b580 size=3008
+  TRACE: thinkos_krn_thread_init:  task: entry=08034a09 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000003 00000003 00000003
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <3> ctx=2000c100 ctrl=0 pc=08034a09 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 15
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=16
+  TRACE: thinkos_thread_init_svc: < 1> thread=16 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20005220 base=20003a28 size=6136
+  TRACE: thinkos_krn_thread_init:  task: entry=08023589 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000f094 00000010 00000010 00000010
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <16> ctx=200051e0 ctrl=0 pc=08023589 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 11
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=12
+  TRACE: thinkos_thread_init_svc: < 1> thread=12 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000d980 base=2000c280 size=5888
+  TRACE: thinkos_krn_thread_init:  task: entry=08036459 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000000c 0000000c 0000000c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <12> ctx=2000d940 ctrl=0 pc=08036459 ready.
+  TRACE: thinkos_obj_alloc_svc: < 3> kind="Cond" oid=62
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Sema" oid=84
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=108
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=109
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Thrd" oid=27
+  TRACE: thinkos_thread_init_svc: <12> thread=27 init=0x2000d928
+  TRACE: thinkos_krn_thread_init: stack: top=2000dc40 base=2000da40 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08036599 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000d980 0000001b 0000001b 0000001b
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2000d908
+  TRACE: thinkos_krn_thread_init: <27> ctx=2000dc00 ctrl=0 pc=08036599 ready.
+  TRACE: thinkos_obj_alloc_svc: <29> kind="Sema" oid=85
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_usb_on_setup: CDC Send Break value=65535
+  TRACE: monitor_task: Line break received
+WARNING: thinkos_krn_error_trap: 7[33m[7m Core reset thread=338
+WARNING: thinkos_krn_core_reset: 7[33m!! Core Reset !!8
+  TRACE: thinkos_krn_core_reset: 1. Disable all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 2. Reset all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 3. Initialize kernel datastructures ...
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_usb_on_setup: CDC Send Break value=0
+  TRACE: monitor_task: Alarm
+WARNING: thinkos_krn_error_trap: 7[33m[7m Core reset thread=338
+WARNING: thinkos_krn_core_reset: 7[33m!! Core Reset !!8
+  TRACE: thinkos_krn_core_reset: 1. Disable all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 2. Reset all intrerrupts ...
+  TRACE: thinkos_krn_core_reset: 3. Initialize kernel datastructures ...
+  TRACE: monitor_task: APP_EXEC...
+  TRACE: board_reset: USB irq configure...
+  TRACE: monitor_app_exec: creating a thread to call app_exec()!
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=0800384d exit=08003835
+  TRACE: thinkos_krn_thread_init:  args: 08020000 00000001 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=200009a8 PSP=20009b80
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=0800384d ready.
+  TRACE: thinkos_main_thread_create: thread=1
+  TRACE: monitor_app_exec: monitor_thread_exec() = 1!
+  TRACE: __app_exec_task: thinkos_app_exec()!
+  TRACE: thinkos_app_exec_svc: < 1> addr=0x08020000 ...
+  TRACE: thinkos_flat_check: app=0x08020000 pc=0x08020041 sp=0x20020000
+  TRACE: thinkos_krn_app_start: krn stack: 0x2001c000 - 0x2001ffb0
+WARNING: thinkos_krn_app_start: stack collision, moving by 80!
+  TRACE: thinkos_krn_app_start: app stack: 0x2001c000 - 0x2001ffb0
+  TRACE: thinkos_krn_thread_init: stack: top=2001ffb0 base=2001c000 size=16304
+  TRACE: thinkos_krn_thread_init:  task: entry=08020041 exit=08001589
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000000 00000000 00000000
+  TRACE: thinkos_krn_thread_init: SP=20000b80 PSP=2001ff88
+  TRACE: thinkos_krn_thread_init: <1> ctx=2001ff70 ctrl=0 pc=08020041 ready.
+WARNING: thinkos_app_exec_svc: < 1> self == thread_idx, discarding...
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=122
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=123
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=53 isr=0x08026c2d)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=34
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=2
+  TRACE: thinkos_thread_init_svc: < 1> thread=2 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20002b40 base=20002340 size=2048
+  TRACE: thinkos_krn_thread_init:  task: entry=0802020d exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 00000002 00000002 00000002
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <2> ctx=20002b00 ctrl=0 pc=0802020d ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=35
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=36
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=58
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=59
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=82
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Sema" oid=83
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=32
+  TRACE: thinkos_thread_init_svc: < 1> thread=32 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=20002d40 base=20002b80 size=448
+  TRACE: thinkos_krn_thread_init:  task: entry=08020c75 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000020 00000020 00000020
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <32> ctx=20002d00 ctrl=0 pc=08020c75 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=37
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=106
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=31 isr=0x08022f7d)
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=32 isr=0x08023041)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=38
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=60
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Mutx" oid=39
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Cond" oid=61
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=31
+  TRACE: thinkos_thread_init_svc: < 1> thread=31 init=0x2001fea8
+  TRACE: thinkos_krn_thread_init: stack: top=20009bc0 base=20009a40 size=384
+  TRACE: thinkos_krn_thread_init:  task: entry=08024cb1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001f 0000001f 0000001f
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe88
+  TRACE: thinkos_krn_thread_init: <31> ctx=20009b80 ctrl=0 pc=08024cb1 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="EvSet" oid=98
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=30
+  TRACE: thinkos_thread_init_svc: < 1> thread=30 init=0x2001fea0
+  TRACE: thinkos_krn_thread_init: stack: top=20009840 base=20009640 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08024339 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000001e 0000001e 0000001e
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001fe80
+  TRACE: thinkos_krn_thread_init: <30> ctx=20009800 ctrl=0 pc=08024339 ready.
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Gate" oid=124
+  TRACE: thinkos_irq_ctl_svc: irq_register(irq=61 isr=0x080264e5)
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Flag" oid=107
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=29
+  TRACE: thinkos_thread_init_svc: < 1> thread=29 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000e680 base=2000dc80 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036dc1 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001d 0000001d 0000001d
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <29> ctx=2000e640 ctrl=0 pc=08036dc1 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=28
+  TRACE: thinkos_thread_init_svc: < 1> thread=28 init=0x2001ff50
+  TRACE: thinkos_krn_thread_init: stack: top=2000f080 base=2000e680 size=2560
+  TRACE: thinkos_krn_thread_init:  task: entry=08036d77 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000dc48 0000001c 0000001c 0000001c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff30
+  TRACE: thinkos_krn_thread_init: <28> ctx=2000f040 ctrl=0 pc=08036d77 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 1
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=3
+  TRACE: thinkos_thread_init_svc: < 1> thread=3 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000c140 base=2000b580 size=3008
+  TRACE: thinkos_krn_thread_init:  task: entry=08034a09 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 20003098 00000003 00000003 00000003
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <3> ctx=2000c100 ctrl=0 pc=08034a09 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 15
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=16
+  TRACE: thinkos_thread_init_svc: < 1> thread=16 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=20005220 base=20003a28 size=6136
+  TRACE: thinkos_krn_thread_init:  task: entry=08023589 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000f094 00000010 00000010 00000010
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <16> ctx=200051e0 ctrl=0 pc=08023589 ready.
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 11
+  TRACE: thinkos_obj_alloc_svc: < 1> kind="Thrd" oid=12
+  TRACE: thinkos_thread_init_svc: < 1> thread=12 init=0x2001ff58
+  TRACE: thinkos_krn_thread_init: stack: top=2000d980 base=2000c280 size=5888
+  TRACE: thinkos_krn_thread_init:  task: entry=08036459 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 00000000 0000000c 0000000c 0000000c
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2001ff38
+  TRACE: thinkos_krn_thread_init: <12> ctx=2000d940 ctrl=0 pc=08036459 ready.
+  TRACE: thinkos_obj_alloc_svc: < 3> kind="Cond" oid=62
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Sema" oid=84
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=108
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Flag" oid=109
+  TRACE: thinkos_obj_alloc_svc: tgt_idx = 31
+  TRACE: thinkos_obj_alloc_svc: <12> kind="Thrd" oid=27
+  TRACE: thinkos_thread_init_svc: <12> thread=27 init=0x2000d928
+  TRACE: thinkos_krn_thread_init: stack: top=2000dc40 base=2000da40 size=512
+  TRACE: thinkos_krn_thread_init:  task: entry=08036599 exit=0803613d
+  TRACE: thinkos_krn_thread_init:  args: 2000d980 0000001b 0000001b 0000001b
+  TRACE: thinkos_krn_thread_init: SP=20000bc0 PSP=2000d908
+  TRACE: thinkos_krn_thread_init: <27> ctx=2000dc00 ctrl=0 pc=08036599 ready.
+  TRACE: thinkos_obj_alloc_svc: <29> kind="Sema" oid=85
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm
+  TRACE: monitor_task: Alarm

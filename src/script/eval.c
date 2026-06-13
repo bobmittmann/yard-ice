@@ -281,7 +281,9 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 		}
 		y = NUM_POP();
 		x = NUM_POP();
-		NUM_PUSH(calc32(OP_POP(), x, y));
+		op = OP_POP();
+
+		NUM_PUSH(calc32(op, x, y));
 	}
 
 	if (op_cnt > 0) {
