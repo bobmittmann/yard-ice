@@ -77,10 +77,11 @@ void board_init(void)
 	DCC_LOG(LOG_TRACE, "Disable peripheral clock sources ...");
 #endif
 	rcc->ahb1enr = (1 << RCC_GPIOA) | (1 << RCC_GPIOB)  |
-				   (1 << RCC_GPIOB) | (1 << RCC_GPIOC) | (1 << RCC_GPIOD);
-#if 0
-	               | (1 << RCC_CRC); 
+				   (1 << RCC_GPIOB) | (1 << RCC_GPIOC) | (1 << RCC_GPIOD)
+#if (THINKOS_ENABLE_APP_CRC)
+	               | (1 << RCC_CRC)
 #endif
+				   ;
 	rcc->ahb2enr = (1 << RCC_OTGFS);
 	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;

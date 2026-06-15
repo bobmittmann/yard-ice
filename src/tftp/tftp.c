@@ -132,7 +132,7 @@ int tftp_ack(struct udp_pcb * udp, int block, struct sockaddr_in * sin)
 	hdr.th_block = htons(block);
 
 	if ((ret = udp_sendto(udp, &hdr, sizeof(struct tftphdr), sin)) < 0) {
-		DCC_LOG(LOG_WARNING, "udp_sendto() fail");
+		WARNS("udp_sendto() fail");
 	}
 
 	return ret;
@@ -144,12 +144,11 @@ int tftp_oack(struct udp_pcb * udp, struct sockaddr_in * sin,
 	struct tftp_pkt_oack pkt;
 
 	if (len > TFTP_OACK_OPT_MAX) {
-		DCC_LOG1(LOG_ERROR, "len(%d) > TFTP_OACK_OPT_MAX", len);
+		ERR("len(%d) > TFTP_OACK_OPT_MAX", len);
 		return -1;
 	}
 
-	DBG("TFTP: OACK. len=%d", len);
-	DCC_LOG(LOG_TRACE, "OACK....");
+	DBG("TFTP: >> OACK. len=%d", len);
 
 	pkt.th_opcode = htons(TFTP_OACK);
 	memcpy(pkt.opt, opt, len);
@@ -323,8 +322,8 @@ int tftp_recv_netascii(struct udp_pcb * udp, struct sockaddr_in * sin,
 		if (i == len)
 			buf[i] = '\0';
 
-
-		if ((ret = exec(f, yard_ice_cmd_tab, line)) < 0) {
+		/* */
+		if ((ret = shell_exec(f, yard_ice_cmd_tab, line)) < 0) {
 			DCC_LOG1(LOG_ERROR, "shell_exec(): %d", ret);
 			break;
 		}
@@ -484,8 +483,8 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 		DCC_LOG2(LOG_TRACE, "Connected to: %I.%d", sin.sin_addr.s_addr, 
 				 ntohs(sin.sin_port));
 
-//		INF("Connected to: %08x.%d", sin.sin_addr.s_addr, 
-//			ntohs(sin.sin_port));
+		INF("Connected to: %08x.%d", sin.sin_addr.s_addr, 
+			ntohs(sin.sin_port));
 
 		for (;;) {
 			DCC_LOG3(LOG_INFO, "%I.%d %d", 
@@ -574,9 +573,10 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 
 					if (req.opt_len) 
 						tftp_oack(udp, &sin, req.opt, req.opt_len);
-					else
+					else {
 						tftp_ack(udp, block, &sin);
-
+						DBG("TFTP: >> ACK(%d)", block);
+					}
 					break;
 				} 
 
@@ -666,7 +666,7 @@ send_data:
 				DCC_LOG2(LOG_TRACE, "block=%d len=%d", 
 						 htons(hdr->th_block), len);
 
-				YAP("TFTP: DATA block=%d len=%d", htons(hdr->th_block), len);
+				DBG("TFTP: DATA block=%d len=%d", htons(hdr->th_block), len);
 
 				if (htons(hdr->th_block) != (block + 1)) {
 					/* retransmission, just ack */

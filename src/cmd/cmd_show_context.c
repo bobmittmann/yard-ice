@@ -26,37 +26,54 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/shell.h>
 
 #include "config.h"
 #include "target.h"
 #include "debugger.h"
+#include "command.h"
+#include "trace.h"
 
 int cmd_show_context(FILE * f, int argc, char ** argv)
 {
 	uint32_t addr;
 	int err;
+	bool stack = false;
+	bool extra = false;
+	int i;
 
-	if (argc > 2) {
-//		fprintf(f, msg_show_context_usage);
-		return -1;
-	}
+	if (argc > 3)
+		return SHELL_ERR_EXTRA_ARGS;
 
-	if (argc > 1) {
-		return -1;
+	for (i = 1; i < argc; i++) {
+		if ((strcmp(argv[i], "extra") == 0) || 
+			(strcmp(argv[i], "e") == 0)) {
+			extra = true;
+		} else if ((strcmp(argv[i], "stack") == 0) || 
+			(strcmp(argv[i], "s") == 0)) {
+			stack = true;
+		} else {
+			return SHELL_ERR_ARG_INVALID;
+		}
 	}
 
 	if ((err = target_context_show(f)) < 0) {
 		fprintf(f, "#ICE error: %s\n", target_strerror(err));
-		return -1;
+		return SHELL_ERR_LOW_LEVEL;
 	}
 
-	fprintf(f, "\n");
 
-	/* Get the Instruction Fetch Address */
-	target_ifa_get(&addr);
-	target_print_insn(f, addr);
+	if (extra) {
+		fprintf(f, "\n");
+		/* Get the Instruction Fetch Address */
+		target_ifa_get(&addr);
+		target_print_insn(f, addr);
+	}
 
-//	target_show_stack(f);
+	if (stack) {
+		fprintf(f, "\n");
+		target_stack_show(f);
+	}
 
 	return 0;
 }

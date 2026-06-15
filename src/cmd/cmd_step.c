@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/shell.h>
 
 #include "config.h"
 #include "target.h"
@@ -47,7 +48,7 @@ int cmd_step(FILE * f, int argc, char ** argv)
 	int i;
 
 	if (argc > 3)
-		return -1;
+		return SHELL_ERR_EXTRA_ARGS;
 
 	if (argc > 1) {
 		if (*argv[1] == 'q')
@@ -60,7 +61,7 @@ int cmd_step(FILE * f, int argc, char ** argv)
 		if (*argv[2] == 'q')
 			quiet = 1;
 		else
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 	}
 
 	for (i = 0; i < n; i++) {

@@ -196,9 +196,11 @@ typedef int (* ice_reg_get_t)(ice_ctrl_t * ctrl, int reg, uint32_t * val);
 
 typedef int (* ice_reg_set_t)(ice_ctrl_t * ctrl, int reg, uint32_t val);
 
+/*
 typedef int (* ice_pc_get_t)(ice_ctrl_t * ctrl, uint32_t * val);
 
 typedef int (* ice_pc_set_t)(ice_ctrl_t * ctrl, uint32_t val);
+*/
 
 typedef int (* ice_sp_get_t)(ice_ctrl_t * ctrl, uint32_t * val);
 
@@ -320,6 +322,10 @@ struct ice_oper {
 	/* register access */	
 	ice_reg_get_t reg_get;
 	ice_reg_set_t reg_set;
+
+	/* stack pointer address */	
+	ice_sp_get_t sp_get;
+	ice_sp_set_t sp_set;
 
 	/* instruction fetch address */	
 	ice_ifa_get_t ifa_get;
@@ -563,6 +569,7 @@ static inline int ice_pc_get(const ice_drv_t * ice, uint32_t * val) {
 static inline int ice_pc_set(const ice_drv_t * ice, uint32_t val) {
 	return ice->op.pc_set(ice->ctrl, val);
 }
+*/
 
 static inline int ice_sp_get(const ice_drv_t * ice, uint32_t * val) {
 	return ice->op.sp_get(ice->ctrl, val);
@@ -571,7 +578,6 @@ static inline int ice_sp_get(const ice_drv_t * ice, uint32_t * val) {
 static inline int ice_sp_set(const ice_drv_t * ice, uint32_t val) {
 	return ice->op.sp_set(ice->ctrl, val);
 }
-*/
 
 static inline int ice_ifa_get(const ice_drv_t * ice, uint32_t * val) {
 	return ice->op.ifa_get(ice->ctrl, val);

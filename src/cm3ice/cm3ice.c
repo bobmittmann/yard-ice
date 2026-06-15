@@ -828,7 +828,6 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if ((ret = cm3ice_comm_poll(ctrl, comm)) != 0) {
 			WARNS("cm3ice_comm_poll() failed!"); 
 //			return ret;
-			INF("JTAG TAP reset"); 
 			adapter_reset(tap);
 		}
 
@@ -934,14 +933,14 @@ int cm3ice_status(cm3ice_ctrl_t * ctrl)
 //		ctrl->jtag_lock = false;
 //	}
 
-	INF("S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "
+	YAP("S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "
 		"S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
 		(dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
 		(dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
 		(dhcsr & DHCSR_S_SLEEP) ? 1 : 0,
 		(dhcsr & DHCSR_S_HALT) ? 1 : 0);
 
-	DBG("S_REGRDY=%d C_MASKINTS=%d C_STEP=%d "\
+	YAP("S_REGRDY=%d C_MASKINTS=%d C_STEP=%d "\
 		"C_HALT=%d C_DEBUGEN=%d", (dhcsr & DHCSR_S_REGRDY) ? 1 : 0,
 		(dhcsr & DHCSR_C_MASKINTS) ? 1 : 0,
 		(dhcsr & DHCSR_C_STEP) ? 1 : 0,
@@ -1576,17 +1575,17 @@ int cm3ice_reg_set(cm3ice_ctrl_t * ctrl, int reg, uint32_t val)
 	return ret;
 }
 
-#if 0
 int cm3ice_sp_get(cm3ice_ctrl_t * ctrl, uint32_t * val)
 {
-	return cm3ice_reg_get(ctrl, 13, val);
+	return core_reg_get(ctrl->tap, &ctrl->core, CM3_SP, val);
 }
 
 int cm3ice_sp_set(cm3ice_ctrl_t * ctrl, uint32_t val)
 {
-	return cm3ice_reg_set(ctrl, 13, val);
+	return core_reg_set(ctrl->tap, &ctrl->core, CM3_SP, val);
 }
 
+#if 0
 int cm3ice_pc_get(cm3ice_ctrl_t * ctrl, uint32_t * val)
 {
 	return cm3ice_reg_get(ctrl, 15, val);
@@ -2087,6 +2086,26 @@ int cm3ice_close(cm3ice_ctrl_t * ctrl)
 	return ICE_OK;
 }
 
+int cm3ice_success(cm3ice_ctrl_t * ctrl)
+{
+	return ICE_OK;
+}
+
+int cm3ice_mem_lock(cm3ice_ctrl_t * ctrl)
+{
+	INFS("cm3ice_mem_lock()...");
+	ctrl->flags |= CM3ICE_MEM_LOCK;
+	return ICE_OK;
+}
+
+int cm3ice_mem_unlock(cm3ice_ctrl_t * ctrl)
+{
+	INFS("cm3ice_mem_unlock()...");
+	ctrl->flags &= ~CM3ICE_MEM_LOCK;
+	return ICE_OK;
+}
+
+
 int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which);
 int cm3ice_test(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t req, 
 				uint32_t argc, uint32_t argv[]);
@@ -2125,11 +2144,14 @@ const struct ice_oper cm3ice_oper = {
 	.reg_get = (ice_reg_get_t)cm3ice_reg_get,
 	.reg_set = (ice_reg_set_t)cm3ice_reg_set,
 
+	.sp_get = (ice_sp_get_t)cm3ice_sp_get,
+	.sp_set = (ice_sp_set_t)cm3ice_sp_set,
+
 	.ifa_get = (ice_ifa_get_t)cm3ice_ifa_get,
 	.ifa_set = (ice_ifa_set_t)cm3ice_ifa_set,
 
-	.mem_lock = (ice_mem_lock_t)NULL,
-	.mem_unlock = (ice_mem_unlock_t)NULL,
+	.mem_lock = (ice_mem_lock_t)cm3ice_mem_lock,
+	.mem_unlock = (ice_mem_unlock_t)cm3ice_mem_unlock,
 
 	.rd8 = (ice_rd8_t)cm3ice_rd8,
 	.wr8 = (ice_wr8_t)cm3ice_wr8,

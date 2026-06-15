@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/shell.h>
 
 #include "config.h"
 #include "target.h"
@@ -39,7 +40,7 @@ int cmd_connect(FILE * f, int argc, char ** argv)
 
 	if (argc > 3) {
 //		fprintf(f, msg_connect_usage);
-		return -1;
+		return SHELL_ERR_EXTRA_ARGS;
 	}
 
 	for (i = 1; i < argc; i++) {
@@ -51,7 +52,7 @@ int cmd_connect(FILE * f, int argc, char ** argv)
 				(strcmp(argv[i], "i") == 0)) {
 				init = 1;
 			} else {
-				return -2;
+				return SHELL_ERR_ARG_INVALID;
 			}
 		}
 	}
@@ -60,7 +61,7 @@ int cmd_connect(FILE * f, int argc, char ** argv)
 	if ((err = target_connect(force)) < 0) {
 		fprintf(f, " fail!\n");
 		fprintf(f, "#ERROR: target connect: %s\n", target_strerror(err));
-		return err;
+		return SHELL_ERR_LOW_LEVEL;
 	}
 	fprintf(f, " Ok.\n");
 
@@ -69,11 +70,11 @@ int cmd_connect(FILE * f, int argc, char ** argv)
 		if ((err = target_init(f)) < 0) {
 			fprintf(f, " fail!\n");
 			fprintf(f, "#ERROR: target init: %s\n", target_strerror(err));
-			return err;
+			return SHELL_ERR_LOW_LEVEL;
 		}
 		fprintf(f, " Ok.\n");
 	}
 
-	return 0;
+	return SHELL_OK;
 }
 

@@ -203,13 +203,11 @@ int target_register_get(int reg, uint32_t * val);
 
 int target_register_set(int reg, uint32_t val);
 
-int target_pc_get(uint32_t * val);
-
-int target_pc_set(uint32_t val);
-
 int target_sp_get(uint32_t * val);
 
 int target_sp_set(uint32_t val);
+
+int target_stack_refresh(void * buf, size_t len);
 
 /* Instruction Fetch Address (IFA) get */
 int target_ifa_get(uint32_t * val);
@@ -301,6 +299,8 @@ int target_int_enable(void);
 int target_int_disable(void);
 
 int target_context_show(FILE * f);
+
+int target_stack_show(FILE * f);
 
 int target_fpu_context_show(FILE * f);
 

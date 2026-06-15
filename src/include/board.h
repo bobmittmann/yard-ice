@@ -38,9 +38,9 @@
 /**************************************************************************
  * USB
  **************************************************************************/
-#define OTG_FS_DP   STM32_GPIOA, 12
-#define OTG_FS_DM   STM32_GPIOA, 11
-#define OTG_FS_VBUS STM32_GPIOA, 9
+#define OTG_FS_DP         STM32_GPIOA, 12
+#define OTG_FS_DM         STM32_GPIOA, 11
+#define OTG_FS_VBUS       STM32_GPIOA, 9
 
 /**************************************************************************
  * Sebug serial
@@ -74,10 +74,10 @@
  * FLASH memory partitions
  **************************************************************************/
 #define FLASH_BLK_BOOT_OFFS     0x00000000
-#define FLASH_BLK_BOOT_SIZE     (16 * 1024)
+#define FLASH_BLK_BOOT_SIZE     (32 * 1024)
 
-#define FLASH_BLK_FS_OFFS       0x00004000
-#define FLASH_BLK_FS_SIZE       (48 * 1024)
+#define FLASH_BLK_FS_OFFS       0x00008000
+#define FLASH_BLK_FS_SIZE       (32 * 1024)
 
 #define FLASH_BLK_RBF_OFFS      0x00010000
 #define FLASH_BLK_RBF_SIZE      (64 * 1024)

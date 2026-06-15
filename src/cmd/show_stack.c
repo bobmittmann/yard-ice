@@ -33,45 +33,24 @@
 #include "debugger.h"
 #include "hexdump.h"
 
-#include <debug.h>
-
-int show_stack(FILE * f)
+int target_stack_show(FILE * f)
 {
 	struct debugger * dbg = &debugger;
 	unsigned int addr;
-	unsigned int * sp = 0;
-	unsigned int base;
+	uint32_t buf[16];
+	uint32_t * sp;
 	int cnt;
-	int n;
+	int ret;
 
-	if (target_stack_refresh() < 0)
-		return -1;
+	if ((ret = target_stack_refresh(buf, sizeof(buf))) < 0)
+		return ret;
 
 	addr = dbg->stack.base;
 	cnt = dbg->stack.size;
-//	sp = (unsigned int *)dbg->stack_buf;
+	sp = (uint32_t *)buf;
 
 	addr &= ~(sizeof(uint32_t) - 1);
-	base = addr & ~(16 - 1);
-	if (base < addr) {
-		n = (base + 16) - addr;
-	} else {
-		n = 16;
-	}
-
-	do {
-		if (cnt < n)
-			n = cnt;
-
-		show_hex32(f, addr, sp, n);
-
-		fprintf(f, "\n");
-
-		addr += n;
-		sp += 16;
-		cnt -= n;
-		n = 16;
-	} while (cnt > 0);
+	show_hex32(f, addr, sp, cnt);
 
 	return 0;
 }

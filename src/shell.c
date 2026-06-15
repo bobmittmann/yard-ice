@@ -88,7 +88,7 @@ void show_uint32(FILE * f, uint32_t val)
 				fprintf(f, "0x%08x (%d)\n", val, val);
 }
 
-int exec(FILE * f, const struct shell_cmd * cmd_tab, char * line)
+int shell_exec(FILE * f, const struct shell_cmd * cmd_tab, char * line)
 {
 	char * argv[SHELL_ARG_MAX];
 	struct shell_cmd * cmd;
@@ -181,16 +181,16 @@ int shell(FILE * f, const char * (* prompt)(void),
 
 			ret = cmd_exec(f, cmd, stat);
 #else
-			ret = exec(f, cmd_tab, stat);
+			ret = shell_exec(f, cmd_tab, stat);
 #endif
 			if ((ret < 0) && (ret !=  SHELL_ABORT)) {
-				fprintf(f, "Error: %d\n", -ret);
+				fprintf(f, "Error: %s\n", shell_strerror(ret));
 				break;
 			}
 			
 		}
 
-		INF("shell() ret=%d", ret);
+		YAP("shell() ret=%d", ret);
 	} while (ret != SHELL_ABORT); 
 
 	return 0;
@@ -207,6 +207,15 @@ const char * yard_ice_get_prompt(void)
 
 const struct shell_cmd yard_ice_cmd_tab[] = {
 
+	{ cmd_arp, "arp", "arp", 
+		"", "show / manipulate the system ARP cache" },
+
+#if (ENABLE_NAND)
+	{ cmd_bb_scan, "bbscan", "bbs", 
+		"", "NAND bad block scan" },
+#endif
+
+
 	{ cmd_beep, "beep", "", 
 		"[tone [time]]", "play a tone" },
 
@@ -220,32 +229,41 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"", "cause the shell to close" },
 
 	{ cmd_connect, "connect", "con", 
-		"", "connect to target" },
+		"< i | init | f | force>", "connect to selected target" },
 
 	{ cmd_show_context, "cpu", "c", 
-		"", "show target CPU context" },
+		"<ext | stack>", "show target CPU context" },
 
-	{ cmd_show_fpu_context, "fpu", "f", 
-		"", "show target FPU context" },
-
+	{ cmd_disable, "disable", "dis", 
+		"[poll | comm | debug | irq]", "disable feature." },
 #if 0
 	{ cmd_dint, "dint", "di", 
 		"", "disable interrupts" },
 #endif
 	{ cmd_disassemble, "dasm", "d", 
-		"", "disassemble" },
+		"ADDR [SIZE]", "disassemble" },
 #if 0
 	{ cmd_eint, "eint", "ei", 
 		"", "enable interrupts" },
 #endif
+
+	{ cmd_enable, "enable", "en", 
+		"[poll | comm | debug | irq]", "enable feature." },
+
 	{ cmd_mem_erase, "erase", "er", 
 		"ADDR [SIZE]", "erase a memory region" },
+
+	{ cmd_fpga, "fpga", "rbf", 
+		"[erase] [load] [cfg]", "update FPGA program." },
+
+	{ cmd_show_fpu_context, "fpu", "f", 
+		"", "show target FPU context" },
 
 	{ cmd_get, "get", "", 
 		"VAR", "get environement variable" },
 
 	{ cmd_goto, "goto", "g", 
-		"", "move the program counter" },
+		"ADDR", "move the program counter" },
 
 	{ cmd_halt, "halt", "h", 
 		"", "halt (break) the target" },
@@ -253,8 +271,25 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
 
+	{ cmd_i2c, "i2c", "", 
+		"[reset | info | probe | select N]", "I2C operations." },
+
+	{ cmd_ice_info, "iceinfo", "ice", 
+		"[1..12]", "show ICE details" },
+
+	{ cmd_ice_test, "icetest", "icet", 
+		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
+
 	{ cmd_info, "info", "inf", 
 		"", "show Target and ICE information" },
+
+#if (ENABLE_NETWORK)
+	{ cmd_ifconfig, "ifconfig", "if", 
+		"", "configure a network interface" },
+
+	{ cmd_ipcfg, "ipcfg", "ipcf", 
+		"", "ip configuration utility" },
+#endif
 
 	{ cmd_init, "init", "ini", 
 		"", "perform target initialization" },
@@ -265,6 +300,12 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_meminfo, "meminfo", "mi", 
 		"", "show memory info" },
 
+	{ cmd_nrst, "nrst", "nr", 
+		"[set | clr | [pulse TIME(ms)]]", "assert the nRST signal ..." },
+
+	{ cmd_power, "power", "pwr", 
+		"[on | off | cycle]", "control the target power ..." },
+	
 	{ cmd_probe, "probe", "pb", 
 		"", "probe for target" },
 
@@ -274,46 +315,55 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_mem_read, "read", "mr", 
 		"ADDR [SIZE]", "read a memory region" },
 
+	{ cmd_reboot, "reboot", "rb", 
+		"", "system restart" },
+
+	{ cmd_relay, "relay", "rly", 
+		"[on | off | cycle]", "control on board relay..." },
+
+
 	{ cmd_reset, "reset", "rst", 
 		"[auto|soft|hard|core|dbg|sys]", "reset the target" },
 
 	{ cmd_run, "run", "r", 
 		"", "resume target execution" },
 
+#if (ENABLE_NAND)
+	{ cmd_scrub, "scrub", "scb", 
+		"", "NAND block forced erase" },
+#endif
+	{ cmd_set, "set", "", 
+		"VAR EXPR", "set environement variable" },
+
+#if (ENABLE_NETWORK)
+#if (ENABLE_TCP_SEND)
+	{ cmd_tcp_send, "sndnet", "sn", 
+		"[ADDR] [SIZE] [PORT]", "send a memory block through network" },
+#endif
+#endif
+
 	{ cmd_step, "step", "s", 
 		"", "single step execution" },
+
+	{ cmd_tap, "tap", "", 
+		"[reset | info | probe | select N]", "JTAG TAP operations." },
 
 	{ cmd_target, "target", "tgt", 
 		"<NAME|ID> <force|probe|scan|config>", 
 		"configure the target system" },
 
-#if (ENABLE_NAND)
-	{ cmd_bb_scan, "bbscan", "bbs", 
-		"", "NAND bad block scan" },
-#endif
-
-#if (ENABLE_NAND)
-	{ cmd_scrub, "scrub", "scb", 
-		"", "NAND block forced erase" },
-#endif
-
-	{ cmd_reboot, "reboot", "rb", 
-		"", "system restart" },
-
-	{ cmd_set, "set", "", 
-		"VAR EXPR", "set environement variable" },
-
 	{ cmd_test, "test", "tst", 
 		"", "perform target test" },
 
-	{ cmd_ice_test, "icetest", "icet", 
-		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
+	{ cmd_trst, "trst", "tr", 
+		"[set | clr | [pulse TIME(ms)]]", "assert the TRST signal ..." },
 
-	{ cmd_ice_info, "iceinfo", "ice", 
-		"[1..12]", "show ICE details" },
 
 	{ cmd_unset, "unset", "", 
-		"VAR", "clear environement variable" },
+		"VAR", "clear environment variable" },
+
+	{ cmd_var, "variable", "var", 
+		"", "show global variables" },
 
 	{ cmd_version, "version", "ver", 
 		"", "show version" },
@@ -321,44 +371,20 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_watchpoint, "watchpt", "wp", 
 		"[set | clr | en | dis] [all | <ADDR [SIZE]>]", "set/modify watchpoint" },
 
-	{ cmd_power, "power", "pwr", 
-		"[on | off | cycle]", "control the target power ..." },
-
-	{ cmd_relay, "relay", "rly", 
-		"[on | off | cycle]", "control on board relay..." },
-
 	{ cmd_mem_write, "write32", "mw", 
 		"ADDR W0 [W1 .. Wn]", "write into a memory region" },
 
-	{ cmd_tap, "tap", "", 
-		"[reset | info | probe | select N]", "JTAG TAP operations." },
+	{ cmd_drscan, "drscan", "dr", 
+		"VECTOR LEN", "scan a vector int the JTAG data register" },
 
-	{ cmd_i2c, "i2c", "", 
-		"[reset | info | probe | select N]", "I2C operations." },
-
-	{ cmd_enable, "enable", "en", 
-		"[poll | comm | debug | irq]", "enable feature." },
-
-	{ cmd_disable, "disable", "dis", 
-		"[poll | comm | debug | irq]", "disable feature." },
-
-	{ cmd_trst, "trst", "tr", 
-		"[set | clr | [pulse TIME(ms)]]", "assert the TRST signal ..." },
-
-	{ cmd_nrst, "nrst", "nr", 
-		"[set | clr | [pulse TIME(ms)]]", "assert the nRST signal ..." },
+	{ cmd_irpause, "irpause", "ip", 
+		"COUNT", "cycle in the IRPAUSE state <COUNT> times" },
 
 	{ cmd_irscan, "irscan", "ir", 
 		"VECTOR LEN", "scan a vector int the JTAG instruction register" },
 
-	{ cmd_drscan, "drscan", "dr", 
-		"VECTOR LEN", "scan a vector int the JTAG instruction register" },
-
-	{ cmd_irpause, "irpause", "ip", 
-		"COUNT", "" },
-
 	{ cmd_drpause, "drpause", "dp", 
-		"COUNT", "" },
+		"COUNT", "cycle in the DRPAUSE state <COUNT> times" },
 
 	{ cmd_runtest, "runtest", "idle", 
 		"COUNT", "cycle the JTAG TCK <COUNT> times" },
@@ -366,14 +392,11 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_idcode, "idcode", "id", 
 		"[TAP]", "get the JTAG IDCODE for a device in the chain" },
 
-	{ cmd_var, "variable", "var", 
-		"", "show global variables" },
-
 	{ cmd_trace, "trace", "tc", 
 		"[sup | flush | auto | keep]", "handle the trace ring..." },
 
 	{ cmd_sleep, "sleep", "", 
-		"", "delay for a specific amount of time" },
+		"INTERVAL", "delay for a specific <INTERVAL> in milliseconds" },
 #if 0
 	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
@@ -384,25 +407,15 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_thread, "thread", "th", 
 		"[ID]", "show thread status" },
 #endif
-	{ cmd_fpga, "fpga", "rbf", 
-		"[erase] [load] [cfg]", "update FPGA program." },
-
 #if (ENABLE_NETWORK)
-	{ cmd_ifconfig, "ifconfig", "if", 
-		"", "configure a network interface" },
-
-	{ cmd_ipcfg, "ipcfg", "ipcf", 
-		"", "ip configuration utility" },
-
 	{ cmd_ping, "ping", "", 
 		"DESTINATION", "send ICMP ECHO_REQUEST to network hosts" },
-
+#endif
+#if (ENABLE_NETWORK)
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
-
-	{ cmd_arp, "arp", "arp", 
-		"", "show / manipulate the system ARP cache" },
-
+#endif
+#if (ENABLE_NETWORK)
 	{ cmd_route, "route", "rt", 
 		"", "show / manipulate the IP routing table" },
 
@@ -416,10 +429,6 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 #if (ENABLE_TCP_RECV)
 	{ cmd_tcp_recv, "rcvnet", "rn", 
 		"[ADDR] [PORT]", "receive file through network" },
-#endif
-#if (ENABLE_TCP_SEND)
-	{ cmd_tcp_send, "sndnet", "sn", 
-		"[ADDR] [SIZE] [PORT]", "send a memory block through network" },
 #endif
 #endif
 

@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/shell.h>
 
 #include "config.h"
 #include "target.h"
@@ -144,7 +145,7 @@ int cmd_target(FILE *f, int argc, char ** argv)
 				fprintf(f, "Invalid argument: %s...\n", *argv);
 				fprintf(f, "usage: target <NAME|ID> "
 						"<force|probe|scan|config>\n");
-				return -1;
+				return SHELL_ERR_ARG_INVALID;
 			}
 			argc--;
 			argv++;
@@ -160,14 +161,14 @@ int cmd_target(FILE *f, int argc, char ** argv)
 		if ((ret = target_ice_configure(f, target, force)) < 0) {
 			fprintf(f, " # ICE configuration ERROR!\n");
 			fprintf(f, "ERROR: target_ice_configure()!\n");
-			return ret;
+			return SHELL_ERR_LOW_LEVEL;
 		}
 	}
 
 	if (probe) {
 		if ((ret = target_probe(f)) < 0) {
 			fprintf(f, " # probe ERROR!\n");
-			return ret;
+			return SHELL_ERR_LOW_LEVEL;
 		} 
 		if(ret == 0) {
 			fprintf(f, " - probe Fail!\n");
@@ -179,7 +180,7 @@ int cmd_target(FILE *f, int argc, char ** argv)
 	if (config) {
 		if ((ret = target_config(f)) < 0) {
 			fprintf(f, " # Target configuration ERROR!\n");
-			return ret;
+			return SHELL_ERR_LOW_LEVEL;
 		} 
 	}
 

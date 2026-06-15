@@ -43,7 +43,7 @@
 #define THINKOS_ENABLE_WQ_IRQ               0
 /* System */
 /* Enable the per thread CPU usage counters */
-#define THINKOS_ENABLE_PROFILING            0
+#define THINKOS_ENABLE_PROFILING            1
 #define THINKOS_ENABLE_PREEMPTION           1
 #define THINKOS_ENABLE_CRITICAL             0
 /* Check the validity of arguments to system calls */
@@ -59,12 +59,12 @@
 #define THINKOS_ENABLE_BREAK                0
 #define THINKOS_ENABLE_MEMORY_CLEAR         1
 #define THINKOS_ENABLE_STACK_INIT           1
-#define THINKOS_ENABLE_OFAST                0
-#define THINKOS_ENABLE_MPU                  0
+#define THINKOS_ENABLE_OFAST                1
+#define THINKOS_ENABLE_MPU                  1
 #define THINKOS_ENABLE_FPU                  0
 #define THINKOS_ENABLE_PRIVILEGED_THREAD    0
 #define THINKOS_ENABLE_CORE_RESET           1
-#define THINKOS_ENABLE_CTL                  0
+#define THINKOS_ENABLE_CTL                  1
 #define THINKOS_ENABLE_MEM_MAP              0
 #define THINKOS_ENABLE_IDLE_HOOKS           0
 #define THINKOS_ENABLE_I_CALLS              1
@@ -90,7 +90,7 @@
 
 #define THINKOS_MUTEX_MAX                  24
 
-#define THINKOS_COND_MAX                   24
+#define THINKOS_COND_MAX                   32
 
 #define THINKOS_SEMAPHORE_MAX              16
 
@@ -113,20 +113,20 @@
 /* Console */
 #define THINKOS_ENABLE_CONSOLE              1
 #define THINKOS_ENABLE_CONSOLE_READ         1
-#define THINKOS_ENABLE_CONSOLE_CTL          0 
+#define THINKOS_ENABLE_CONSOLE_CTL          1
 #define THINKOS_ENABLE_CONSOLE_MODE         0
 #define THINKOS_ENABLE_CONSOLE_NONBLOCK     0
 #define THINKOS_ENABLE_CONSOLE_BREAK        0
-#define THINKOS_ENABLE_CONSOLE_OPEN         0
-#define THINKOS_ENABLE_CONSOLE_DRAIN        0
-#define THINKOS_ENABLE_CONSOLE_MISC         0
+#define THINKOS_ENABLE_CONSOLE_OPEN         1
+#define THINKOS_ENABLE_CONSOLE_DRAIN        1
+#define THINKOS_ENABLE_CONSOLE_MISC         1
 #define THINKOS_CONSOLE_RX_FIFO_LEN        64
-#define THINKOS_CONSOLE_TX_FIFO_LEN       128
+#define THINKOS_CONSOLE_TX_FIFO_LEN       256
 
 /* Error Handling */
 #define THINKOS_ENABLE_STACK_ALIGN          1
 #define THINKOS_ENABLE_UNALIGN_TRAP         1
-#define THINKOS_ENABLE_DIV0_TRAP            0
+#define THINKOS_ENABLE_DIV0_TRAP            1
 #define THINKOS_EXCEPT_STACK_SIZE         512
 #define THINKOS_ENABLE_STACK_LIMIT          0
 #define THINKOS_ENABLE_ERROR_TRAP           1
@@ -158,7 +158,7 @@
 #define THINKOS_ENABLE_DEBUG_STEP           0
 
 #define THINKOS_ENABLE_OBJ_ALLOC            1
-#define THINKOS_ENABLE_OBJ_FREE             0
+#define THINKOS_ENABLE_OBJ_FREE             1
 
 #define THINKOS_FLASH_MEM_MAX               0
 /* Communication channels */
@@ -167,10 +167,10 @@
 #define THINKOS_ENABLE_APP                  1
 #define THINKOS_ENABLE_APP_FLAT             1
 #define THINKOS_ENABLE_APP_ELF              0
-#define THINKOS_ENABLE_APP_CRC              0
+#define THINKOS_ENABLE_APP_CRC              1
 
 /* Thinkos User library configureation */
-#define THINKOS_CUSTOM_APP_TAG          "YardIce"
+#define THINKOS_CUSTOM_APP_TAG              "YardICE"
 
 /* -------------------------------------------------------------------------
  * kernel printf
@@ -212,6 +212,8 @@
 #define STM32_OTG_FS_BULK_PKTS       6
 
 #define CDC_EP_IN_MAX_PKT_SIZE       64
+#define CDC_EP_OUT_MAX_PKT_SIZE      64
+#define CDC_EP_INT_MAX_PKT_SIZE      32
 
 /* -------------------------------------------------------------------------
  * TCP/IP
@@ -266,8 +268,8 @@
 #define ENABLE_TFTP     1
 #define ENABLE_NAND     1
 #define ENABLE_COMM     1
-#define ENABLE_GDB      0
-#define ENABLE_VCOM     0
+#define ENABLE_GDB      1
+#define ENABLE_VCOM     1
 #define ENABLE_I2C      1
 #define ENABLE_TELNET   1
 

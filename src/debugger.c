@@ -1498,6 +1498,7 @@ int target_pc_set(uint32_t val)
 
 	return ret;
 }
+*/
 
 int target_sp_get(uint32_t * val)
 {
@@ -1528,7 +1529,48 @@ int target_sp_set(uint32_t val)
 
 	return ret;
 }
-*/
+
+int target_stack_refresh(void * ptr, size_t size)
+{
+	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	int ret;
+
+	thinkos_mutex_lock(dbg->target_mutex);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		thinkos_mutex_unlock(dbg->target_mutex);
+		return ERR_STATE;
+	}
+
+	/* stop polling */
+	poll_stop(dbg);
+	thinkos_mutex_lock(dbg->ice_mutex);
+
+	if ((ret = ice_sp_get(ice, &dbg->stack.base)) < 0) {
+		DCC_LOG(LOG_WARNING, "ice_sp_get() fail!");
+	} else {
+		if ((ret = ice_mem_lock(ice)) < 0) {
+			DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
+		} else {
+			uint32_t addr = dbg->stack.base;
+			if ((ret = ice_mem_read(ice, dbg->mem, addr, ptr, size)) < 0) {
+				DCC_LOG(LOG_WARNING, "dbg_mem_read(), fail");
+			} else {
+				dbg->stack.size = ret;
+			}
+			ice_mem_unlock(ice);
+		}
+	}
+
+	poll_start(dbg);
+	thinkos_mutex_unlock(dbg->ice_mutex);
+
+	thinkos_mutex_unlock(dbg->target_mutex);
+
+	return ret;
+}
 
 int target_ifa_get(uint32_t * val)
 {
@@ -2472,7 +2514,7 @@ int target_reset(FILE * f, int mode)
 	case RST_SOFT:
 		fprintf(f, " - software reset...\n");
 		DCC_LOG(LOG_TRACE, "software reset...");
-		INF("soft reset...");
+		INFS("soft reset...");
 		if ((ret = soft_reset(f, ice, dbg->target, dbg->mem)) < 0) {
 			DCC_LOG(LOG_WARNING, "software reset failed!");
 			/* XXX: ERROR */
@@ -2481,7 +2523,7 @@ int target_reset(FILE * f, int mode)
 	case RST_HARD:
 		fprintf(f, " - hardware reset...\n");
 		DCC_LOG(LOG_TRACE, "hardware reset...");
-		INF("hard reset...");
+		INFS("hard reset...");
 		if ((ret = hw_reset(ice, target)) < 0) {
 			DCC_LOG(LOG_WARNING, "hardware reset failed!");
 		}
@@ -2489,7 +2531,7 @@ int target_reset(FILE * f, int mode)
 	case RST_CORE:
 		fprintf(f, " - core reset...\n");
 		DCC_LOG(LOG_TRACE, "core reset...");
-		INF("core reset...");
+		INFS("core reset...");
 		if ((ret = ice_core_reset(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "core reset failed!");
 		}
@@ -2497,7 +2539,7 @@ int target_reset(FILE * f, int mode)
 	case RST_SYS:
 		fprintf(f, " - system reset...\n");
 		DCC_LOG(LOG_TRACE, "system reset...");
-		INF("system reset...");
+		INFS("system reset...");
 		if ((ret = ice_system_reset(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "system reset failed!");
 		}
@@ -2505,7 +2547,7 @@ int target_reset(FILE * f, int mode)
 	case RST_DBG:
 		fprintf(f, " - debug reset...\n");
 		DCC_LOG(LOG_TRACE, "debug reset...");
-		INF("debug reset...");
+		INFS("debug reset...");
 		if ((ret = dbg_reset(ice, target)) < 0) {
 			DCC_LOG(LOG_WARNING, "debug reset failed!");
 		}
@@ -2518,10 +2560,10 @@ int target_reset(FILE * f, int mode)
 
 	if (dbg->state > DBG_ST_CONNECTED) {
 		if (ice_status(ice) & ICE_ST_HALT) {
-			INF("[DBG_ST_HALTED].");
+			INFS("[DBG_ST_HALTED].");
 			dbg->state = DBG_ST_HALTED;
 		} else {
-			INF("[DBG_ST_RUNNING], start polling...");
+			INFS("[DBG_ST_RUNNING], start polling...");
 			dbg->state = DBG_ST_RUNNING;
 		}
 	}
@@ -3211,7 +3253,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 	/* initializing the jtag chain */
 	if ((ret = jtag_chain_init(irlen, cnt)) != JTAG_OK) {
-		DCC_LOG(LOG_ERROR, "JTAG chain fail!");
+		ERRS("JTAG chain fail!");
 		thinkos_mutex_unlock(dbg->ice_mutex);
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return ret;
@@ -3220,14 +3262,14 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	if (target->pre_config) {
 		DCC_LOG(LOG_TRACE, "Target pre config callback...");
 		if ((ret = target->pre_config(f, ice, target)) < 0) {
-			DCC_LOG(LOG_ERROR, "target->pre_config() fail!");
+			ERRS("target->pre_config() fail!");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return ret;
 		}
 		cnt = jtag_tap_tell();
 	} else {
-		DCC_LOG(LOG_TRACE, "target->pre_config callback undefined!");
+		INFS("target->pre_config callback undefined!");
 	}
 
 	if (tap_pos < 0) {
@@ -3235,14 +3277,14 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 		for (i = 0; i < cnt; i++) {
 			if ((ret = jtag_tap_get(&tap, i)) != JTAG_OK) {
-				DCC_LOG(LOG_ERROR, "jtag_tap_get()!");
+				ERRS("jtag_tap_get()!");
 				thinkos_mutex_unlock(dbg->ice_mutex);
 				thinkos_mutex_unlock(dbg->target_mutex);
 				return ret;
 			}
 
 			if ((ret = jtag_tap_idcode(tap, &idcode)) != JTAG_OK) {
-				DCC_LOG(LOG_ERROR, "jtag_tap_idcode()!");
+				ERRS("jtag_tap_idcode()!");
 				thinkos_mutex_unlock(dbg->ice_mutex);
 				thinkos_mutex_unlock(dbg->target_mutex);
 				return ret;
@@ -3259,14 +3301,14 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		}
 
 		if (tap_pos < 0) {
-			DCC_LOG(LOG_WARNING, "no suitable CPU found()!");
+			WARNS("no suitable CPU found()!");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return -1;
 		}
 	} else {
 		if (tap_pos > cnt) {
-			DCC_LOG1(LOG_ERROR, "TAP position (%d) is out of bounds!", tap_pos);
+			ERR("TAP position (%d) is out of bounds!", tap_pos);
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			/* XXX: this is a JTAG error and shuld not be used in
@@ -3275,13 +3317,13 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		}
 
 		if ((ret = jtag_tap_get(&tap, tap_pos)) != JTAG_OK) {
-			DCC_LOG(LOG_ERROR, "jtag_tap_get()!");
+			ERRS("jtag_tap_get()!");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return ret;
 		}
 		if ((ret = jtag_tap_idcode(tap, &idcode)) != JTAG_OK) {
-			DCC_LOG(LOG_ERROR, "jtag_tap_idcode()!");
+			ERRS("jtag_tap_idcode()!");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return ret;
@@ -3291,7 +3333,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		fprintf(f, " - JTAG IDCODE: 0x%08x\n", idcode); 
 
 		if ((idcode & target->arch->cpu->idmask) != target->arch->cpu->idcomp) {
-			DCC_LOG(LOG_TRACE, "invalid IDCODE");
+			ERRS("invalid IDCODE");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return -1;

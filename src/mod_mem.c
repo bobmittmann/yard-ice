@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <trace.h>
 
 #include "target.h"
 #include "dbglog.h"
@@ -52,7 +53,7 @@ int mod_mem_on_load(struct ice_mem_entry * mem, int mod_id)
 {
 	int id;
 
-	DCC_LOG2(LOG_INFO, "mem=0x%p mod_id=%d", mem, mod_id);
+	INF("mem=0x%p mod_id=%d", mem, mod_id);
 
 	for(id = 0; mem[id].op != NULL; ++id) {
 		uint32_t addr;
@@ -62,13 +63,10 @@ int mod_mem_on_load(struct ice_mem_entry * mem, int mod_id)
 		if ((size = mem[id].blk.count * mem[id].blk.size) == 0)
 			continue; /* skip empty blocks */
 #endif
-
-
 		addr = mem[id].addr.base + mem[id].addr.offs;
 		(void)addr;
 
-		DCC_LOG3(LOG_INFO, "mem=\"%s\" id=%d addr=0x%08x", 
-				 mem[id].name, id, addr);
+		DBG("mem=\"%s\" id=%d addr=0x%08x", mem[id].name, id, addr);
 
 		if (var_global_add(mod_id, mem[id].name, TYPE_UINT32, id) < 0) {
 			DCC_LOG(LOG_WARNING, "var_global_add() fail!");

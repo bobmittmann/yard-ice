@@ -169,7 +169,7 @@ int cmd_fpga(FILE * f, int argc, char ** argv);
 
 int cmd_xflash(FILE * f, int argc, char ** argv);
 
-int exec(FILE * f, const struct shell_cmd * cmd_tab, char * line);
+int shell_exec(FILE * f, const struct shell_cmd * cmd_tab, char * line);
 
 void show_val(FILE * f, uint32_t val);
 

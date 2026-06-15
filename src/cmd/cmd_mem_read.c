@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/shell.h>
 
 #include "target.h"
 #include "debugger.h"
@@ -74,9 +75,8 @@ int cmd_mem_read(FILE * f, int argc, char ** argv)
 
 	if (argc) {
 		fprintf(f, "Too many arguments...\n");
-		return -1;
+		return SHELL_ERR_EXTRA_ARGS;
 	}
-
 
 	if (size == 0)
 		size = 64;

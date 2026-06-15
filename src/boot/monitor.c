@@ -73,11 +73,6 @@ const struct magic_blk bootloader_magic = {
 };
 #pragma GCC diagnostic pop
 
-extern int __heap_end;
-const void * heap_end = &__heap_end; 
-extern uint32_t _stack;
-extern const struct thinkos_thread_inf thinkos_main_inf;
-
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
 
@@ -96,14 +91,14 @@ void board_reset(void);
 static const char s_version[] = "ThinkOS " VERSION_NUM "\r\n";
 
 static const char s_help[] = 
-" ^C - Restart\r\n"
+"\tCtrl+C - Restart\r\n"
+"\tCtrl+F - Upload FPGA\r\n"
 #if (MONITOR_OSINFO_ENABLE)
-" ^O - OS Info\r\n"
+"\tCtrl+O - OS Info\r\n"
 #endif
-" ^F - Upload FPGA\r\n"
-" ^V - Help\r\n"
-" ^T - Upload ThinkOS\r\n"
-" ^Y - Upload YARD-ICE\r\n"
+"\tCtrl+V - Help\r\n"
+"\tCtrl+T - Upload ThinkOS\r\n"
+"\tCtrl+Y - Upload YARD-ICE\r\n"
 ;
 
 static const char s_hr[] = 
@@ -122,7 +117,8 @@ static int yflash(uint32_t blk_offs, uint32_t blk_size,
 	uintptr_t thumb;
 	int ret;
 
-	cm3_primask_set(1);
+	/* disable interrupts */
+	cm3_cpsid_i();
 	__thinkos_memcpy32((void *)yflash_code, otg_xflash_pic, 
 					 sizeof_otg_xflash_pic);
 
@@ -138,6 +134,7 @@ static int yflash(uint32_t blk_offs, uint32_t blk_size,
 #define REQ_BOOT_UPLOAD     MONITOR_USER_EVENT2
 #define	REQ_CONFIG_UPLOAD   MONITOR_USER_EVENT3
 #define REQ_SHOW_MENU       MONITOR_USER_EVENT4
+#define REQ_SHOW_STACK_USG  MONITOR_USER_EVENT5
 
 bool monitor_process_input(const struct monitor_comm * comm, int c)
 {
@@ -151,11 +148,14 @@ bool monitor_process_input(const struct monitor_comm * comm, int c)
 		monitor_signal(REQ_SHOW_OSINFO);
 		break;
 #endif
+    case CTRL_U:
+		monitor_signal(REQ_SHOW_STACK_USG);
+        break;
 
 	case CTRL_V:
 		monitor_signal(REQ_SHOW_MENU);
 		break;
-
+ 
 	case CTRL_Y:
 		monitor_puts(s_confirm, comm);
 		if (monitor_getc(comm) == 'y') {
@@ -189,19 +189,14 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 											void * param, 
 											struct thinkos_rt * krn)
 {
-#if (THINKOS_ENABLE_CONSOLE)
-  #if (THINKOS_ENABLE_CONSOLE_MODE)
-	bool raw_mode = false;
-  #endif 
-	uint8_t * ptr;
-	int cnt;
+#if (MONITOR_OSINFO_ENABLE)
+	uint32_t cycref[THINKOS_THREAD_LAST + 1];
 #endif
-	bool connected = false;
-	int status;
 	uint32_t sigmask = 0;
-//	bool connected;
 	uint8_t buf[4];
-	uint32_t sig;
+	uint8_t * ptr;
+	int sig;
+	int cnt;
 
 	DCC_LOG(LOG_TRACE, "starting monitor...");
 
@@ -219,10 +214,12 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 	sigmask |= (1 << MONITOR_RX_PIPE);
 
 	sigmask |= (1 << MONITOR_APP_UPLOAD);
+	sigmask |= (1 << MONITOR_APP_EXEC);
 	sigmask |= (1 << REQ_FPGA_UPLOAD);
 	sigmask |= (1 << REQ_BOOT_UPLOAD);
 	sigmask |= (1 << REQ_SHOW_MENU);
-	sigmask |= (1 << MONITOR_APP_EXEC);
+	sigmask |= (1 << REQ_SHOW_STACK_USG);
+
 #if (MONITOR_OSINFO_ENABLE)
 	sigmask |= (1 << REQ_SHOW_OSINFO);
 #endif
@@ -262,42 +259,40 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			monitor_app_exec(APPLICATION_START_ADDR);
 			break;
 
+		case REQ_SHOW_STACK_USG:
+			monitor_clear(REQ_SHOW_STACK_USG);
+			monitor_print_stack_usage(comm);
+			break;
+
 #if (MONITOR_FAULT_ENABLE)
 		case MONITOR_THREAD_FAULT:
 			{
 				int32_t errno;
 				int32_t thread;
 
-				DCC_LOG(LOG_ERROR, "THREAD_FAULT!!!");
-
 				monitor_clear(MONITOR_THREAD_FAULT);
-
 				/* get the last thread known to be at fault */
 				thread = monitor_thread_break_get(&errno);
 				(void)thread;
 
-				DCC_LOG2(LOG_ERROR, "<%d> error %d !!", thread, errno);
 				if ((errno >= THINKOS_ERR_APP_INVALID) && 
 					(errno <= THINKOS_ERR_APP_BSS_INVALID)) {
-					DCC_LOG(LOG_ERROR, "Invalid application !");
+					DCC_LOG(LOG_ERROR, "Invalid application!");
 					monitor_thread_break_clr();
-				}
-				if (errno == THINKOS_ERR_SYSCALL_INVALID) {
+				} else if (errno == THINKOS_ERR_SYSCALL_INVALID) {
 					struct thinkos_context * ctx = monitor_thread_ctx_get(thread);
 					uint8_t * pc = (uint8_t *)ctx->pc;
 					(void)pc;
-					DCC_LOG1(LOG_ERROR, "Invalid System Call %d !", pc[-2]);
-					//[-2] & 0xffff);
+					DCC_LOG1(LOG_ERROR, "Invalid System Call %d!", pc[-2]);
 					monitor_thread_break_clr();
+				} else {
+					DCC_LOG2(LOG_ERROR, "<%d> error %d !!", thread, errno);
 				}
 
 				monitor_puts("!ERR: thread=", comm);
-				monitor_comm_send_uint(thread, 5, comm);
-				monitor_puts(" rrno=", comm);
-				monitor_comm_send_uint(errno, 5, comm);
-#if (MONITOR_OSINFO_ENABLE)
-				monitor_signal(REQ_SHOW_OSINFO);
-#endif
+				monitor_comm_send_uint(thread, 3, comm);
+				monitor_puts(", error code=", comm);
+				monitor_comm_send_uint(errno, 3, comm);
 			}
 			break;
 #endif
@@ -305,7 +300,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 #if (MONITOR_OSINFO_ENABLE)
 		case REQ_SHOW_OSINFO:
 			monitor_clear(REQ_SHOW_OSINFO);
-			monitor_print_osinfo(comm, NULL);
+			monitor_print_osinfo(comm, cycref);
 			break;
 #endif
 
@@ -329,7 +324,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 		case REQ_SHOW_MENU:
 			monitor_clear(REQ_SHOW_MENU);
 			board_reset();
-			if (connected) {
+			if (monitor_comm_isconnected(comm)) {
 				monitor_puts(s_hr, comm);
 				monitor_puts(s_version, comm);
 				monitor_puts(s_help, comm);
@@ -366,25 +361,7 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 
 		case MONITOR_COMM_CTL:
 			DCC_LOG1(LOG_MSG, "comm=%08x", comm);
-			monitor_clear(MONITOR_COMM_CTL);
-
-			status = monitor_comm_status_get(comm);
-			thinkos_krn_console_connect_set(connected);
-			if (status & COMM_ST_CONNECTED) {
-				if (!connected) {
-					DCC_LOG(LOG_TRACE, "Connected!");
-					connected = true;
-				}
-				sigmask |= ((1 << MONITOR_COMM_EOT) |
-							(1 << MONITOR_COMM_RCV));
-			} else {
-				DCC_LOG(LOG_TRACE, "Disconnected!");
-				connected = false;
-				sigmask &= ~((1 << MONITOR_COMM_EOT) | 
-							 (1 << MONITOR_COMM_RCV) |
-							 (1 << MONITOR_RX_PIPE));
-			}
-			sigmask |= (1 << MONITOR_TX_PIPE);
+			sigmask = monitor_on_comm_ctl(comm, sigmask);
 			break;
 
 		case MONITOR_COMM_EOT:

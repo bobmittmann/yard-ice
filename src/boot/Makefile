@@ -43,11 +43,11 @@ INCPATH = ../include
 
 CDEFS = CONFIG_H 
 
-CFLAGS = -Os 
+CFLAGS = -Ofast
 
 RAM_VECTORS = 1
 MACH = stm32f207xe
-KRN_CODE_SIZE = 16384
+KRN_CODE_SIZE = 32768
 KRN_DATA_SIZE = 4096
 include $(ARCHDIR)/mk/stm32-krn.mk
 

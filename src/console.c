@@ -53,8 +53,9 @@ int __attribute__((noreturn)) console_task(FILE * f_tty)
 	}
 }
 
-//uint32_t __attribute__((section(".sram1"), aligned(8))) 
-uint32_t __attribute__((aligned(8))) console_shell_stack[1024 + 512]; 
+uint32_t __attribute__((section(".stack"), aligned(8))) 
+	console_shell_stack[1024 + 512]; 
+//uint32_t __attribute__((aligned(8))) 
 
 const struct thinkos_thread_inf console_shell_inf = {
 	.stack_ptr = console_shell_stack, 

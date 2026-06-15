@@ -33,7 +33,7 @@ PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
 CFILES = ../yard-ice.c ../io.c ../debugger.c ../ice_drv.c\
 	 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
-	 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c 
+	 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c
 
 LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
 	  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \

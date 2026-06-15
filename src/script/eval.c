@@ -289,7 +289,8 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 	if (op_cnt > 0) {
 		/* extra operator left on the stack */
 		DCC_LOG(LOG_WARNING, "syntax error, extra operator");
-		return -9;
+//		return -9;
+		n--;
 	}
 
 	x = NUM_POP();
