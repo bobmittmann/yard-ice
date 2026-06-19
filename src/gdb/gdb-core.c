@@ -30,7 +30,7 @@
 #include <sys/file.h>
 #include <sys/null.h>
 #include <string.h>
-#define TRACE_LEVEL TRACE_LVL_DBG
+//#define TRACE_LEVEL TRACE_LVL_DBG
 #include <trace.h>
 
 #ifndef GDB_DEBUG_PACKET
@@ -67,7 +67,7 @@ static const char hextab[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7',
 	'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
-
+/* File operations */
 int gdb_rsp_write(struct gdb_comm * comm, const void * buf, int len)
 {
 	char pkt[(len * 2) + 8];
@@ -491,7 +491,7 @@ int rsp_features_read(struct gdb_rsp * gdb, char * pkt)
 
 	annex = pkt + sizeof("qXfer:features:read:") - 1;
 	rsp_decode_read(annex, &offs, &size);
-
+	DBG("qXfer:features:read:%s", annex);
 	cnt = gdb->target.op->file_read(gdb->target.arg, annex, 
 									&pkt[2], offs, size);
 
@@ -520,6 +520,69 @@ int rsp_memory_map_read(struct gdb_rsp * gdb, char * pkt)
 	return rsp_pkt_send(gdb, pkt, cnt + 2);
 }
 
+#define OPT_MULTIPROCESS   0
+#define OPT_SWBREAK        1
+#define OPT_HWBREAK        2
+#define OPT_QRELOCINSN     3
+#define OPT_FORK_EVENTS    4
+#define OPT_VFORK_EVENTS   5
+#define OPT_EXEC_EVENTS    6 
+#define OPT_VCONTSUPPORTED 7
+#define OPT_QTHREADEVENTS  8
+#define OPT_QTHREADOPTIONS 9
+#define OPT_NO_RESUMED     10
+#define OPT_MEMORY_TAGGING 11
+#define OPT_ERROR_MESSAGE  12
+#define OPT_LIST_LEN       13
+
+
+const struct {
+	const char opt[15];
+	int8_t flag;
+} opt_supported[OPT_LIST_LEN] = {
+	{ .opt = "multiprocess",   .flag = OPT_MULTIPROCESS },
+	{ .opt = "swbreak",        .flag = OPT_SWBREAK },
+	{ .opt = "hwbreak",        .flag = OPT_HWBREAK },
+	{ .opt = "qRelocInsn",     .flag = OPT_QRELOCINSN },
+	{ .opt = "fork-events",    .flag = OPT_FORK_EVENTS },
+	{ .opt = "vfork-events",   .flag = OPT_VFORK_EVENTS },
+	{ .opt = "exec-events",    .flag = OPT_EXEC_EVENTS },
+	{ .opt = "vContSupported", .flag = OPT_VCONTSUPPORTED },
+	{ .opt = "QThreadEvents",  .flag = OPT_QTHREADEVENTS },
+	{ .opt = "QThreadOptions", .flag = OPT_QTHREADOPTIONS },
+	{ .opt = "no-resumed",     .flag = OPT_NO_RESUMED },
+	{ .opt = "memory-tagging", .flag = OPT_MEMORY_TAGGING },
+	{ .opt = "error-message",  .flag = OPT_ERROR_MESSAGE },
+};
+
+static void rsp_qsupported(struct gdb_rsp * gdb, char * pkt)
+{
+	uint32_t pflags = 0;
+	uint32_t nflags = 0;
+	char * cp = pkt;
+
+	INFS("RSP: Supported:");
+
+	for (;;) {
+		int i;
+		for (i = 0; i < OPT_LIST_LEN; ++i) {       
+			if ((cp = prefix(pkt, opt_supported[i].opt))) {
+				break;
+			}
+		}
+		if (cp == NULL) {
+			break;
+		}
+		if (*cp == '+') {
+			DBG("option: %s+", opt_supported[i].opt);
+			pflags |= (1 << opt_supported[i].flag);
+		} else if (*cp == '-') {
+			DBG("option: %s-", opt_supported[i].opt);
+			nflags |= (1 << opt_supported[i].flag);
+		}
+		pkt = cp += 2;
+	}
+}
 
 static int rsp_query(struct gdb_rsp * gdb, char * pkt)
 {
@@ -582,9 +645,13 @@ static int rsp_query(struct gdb_rsp * gdb, char * pkt)
 		return rsp_empty(gdb);
 	}
 
-	if (prefix(pkt, "qSupported")) {
-		if (pkt[10] == ':') {
-		} 
+	if ((cp = prefix(pkt, "qSupported")) != NULL) {
+		DBG("RSP '%c'", *cp);
+		if (*cp == ':') {
+			cp++;
+			rsp_qsupported(gdb, cp);
+		} else {
+		}
 		DCC_LOG(LOG_TRACE, "qSupported");
 		cp = pkt + str2str(pkt, "$PacketSize=");
 		cp += uint2hex(cp, RSP_BUFFER_LEN - 1);
@@ -1472,11 +1539,11 @@ static int rsp_pkt_recv(struct gdb_comm * comm, char * pkt, int max)
 				pkt[pos] = '\0';
 #if GDB_DEBUG_PACKET
 				if (pkt[0] == 'X') 
-					DCC_LOG(LOG_MSG, "<-- '$X ...'");
+					DCC_LOG(LOG_TRACE, "<-- '$X ...'");
 				else if (pkt[0] == 'm')
-					DCC_LOG(LOG_MSG, "<-- '$m ...'");
+					DCC_LOG(LOG_TRACE, "<-- '$m ...'");
 				else {
-					DCC_LOGSTR(LOG_INFO, "<-- '$%s'", pkt);
+					DCC_LOGSTR(LOG_TRACE, "<-- '$%s'", pkt);
 				}
 #endif
 				return pos - 3;

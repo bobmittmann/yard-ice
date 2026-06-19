@@ -67,14 +67,13 @@ int cmd_mem_read(FILE * f, int argc, char ** argv)
 			return n;
 		}
 		size = val.uint32;
-		DCC_LOG2(LOG_TRACE, "size=%d n=%d", size, n);
+		DCC_LOG2(LOG_INFO, "size=%d n=%d", size, n);
 		argc -= n;
 		argv += n;
 	} else
 		size = (dbg->dump.size + 3) & ~0x03;
 
 	if (argc) {
-		fprintf(f, "Too many arguments...\n");
 		return SHELL_ERR_EXTRA_ARGS;
 	}
 

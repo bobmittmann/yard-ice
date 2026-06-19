@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/shell.h>
 
 #include "config.h"
 #include "jtag.h"
@@ -47,18 +48,20 @@ int cmd_drscan(FILE * f, int argc, char ** argv)
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
 			DCC_LOG(LOG_WARNING, "arg_eval(), addr");
-			return n;
+			return SHELL_ERR_PARSE;
 		}
 		argc -= n;
 		argv += n;
 		buf[0] = val.uint32;
 		len = 32;
-	} 
+	} else {
+		return SHELL_ERR_ARG_MISSING;
+	}
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
 			DCC_LOG(LOG_WARNING, "arg_eval(), addr");
-			return n;
+			return SHELL_ERR_PARSE;
 		}
 		len = val.uint32;
 		argc -= n;

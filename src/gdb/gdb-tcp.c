@@ -53,7 +53,7 @@ int gdb_tcp_init(struct tcp_pcb * tp)
 
 int gdb_tcp_send(struct tcp_pcb * tp, const void * buf, unsigned int len)
 {
-	INF("TX buf=%08x, len=%d", (uint32_t)buf, len);
+//	INF("TX buf=%08x, len=%d", (uint32_t)buf, len);
 //	INFA("TX", buf, len);
 	return tcp_send(tp, buf, len, TCP_SEND_NOWAIT);
 }
@@ -63,11 +63,12 @@ int gdb_tcp_recv(struct tcp_pcb * tp, void * buf, unsigned int len)
 	int ret;
 
 	ret = tcp_recv(tp, buf, len);
-	if (ret > 0)
-//		INFA("RX", buf, ret);
-		INF("RX %d", ret);
-	else
+	if (ret > 0) {
+		//		INFA("RX", buf, ret);
+		//		INF("RX %d", ret);
+	} else {
 		WARN("TCP ERR: %d", ret);
+	}
 
 	return ret;
 }
@@ -274,8 +275,9 @@ int __attribute__((noreturn)) gdb_tcp_task(struct gdb_tcpd * tcpd)
 	for (;;);
 }
 
-uint32_t gdb_srv_stack[((RSP_BUFFER_LEN * 3) / 8)  + 512];
-uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 512];
+uint32_t __attribute__((aligned(8))) gdb_srv_stack[((RSP_BUFFER_LEN * 3) / 8)  + 512];
+ 
+uint32_t __attribute__((aligned(8))) gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 512];
 
 const struct thinkos_thread_inf gdb_srv_inf = {
 	.stack_ptr = gdb_srv_stack, 
@@ -315,6 +317,7 @@ int gdb_rspd_start(void)
 		return -1;
 	}
 
+	/* FIXME: select the target according to the ICE driver selected */
 	gdb_rsp_target_init(gdb, &gdb_target_arm_jtag_op, NULL);
 
 	tcpd->gdb = gdb;

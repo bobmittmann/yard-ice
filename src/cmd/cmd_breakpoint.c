@@ -33,6 +33,14 @@
 #include "debugger.h"
 #include "eval.h"
 
+enum args {
+	ARG_CLR = 1,
+	ARG_SET = 2,
+	ARG_EN = 3,
+	ARG_DIS = 4,
+	ARG_ALL = 5
+};
+
 int bp_usage(FILE * f, char * msg, char * cmd)
 {
 	if (msg)

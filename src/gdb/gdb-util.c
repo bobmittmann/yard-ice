@@ -68,20 +68,23 @@ unsigned long hex2int(const char * __s, char ** __endp)
 	return val;
 }
 
-bool prefix(const char * __s, const char * __prefix)
+char * prefix(const char * __s, const char * __prefix)
 {
 	int c1;
 	int c2;
 
 	for (;;) {
-		c1 = *__s++;
-		c2 = *__prefix++;
+		c1 = *__s;
+		c2 = *__prefix;
 	
 		if (c2 == '\0')
-			return true;
+			return (char *)__s;
 
-		if ((c2 = c1 - c2) != 0)
-			return false;
+		if ((c1 - c2) != 0)
+			return NULL;
+
+		__s++;
+		__prefix++;
 	} 
 }
 

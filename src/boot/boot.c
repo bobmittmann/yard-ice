@@ -192,12 +192,6 @@ void main(int argc, char ** argv)
 #endif
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
-#if DEBUG
-    DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
-            "* 4. thinkos_krn_irq_on()." VT_POP);
-#endif
-    /* enable interrupts */
-    thinkos_krn_irq_on();
 #if 0
 	if (stm32_gpio_stat(IO_JTRST) == 0) {
 		DCC_LOG(LOG_TRACE, "SHELL | AUTOBOOT");

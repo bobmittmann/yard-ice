@@ -156,7 +156,7 @@ int jtag_rtck_disable(void)
 
 int jtag_trst(bool assert)
 {
-	INF("%s", assert ? "LOW" : "HIGH");
+	DBG("TRST %s", assert ? "Low" : "High");
 	jtag3ctrl_trst(assert);
 	jtag3drv.arm_scan_chain = -1;
 	return JTAG_OK;
@@ -164,8 +164,7 @@ int jtag_trst(bool assert)
 
 int jtag_nrst(bool assert)
 {
-	INF("%s", assert ? "LOW" : "HIGH");
-
+	DBG("nRST %s", assert ? "Low" : "High");
 	jtag3ctrl_nrst(assert);
 	jtag3drv.arm_scan_chain = -1;
 	return JTAG_OK;

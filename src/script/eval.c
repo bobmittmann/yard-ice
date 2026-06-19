@@ -121,7 +121,7 @@ uint32_t calc32(int op, uint32_t x, uint32_t y)
 		break;
 	}
 
-	DCC_LOG4(LOG_TRACE, "%d %s %d = %d", x, op_sym[op], y, z);
+	DCC_LOG4(LOG_MSG, "%d %s %d = %d", x, op_sym[op], y, z);
 
 	return z;
 }
@@ -142,7 +142,7 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 	int n;
 	bool need_val;
 
-	DCC_LOG1(LOG_TRACE, "argc:%d", argc);
+	DCC_LOG1(LOG_MSG, "argc:%d", argc);
 
 	if (val == NULL)
 		return -1;
@@ -194,7 +194,7 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 			if (NUM_STACK_FULL()) {
 				return -4;
 			}
-			DCC_LOG1(LOG_TRACE, "push(%d)", x);
+			DCC_LOG1(LOG_MSG, "push(%d)", x);
 			NUM_PUSH(x);
 			continue;
 		} 
@@ -230,10 +230,10 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 			default:
 				op = 0;
 			}
-		} else if (cp[2] == '\0') {
-			if (c1 == '>' && c2 == '>')
+		} else if (c1 == c2) {
+			if (c1 == '>')
 				op = SHR;
-			else if (c1 == '<' || c2 == '<')
+			else if (c1 == '<')
 				op = SHL;
 		}
 
@@ -246,7 +246,7 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 			/* can't evaluate precedence with a single operator,
 			 push and continue */
 			OP_PUSH(op);
-			DCC_LOG1(LOG_TRACE, "op_push('%s')", op_sym[op]);
+			DCC_LOG1(LOG_MSG, "op_push('%s')", op_sym[op]);
 			continue;
 		}
 

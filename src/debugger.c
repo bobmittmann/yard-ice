@@ -54,14 +54,6 @@
 #define TRACE_LEVEL TRACE_LVL_DBG
 #include <trace.h>
 
-#ifndef DBG_BREAKPOINT_MAX
-#define DBG_BREAKPOINT_MAX 16
-#endif
-
-#ifndef DBG_WATCHPOINT_MAX
-#define DBG_WATCHPOINT_MAX 16
-#endif
-
 #define ENABLE_ICE_POLLING 1
 
 /* Debugger state data */
@@ -81,115 +73,177 @@ static struct dbg_bp dbg_bp_pool[DBG_BREAKPOINT_MAX];
    breakpoints, in this case the top of this list will 
    correspond to the target's hardware ones.
  */
-static struct dbg_bp * dbg_bp_list[DBG_BREAKPOINT_MAX];
+inline static int bp2idx(struct dbg_bp * bp) {
+	return bp - &dbg_bp_pool[0];
+}
 
 static void dbg_bp_init(struct dbg_bp_ctrl * bpctl)
 {
-	struct dbg_bp * bp;
 	int i;
 
 	/* initialize the breakpoint poll.
 	 The breakpoint poll consist of a linked list of free
 	 breakpoint structures */
-	bpctl->free = dbg_bp_pool;
-	bpctl->lst = dbg_bp_list;
-	bpctl->cnt = 0;
-
-	bp = bpctl->free;
-	for (i = 1; i < DBG_BREAKPOINT_MAX; i++) {
-		bp->next = &dbg_bp_pool[i];
-		bp = &dbg_bp_pool[i];
+	for (i = 0; i < DBG_BREAKPOINT_MAX; ++i) {
+		bpctl->lst[i] = &dbg_bp_pool[i]; 
 	}
-	bp->next = NULL;
-
+	bpctl->head = 0;
+	bpctl->tail = 0;
 }
 
 static struct dbg_bp * dbg_bp_new(struct dbg_bp_ctrl * bpctl, 
 								  uint32_t addr, uint32_t size)
 {
 	struct dbg_bp * bp;
+	uint32_t head;
+	uint32_t tail;
 
-	if ((bp = bpctl->free) != NULL)
-		bpctl->free = bp->next;
+	head = bpctl->head;
+	tail = bpctl->tail;
+	bp = bpctl->lst[++head % DBG_BREAKPOINT_MAX];
+	bpctl->head = head;
+	/* The head always point to the most recently entry in the list
+	 * whereas the tail points to the empty cell at the back
+	*
+	*   |tail               |head
+	*   v                   v
+	*  [ ] [1] [2] [3] [4] [5]
+	*/
+
+	/* insert at the list's head, if the list is full 
+	 * drop the last entry at the tail */
+	if ((head - tail) > DBG_BREAKPOINT_MAX) {
+		/* discarding the first itemn */
+		tail++;
+		bpctl->tail = tail;
+	}
 
 	bp->addr = addr;
 	bp->size = size;
 	bp->active = 0;
-
-	/* insert at the list's tail,
-	   if the list is full drop the last entry */
-
-	if (bpctl->cnt < DBG_BREAKPOINT_MAX)
-		bpctl->cnt++;
-
-	bpctl->lst[bpctl->cnt - 1] = bp;
-	
-	DCC_LOG1(LOG_INFO, "cnt=%d", bpctl->cnt);
 
 	return bp;
 }
 
 static void dbg_bp_move_to_head(struct dbg_bp_ctrl * bpctl, struct dbg_bp * bp)
 {
-	struct dbg_bp * tmp = NULL;
-	struct dbg_bp * prev = bp;
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
+	struct dbg_bp * prev;
 	int i;
 
-	DCC_LOG1(LOG_INFO, "bpctl->cnt=%d", bpctl->cnt);
+	if (head == tail) {
+		DCC_LOG(LOG_EXCEPT, "list empty!!!!");
+		return;
+	}
 
+	DCC_LOG2(LOG_TRACE, "head=%d tail=%d", head, tail);
+	DCC_LOG8(LOG_TRACE, "[%d] [%d] [%d] [%d] [%d] [%d] [%d] [%d]",
+			 bp2idx(bpctl->lst[0]), bp2idx(bpctl->lst[1]), bp2idx(bpctl->lst[2]),
+			 bp2idx(bpctl->lst[3]), bp2idx(bpctl->lst[4]), bp2idx(bpctl->lst[5]),
+			 bp2idx(bpctl->lst[6]), bp2idx(bpctl->lst[7]));
+
+	
+	if (bp == bpctl->lst[head % DBG_BREAKPOINT_MAX]) {
+		/* already at the head */
+		return;
+	}
+	/*   |tail               |head
+	 *   v                   v
+	 *  [k] [1] [2] [3] [4] [5] [x] [ ]
+	 *  move item 3 to head
+	 *       |tail               |head
+	 *       v                   v
+	 *  [k] [x] [1] [2] [4] [5] [3] [ ] 
+	 */
 	/* moving the list (shifting) */
-	for (i = 0; i < bpctl->cnt; i++) {
-		DCC_LOG1(LOG_INFO, "i=%d", i);
-		tmp = bpctl->lst[i];
-		bpctl->lst[i] = prev;
-		if (tmp == bp) {
+	/* this algorithm assumes that the item is in the list */
+	prev = bpctl->lst[++tail % DBG_BREAKPOINT_MAX];
+	for (i = tail + 1; i != head; ++i) {
+		struct dbg_bp * tmp;
+		if (prev == bp) {
 			break;
 		}
+
+		tmp = bpctl->lst[i % DBG_BREAKPOINT_MAX];
+		bpctl->lst[i % DBG_BREAKPOINT_MAX] = prev;
 		prev = tmp;
 	}
+
+	/* swap head content with tail to not loose track of the pointer */
+	prev = bpctl->lst[++head % DBG_BREAKPOINT_MAX];
+	bpctl->lst[tail % DBG_BREAKPOINT_MAX] = prev;
+	/* store at new head */
+	bpctl->lst[head % DBG_BREAKPOINT_MAX] = bp;
+
+	DCC_LOG8(LOG_TRACE, "[%d] [%d] [%d] [%d] [%d] [%d] [%d] [%d]",
+			 bp2idx(bpctl->lst[0]), bp2idx(bpctl->lst[1]), bp2idx(bpctl->lst[2]),
+			 bp2idx(bpctl->lst[3]), bp2idx(bpctl->lst[4]), bp2idx(bpctl->lst[5]),
+			 bp2idx(bpctl->lst[6]), bp2idx(bpctl->lst[7]));
+
+	bpctl->head = head;
+	bpctl->tail = tail;
 }
 
 static int dbg_bp_delete(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl, 
 						 struct dbg_bp * bp)
 {
-	int i;
-	int n;
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
+	struct dbg_bp * prev;
+	uint32_t cnt;
+	uint32_t i;
 
-	/* look up for this breakpoint in the list */
-	for (i = 0; i < bpctl->cnt; i++) {
-		if (bp == bpctl->lst[i])
-			break;
+	if (head == tail) {
+		DCC_LOG(LOG_EXCEPT, "list empty!!!!");
+		return -1;
+	}
+	/*   |tail               |head
+	 *   v                   v
+	 *  [ ] [1] [2] [3] [4] [5] [ ]
+	 * delete item 3
+	 *       |tail           |head
+	 *       v               v
+	 *      [ ] [1] [2] [4] [5] [ ] 
+	 */
+
+	/* look up for this breakpoint in the list while
+	 * also moving the items */
+	if (++tail != head) {
+		prev = bpctl->lst[tail % DBG_BREAKPOINT_MAX];
+		for (i = tail + 1; i != (head + 1); ++i) {
+			struct dbg_bp * tmp;
+			if (prev == bp)
+				break;
+			/* save the item for later */
+			tmp = bpctl->lst[i % DBG_BREAKPOINT_MAX];
+			/* store the item of previous round */
+			bpctl->lst[i % DBG_BREAKPOINT_MAX] = prev;
+			prev = tmp;
+		}
+		bpctl->lst[tail % DBG_BREAKPOINT_MAX] = prev;
 	}
 
-	n = i;
+	DCC_LOG8(LOG_TRACE, "[%d] [%d] [%d] [%d] [%d] [%d] [%d] [%d]",
+			 bp2idx(bpctl->lst[0]), bp2idx(bpctl->lst[1]), bp2idx(bpctl->lst[2]),
+			 bp2idx(bpctl->lst[3]), bp2idx(bpctl->lst[4]), bp2idx(bpctl->lst[5]),
+			 bp2idx(bpctl->lst[6]), bp2idx(bpctl->lst[7]));
 
-	if (n == bpctl->cnt) {
-		DCC_LOG(LOG_EXCEPT, "not in the list!!!");
-		abort();
-	}
-
-	/* one less item in the list */
-	bpctl->cnt--;
-
-	/* moving the remaining items in the list one position to the front */
-	for (i = n; i < bpctl->cnt; i++) {
-		bpctl->lst[i] = bpctl->lst[i + 1];
-	}
-
-	DCC_LOG3(LOG_INFO, "n=%d cnt=%d ice->opt.bp_max=%d", 
-			 n, bpctl->cnt, ice->opt.bp_max);
-
+	/* discard the oldest */
+	bpctl->tail = tail;
+	cnt = head - tail; 	
 	if (bp->active) {
 		/* clear the current breakpoint */
 		DCC_LOG1(LOG_INFO, "clearing active BP: %d", bp->hw_id);
 		ice_bp_clr(ice, bp->hw_id);
 
 		/* activate the next if not disabled */
-		if (bpctl->cnt >= ice->opt.bp_max) {
+		if (cnt >= ice->opt.bp_max) {
 			struct dbg_bp * nxt;
 			uint32_t id;
+			i = head - ice->opt.bp_max + 1;
 
-			nxt = bpctl->lst[ice->opt.bp_max - 1];
+			nxt = bpctl->lst[i %  DBG_BREAKPOINT_MAX];
 			if (nxt->enabled) {
 				DCC_LOG(LOG_INFO, "seting next BP on list");
 				if (ice_bp_set(ice, nxt->addr, nxt->size, &id) < 0) {
@@ -201,25 +255,26 @@ static int dbg_bp_delete(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl,
 		}
 	} 
 
-	/* release memory */
-	bp->next = bpctl->free;
-	bpctl->free = bp;
-
 	return 0;
 }
 
 static int dbg_bp_enable_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
 	struct dbg_bp * bp = NULL;
 	uint32_t id;
 	int ret = 0;
+	int32_t cnt;
 	int n;
 	int i;
 
-	/* activate the breakpoints */
-	n = (bpctl->cnt > ice->opt.bp_max) ? ice->opt.bp_max: bpctl->cnt;
-	for (i = 0; i < n; i++) {
-		bp = bpctl->lst[i];
+	cnt = (head - tail);
+	/* activate the hardware breakpoints */
+	n = (cnt > ice->opt.bp_max) ? ice->opt.bp_max: cnt;
+	/* first to be activated are at head of the list (least recently used) */ 
+	for (i = head; i != (head - n); --i) {
+		bp = bpctl->lst[i % DBG_BREAKPOINT_MAX];
 		if (!bp->active) {
 			DCC_LOG(LOG_INFO, "activating breakpoint...");
 			if ((ret = ice_bp_set(ice, bp->addr, bp->size, &id)) < 0) {
@@ -231,9 +286,9 @@ static int dbg_bp_enable_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 		}
 		bp->enabled = 1;
 	}
-	/* enable the remaining */
-	for (i = n; i < bpctl->cnt; i++) {
-		bp = bpctl->lst[i];
+	/* soft enable the remaining */
+	for (; i != tail; --i) {
+		bp = bpctl->lst[i % DBG_BREAKPOINT_MAX];
 		bp->enabled = 1;
 	}
 
@@ -242,13 +297,15 @@ static int dbg_bp_enable_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 
 static int dbg_bp_disable_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
 	struct dbg_bp * bp = NULL;
 	int ret = 0;
 	int i;
 
 	/* disable all the breakpoints */
-	for (i = 0; i < bpctl->cnt; i++) {
-		bp = bpctl->lst[i];
+	for (i = head; i != tail; --i) {
+		bp = bpctl->lst[i % DBG_BREAKPOINT_MAX];
 		if (bp->active) {
 			/* deactivate the breakpoints */
 			DCC_LOG1(LOG_INFO, "deactivating breakpoint %d", i);
@@ -268,16 +325,22 @@ static int dbg_bp_disable_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 static int dbg_bp_activate(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl, 
 						   struct dbg_bp * bp)
 {
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
 	uint32_t id;
+	int32_t cnt;
 
 	if (bp->active)
 		return 0;
 
-	if (bpctl->cnt > ice->opt.bp_max) {
+	cnt = head - tail;
+	if (cnt > ice->opt.bp_max) {
 		struct dbg_bp * nxt;
+		int i;
 		/* we are short of hardware breakpoints,
 		   deactivate the least recently active */
-		nxt = bpctl->lst[ice->opt.bp_max];
+		i = (head - ice->opt.bp_max);
+		nxt = bpctl->lst[i % DBG_BREAKPOINT_MAX];
 		if (nxt->active) {
 			id = nxt->hw_id;
 			nxt->active = 0;
@@ -320,15 +383,19 @@ static int dbg_bp_deactivate(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl,
 
 static int dbg_bp_activate_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
 	struct dbg_bp * bp = NULL;
 	uint32_t id;
 	int ret = 0;
+	int32_t cnt;
 	int n;
 	int i;
 
-	n = (bpctl->cnt > ice->opt.bp_max) ? ice->opt.bp_max: bpctl->cnt;
-	for (i = 0; i < n; i++) {
-		bp = bpctl->lst[i];
+	cnt = head - tail;
+	n = (cnt > ice->opt.bp_max) ? ice->opt.bp_max: cnt;
+	for (i = cnt; i > (cnt - n); --i) {
+		bp = bpctl->lst[(tail + i) % DBG_BREAKPOINT_MAX];
 		if (bp->enabled && !bp->active) {
 			DCC_LOG(LOG_INFO, "activating breakpoint...");
 			if ((ret = ice_bp_set(ice, bp->addr, bp->size, &id)) < 0) {
@@ -345,14 +412,18 @@ static int dbg_bp_activate_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 
 static int dbg_bp_deactivate_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 {
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
 	struct dbg_bp * bp = NULL;
 	int ret = 0;
+	int32_t cnt;
 	int n;
 	int i;
 
-	n = (bpctl->cnt > ice->opt.bp_max) ? ice->opt.bp_max: bpctl->cnt;
-	for (i = 0; i < n; i++) {
-		bp = bpctl->lst[i];
+	cnt = head - tail;
+	n = (cnt > ice->opt.bp_max) ? ice->opt.bp_max: cnt;
+	for (i = cnt; i > (cnt - n); --i) {
+		bp = bpctl->lst[(tail + i) % DBG_BREAKPOINT_MAX];
 		if (bp->active) {
 			/* deactivate the breakpoints */
 			DCC_LOG1(LOG_INFO, "deactivating breakpoint %d", i);
@@ -371,35 +442,42 @@ static int dbg_bp_deactivate_all(ice_drv_t * ice, struct dbg_bp_ctrl * bpctl)
 static struct dbg_bp * dbg_bp_get_next(struct dbg_bp_ctrl * bpctl, 
 									   struct dbg_bp * bp)
 {
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
 	int i;
 
-	if (bpctl->cnt == 0)
+	if (head == tail)
 		return NULL;
+	
+	if (bp == NULL)
+		return bpctl->lst[head % DBG_BREAKPOINT_MAX];
 
 	/* look up for this breakpoint in the list */
-	for (i = 0; i < bpctl->cnt; i++) {
-		if (bp == bpctl->lst[i]) {
+	for (i = head; i != tail; --i) {
+		if (bp == bpctl->lst[i % DBG_BREAKPOINT_MAX]) { 
 			/* the breakpoint is in the list, return the next item */
-			i++;
-			if (i < bpctl->cnt)
-				return bpctl->lst[i];
+			if (--i != tail)
+				return bpctl->lst[i % DBG_BREAKPOINT_MAX];
 			return NULL;
 		}
 	}
 
-	return bpctl->lst[0];
+	DCC_LOG2(LOG_ERROR, "head=%d tail=%d", head, tail);
+	return NULL;
 }
 
 static struct dbg_bp * dbg_bp_lookup(struct dbg_bp_ctrl * bpctl, 
 									 uint32_t addr, uint32_t size)
 {
+	uint32_t head = bpctl->head;
+	uint32_t tail = bpctl->tail;
 	struct dbg_bp * bp;
-	int pos;
+	int i;
 
 	/* check if a breakpoint with the same address and size 
 	 already exist */
-	for (pos = 0; pos < bpctl->cnt; pos++) {
-		bp = bpctl->lst[pos];
+	for (i = head; i != tail; --i) {
+		bp = bpctl->lst[i % DBG_BREAKPOINT_MAX];
 		if ((bp->addr == addr) && (bp->size == size)) {
 			return bp;
 		}
@@ -782,7 +860,7 @@ static int soft_reset(FILE * f, const ice_drv_t * ice,
 	return ret;
 }
 
-static int hw_reset(const ice_drv_t * ice, const target_info_t * target)
+static void hw_reset(const ice_drv_t * ice, const target_info_t * target)
 {
 	DCC_LOG(LOG_TRACE, "reset...");
 	int ms = 100;
@@ -800,8 +878,6 @@ static int hw_reset(const ice_drv_t * ice, const target_info_t * target)
 		jtag_trst(false);
 
 	jtag_tap_reset();
-
-	return OK;
 }
 
 static int dbg_reset(const ice_drv_t * ice, const target_info_t * target)
@@ -1006,12 +1082,13 @@ int target_halt_wait(int tmo)
 
 	/* halt wait */
 	while (dbg->poll_enabled) {
-		DCC_LOG(LOG_TRACE, "poll enabled waiting...");
-		if (thinkos_cond_timedwait(dbg->halt_cond, dbg->target_mutex, 
-								   tmo) < 0) {
-			thinkos_mutex_unlock(dbg->target_mutex);
-			return ERR_TIMEOUT;
-		}
+		DCC_LOG(LOG_INFO, "poll enabled waiting...");
+		thinkos_cond_wait(dbg->halt_cond, dbg->target_mutex);
+//		if (thinkos_cond_timedwait(dbg->halt_cond, dbg->target_mutex, 
+//								   tmo) < 0) {
+//			thinkos_mutex_unlock(dbg->target_mutex);
+//			return ERR_TIMEOUT;
+//		}
 	}
 
 	thinkos_mutex_lock(dbg->ice_mutex);
@@ -1124,14 +1201,14 @@ int target_halt(int method)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret = OK;
 
-	DCC_LOG(LOG_TRACE, "-----------------------------------------"); 
+	DCC_LOG(LOG_MSG, "-----------------------------------------"); 
 
 	thinkos_mutex_lock(dbg->target_mutex);
 
 	if (dbg->state != DBG_ST_RUNNING) {
 		if (dbg->state != DBG_ST_HALTED) {
 			DCC_LOG(LOG_WARNING, "invalid state"); 
-			WARN("Invalid state"); 
+			WARNS("DBG: Invalid state"); 
 			ret = ERR_STATE;
 		}
 		thinkos_mutex_unlock(dbg->target_mutex);
@@ -1146,12 +1223,10 @@ int target_halt(int method)
 	
 	/* request the core to stop */
 	if (ret < 0) {
-		DCC_LOG(LOG_WARNING, "drv->halt() fail!");
+		DCC_LOG(LOG_WARNING, "drv->halt() fail [DBG_ST_OUTOFSYNC]!");
 		dbg->state = DBG_ST_OUTOFSYNC;
-		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
-		WARN("Out of sync"); 
 	} else {
-		INF("Target halted");
+		INFS("Target halted");
 		dbg_status(dbg);
 	}
 
@@ -1226,7 +1301,9 @@ int target_step(void)
 	thinkos_mutex_lock(dbg->ice_mutex);
 	if ((ret = ice_step(ice)) < 0) {
 		DCC_LOG(LOG_WARNING, "drv->step() fail!");
-		WARN("drv->step() fail");
+		WARN("ice->step() fail!");
+	} else {
+		DBGS("ice->step()");
 	}
 	thinkos_mutex_unlock(dbg->ice_mutex);
 
@@ -2524,9 +2601,7 @@ int target_reset(FILE * f, int mode)
 		fprintf(f, " - hardware reset...\n");
 		DCC_LOG(LOG_TRACE, "hardware reset...");
 		INFS("hard reset...");
-		if ((ret = hw_reset(ice, target)) < 0) {
-			DCC_LOG(LOG_WARNING, "hardware reset failed!");
-		}
+		hw_reset(ice, target);
 		break;
 	case RST_CORE:
 		fprintf(f, " - core reset...\n");
@@ -2575,6 +2650,7 @@ int target_reset(FILE * f, int mode)
 
 	return ret;
 }
+
 
 int target_init(FILE * f)
 {
@@ -2989,7 +3065,7 @@ int ice_drv_select(struct debugger * dbg, const ice_drv_info_t * info)
 	return 0;
 
 }
-
+#if 0
 static inline int __do_connect(struct debugger * dbg, 
 						   const struct target_info * target,
 						   uint32_t idmask, uint32_t idcomp)
@@ -3013,6 +3089,7 @@ static inline int __do_connect(struct debugger * dbg,
 
 	return ret;
 }
+#endif
 
 int target_ice_configure(FILE * f, const struct target_info * target, 
 						 int force)
@@ -3049,6 +3126,8 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		return ERR_PARM;
 	}
 
+	thinkos_mutex_lock(dbg->target_mutex);
+
 	if (!dbg->ext_pwr) { 
 		ext_pwr_on();
 		/* FIXME: configurable power on time */
@@ -3056,13 +3135,11 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		dbg->ext_pwr = 1;
 	}
 
-	thinkos_mutex_lock(dbg->target_mutex);
-
 	if ((target == dbg->target) && (!force)) {
 		DCC_LOG1(LOG_TRACE, "Keeping target: '%s'", target->name);
 		INF("Keeping target: '%s'", target->name);
 		thinkos_mutex_unlock(dbg->target_mutex);
-		return 0;
+		return OK;
 	}
 
 	DCC_LOG1(LOG_TRACE, "Changing target: '%s'", target->name);
@@ -3151,7 +3228,6 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return ret;
 		}
-
 		jtag_rtck_disable();
 	}
 
@@ -3163,9 +3239,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		case RST_HARD:
 			fprintf(f, " - Hardware reset on config...\n");
 			DCC_LOG(LOG_TRACE, "hardware reset...");
-			if ((ret = hw_reset(ice, target)) < 0) {
-				DCC_LOG(LOG_WARNING, "hardware reset failed!");
-			}
+			hw_reset(ice, target);
 			break;
 		case RST_CORE:
 			fprintf(f, " - Core reset on config...\n");
@@ -3186,18 +3260,16 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 #endif
 		fprintf(f, " - Hardware reset on config...\n");
 		INFS("reset_on_config:");
-		if ((ret = hw_reset(ice, target)) < 0) {
-			WARNS("hardware reset failed!");
-		}
+		hw_reset(ice, target);
 	}
 
 	if (target->connect_on_reset) {
 		INFS("connect_on_reset: nTrst asserted!");
 		jtag_trst(true);
-		udelay(1000);
+		udelay(100);
 		INFS("connect_on_reset: nRst asserted!");
 		jtag_nrst(true);
-		udelay(1000);
+		udelay(100);
 	}
 
 	/* configure the scan path */
@@ -3214,7 +3286,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		/* scan the TAP reset sequence */
 		jtag_tap_reset();
 
-		DCC_LOG(LOG_TRACE, "Dynamic JTAC config ...");
+		DCC_LOG(LOG_TRACE, "Auto JTAG config ...");
 
 		/* dynamic configuration */
 		if (jtag_chain_probe(irlen, 32, &cnt) != JTAG_OK) {
@@ -3223,7 +3295,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 				DCC_LOG(LOG_ERROR, "IR length !");
 				thinkos_mutex_unlock(dbg->ice_mutex);
 				thinkos_mutex_unlock(dbg->target_mutex);
-				return -1;
+				return ERR_JTAG_IR_LEN;
 			} 
 			irlen[0] = target->arch->cpu->irlength;
 			cnt = 1;
@@ -3245,7 +3317,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		DCC_LOG(LOG_WARNING, "No TAPs defined!");
 		thinkos_mutex_unlock(dbg->ice_mutex);
 		thinkos_mutex_unlock(dbg->target_mutex);
-		return ERR_TAP_INVALID;
+		return ERR_JTAG_TAP_INVALID;
 	}
 
 	/* reset the TAPs to put the IDCODE in the DR scan */
@@ -3304,16 +3376,16 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 			WARNS("no suitable CPU found()!");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
-			return -1;
+			return ERR_JTAG_TAP_INVALID;
 		}
 	} else {
 		if (tap_pos > cnt) {
 			ERR("TAP position (%d) is out of bounds!", tap_pos);
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
-			/* XXX: this is a JTAG error and shuld not be used in
-			   a high level function... */
-			return JTAG_ERR_INVALID_TAP;
+			/* XXX: this is a JTAG error and should not be used in
+			   a high level function limits */
+			return ERR_JTAG_TAP_INVALID;
 		}
 
 		if ((ret = jtag_tap_get(&tap, tap_pos)) != JTAG_OK) {
@@ -3346,12 +3418,12 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	tap->idcomp = target->arch->cpu->idcomp;
 
 	memset(&ice->opt, 0, sizeof(ice_opt_t));
-	DBGS("Initializing ICE driver...");
-	if (ice_init(ice, tap) < 0) {
-		ERRS("ICE controller configurarion fail!");
+	DBGS("DBG: Initializing ICE driver...");
+	if ((ret = ice_init(ice, tap)) < 0) {
+		ERRS("ICE controller: ice_init() fail!");
 		thinkos_mutex_unlock(dbg->ice_mutex);
 		thinkos_mutex_unlock(dbg->target_mutex);
-		return -1;
+		return ret;
 	}
 
 #if 0
@@ -3379,68 +3451,32 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 		INFS("target connected [DBG_ST_CONNECTED]!");
 		dbg->state = DBG_ST_CONNECTED;
 
+		INFS("connect_on_reset: nRst released!");
+		jtag_nrst(false);
+
+		thinkos_sleep(2);
+
 		if ((ice_st = ice_status(ice)) < 0) {
 			WARNS("ice_status() failed!");
 			thinkos_mutex_unlock(dbg->ice_mutex);
 			thinkos_mutex_unlock(dbg->target_mutex);
 			return ice_st;
 		} 
-#if 0		
+
 		if (ice_st & ICE_ST_HALT) {
 			INF("connect_on_reset: [DBG_ST_HALTED]");
 			dbg->state = DBG_ST_HALTED;
 			ret = 0;
 		} else {
-			INFS("connect_on_reset: [DBG_ST_RUNNING]");
-			dbg->state = DBG_ST_RUNNING;
-			/* request the core to stop */
-			INFS("halt request...");
-
-			if ((ret = ice_halt_req(ice)) < 0) {
-				WARNS("drv->halt() fail, [DBG_ST_OUTOFSYNC]!");
-				dbg->state = DBG_ST_OUTOFSYNC;
-			} 
-
-			thinkos_sleep(10);
-
-			if ((ice_st = ice_status(ice)) < 0) {
-				WARNS("ice_status() failed!");
-				thinkos_mutex_unlock(dbg->ice_mutex);
-				thinkos_mutex_unlock(dbg->target_mutex);
-				return ice_st;
-			} 
-#endif
-		INFS("connect_on_reset: nRst released!");
-		jtag_nrst(false);
-
-		thinkos_sleep(10);
-
-		if ((ice_st = ice_status(ice)) < 0) {
-			WARNS("ice_status() failed!");
-			thinkos_mutex_unlock(dbg->ice_mutex);
-			thinkos_mutex_unlock(dbg->target_mutex);
-			return ice_st;
-		} 
-
-		if (!(ice_st & ICE_ST_HALT)) {
-			WARNS("target halt failed!");
-			thinkos_mutex_unlock(dbg->ice_mutex);
-			thinkos_mutex_unlock(dbg->target_mutex);
-			return ice_st;
-		} else {
-			INF("connect_on_reset: [DBG_ST_RUNNING]");
-			dbg->state = DBG_ST_RUNNING;
-			ret = ice_st;
+			INF("connect_on_reset: [DBG_ST_CONNECTED]");
+			dbg->state = DBG_ST_CONNECTED;
+			ret = 0;
 		}
-
-		INF("connect_on_reset: [DBG_ST_HALTED]");
-		dbg->state = DBG_ST_HALTED;
-		ret = 0;
 
 #if 0
 
 		/* request the core to stop */
-		INF("halt ...");
+		INF("halt request ...");
 		if ((ret = ice_halt_req(ice)) < 0) {
 			WARN("drv->halt() fail, [DBG_ST_OUTOFSYNC]!");
 			dbg->state = DBG_ST_OUTOFSYNC;
@@ -3471,12 +3507,12 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 	} else {
 		dbg->state = DBG_ST_UNCONNECTED;
 		DBGS("[DBG_ST_UNCONNECTED]");
-			ret = 0;
+		ret = 0;
 	}
 
 	DBGS("Configuring ICE driver...");
 	if (ice_configure(ice, &ice->opt, target->ice_cfg) < 0) {
-		ERRS("ICE controller configurarion fail!");
+		ERRS("ICE controller configuration fail!");
 		thinkos_mutex_unlock(dbg->ice_mutex);
 		thinkos_mutex_unlock(dbg->target_mutex);
 		return -1;
@@ -3794,6 +3830,27 @@ void debugger_init(void)
 	DCC_LOG1(LOG_TRACE, "thinkos_thread_create()=%d", dbg->poll_thread);
 
 	mod_ice_register(dbg);
+}
+
+void target_fault_clr(void)
+{
+	struct debugger * dbg = &debugger;
+
+	if (dbg->state != DBG_ST_FAULT ) {
+		return;
+	}
+
+	thinkos_mutex_lock(dbg->target_mutex);
+
+	ice_open(&dbg->ice, &ice_drv_null, &dbg_ice_ctrl_buf.ctrl);
+
+	dbg->state = DBG_ST_UNDEF;
+	DCC_LOG(LOG_TRACE, "[DBG_ST_UNDEF]");
+	dbg->poll_enabled = false;
+	dbg->mem = target_null_mem;
+	dbg->target = &target_null;
+
+	thinkos_mutex_unlock(dbg->target_mutex);
 }
 
 int target_enable_ice_poll(bool flag)

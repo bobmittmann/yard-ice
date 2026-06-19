@@ -229,6 +229,8 @@ static int dwt_probe(jtag_tap_t * tap, armv7m_dwt_ctrl_t * dwt,
 	dwt->numcomp = DWT_NUMCOMP(ctrl);
 	dwt->comp_bmp = 0;
 
+	DCC_LOG1(LOG_TRACE, "DWT: numcomp=%d", dwt->numcomp);
+
 	return ICE_OK;
 }
 
@@ -641,6 +643,8 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	int rem;
 	int cnt;
 
+	DCC_LOG1(LOG_MSG, "COMM Addr=0x%08x", ctrl->comm_addr);
+
 	if (ctrl->comm_addr == 0x00000000)
 		return ICE_BRK_NONE;
 
@@ -662,7 +666,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		if (dp_stickyerr_get(tap)) {
 			/* The comm block is invalid and resulted in
 			   a MEM-AP access error */
-			DCC_LOG(LOG_WARNING, "JTAG DP STICKYERR flag set!");
+			WARNS("Clearing JTAG DP STICKYERR flag!");
 			dp_stickyerr_clr(tap);
 			/* Set the COMM address as invalid */
 			ctrl->comm_addr = 0x00000000;
@@ -752,7 +756,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	return 0;
 }
 
-static int adapter_reset(jtag_tap_t * tap)
+int jtag_adapter_reset(jtag_tap_t * tap)
 {
 	int ret;
 
@@ -792,23 +796,6 @@ static int adapter_reset(jtag_tap_t * tap)
 	/* power up the system domain */
 	jtag_dp_sys_pwr_up(tap);
 
-#if 0
-	if ((ret = armv7m_probe(tap, &ctrl->dbg_map)) < 0) {
-		WARNS(, "armv7m_probe() fail."); 
-		/* reset the debug domain */
-		jtag_dp_dbg_reset(tap);
-		if ((ret = armv7m_probe(tap, &ctrl->dbg_map)) < 0) {
-			WARNS("armv7m_probe() fail."); 
-			return ret;
-		}
-	}
-#endif
-
-	if (jtag_mem_ap_wr32(tap, ARMV7M_DCRDR, 0) != JTAG_ADI_ACK_OK_FAULT) {
-		ERRS("jtag_mem_ap_wr32() failed!"); 
-		return ICE_ERR_JTAG;
-	}
-
 	return ICE_OK;
 }
 
@@ -820,15 +807,15 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 
 	DCC_LOG(LOG_INFO, "cm3ice_comm_sync()..."); 
 	if ((ret = cm3ice_comm_sync(ctrl, comm)) != 0) {
-		DCC_LOG(LOG_WARNING, "cm3ice_comm_sync() failed!"); 
+		WARNS("cm3ice_comm_sync() failed!"); 
 		return ret;
 	}
 
 	while (ctrl->poll_enabled) {
 		if ((ret = cm3ice_comm_poll(ctrl, comm)) != 0) {
 			WARNS("cm3ice_comm_poll() failed!"); 
-//			return ret;
-			adapter_reset(tap);
+			return ret;
+//			jtag_adapter_reset(tap);
 		}
 
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
@@ -883,6 +870,7 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 				return ICE_BRK_EXCEPTION;
 			}
 
+			WARNS("ICE forced break?");
 			return ICE_BRK_UNKNOWN;
 		} else if (dhcsr & DHCSR_S_LOCKUP) {
 			WARNS("Lockup");
@@ -960,7 +948,7 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask,
 	int ret;
 
 	if (dp_stickyerr_get(tap)) {
-		WARNS("JTAG DP STICKYERR flag set!");
+		WARNS("clearing JTAG DP STICKYERR flag!");
 		dp_stickyerr_clr(tap);
 	}
 
@@ -992,12 +980,12 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask,
 			return ICE_ERR_JTAG;
 		}
 	}
-
+#if CM3ICE_COMM_DCRDR_ENABLE 
 	if (jtag_mem_ap_wr32(tap, ARMV7M_DCRDR, 0) != JTAG_ADI_ACK_OK_FAULT) {
 		ERRS("jtag_mem_ap_wr32() failed!"); 
 		return ICE_ERR_JTAG;
 	}
-
+#endif
 	if (dhcsr & DHCSR_S_HALT) {
 	} else {
 		ctrl->core.cache_bmp = 0;
@@ -1078,8 +1066,9 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t idmask,
 			 (dhcsr & DHCSR_C_DEBUGEN) ? 1 : 0);
 
 	if (dp_stickyerr_get(tap)) {
-		ERRS("JTAG DP STICKYERR flag is set!");
-		return -1;
+		WARNS("Clearing JTAG DP STICKYERR flag!");
+		dp_stickyerr_clr(tap);
+//		return -1;
 	}
 
 	return 0;
@@ -1229,15 +1218,8 @@ int cm3ice_init(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap)
 	/* configure the JTAG driver for ADIv5 operations */
 	jtag_adi_tap_setup(tap);
 
-	/* initialize the JTAG-DP */
-	jtag_dp_init(tap);
-
-	/* power up the debug domain */
-	jtag_dp_dbg_pwr_up(tap);
-
-	/* initialize the MEM-AP */
-	if ((ret = jtag_mem_ap_init(tap)) < 0) {
-		WARNS("jtag_mem_ap_init() fail."); 
+	if ((ret = jtag_adapter_reset(tap)) < 0) {
+		WARNS("jtag_adapter_reset() fail."); 
 		return ret;
 	}
 
@@ -1266,41 +1248,11 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, ice_opt_t * opt, cm3ice_cfg_t * cfg)
 		return ICE_ERR_BIG_ENDIAN;
 	}
 
-	/* initialize the JTAG-DP */
-	jtag_dp_init(tap);
-
-	/* power up the debug domain */
-	jtag_dp_dbg_pwr_up(tap);
-
-	/* initialize the MEM-AP */
-	if ((ret = jtag_mem_ap_init(tap)) < 0) {
-		DCC_LOG(LOG_WARNING, "jtag_mem_ap_init() fail."); 
-//		return ret;
-
-		/* XXX: the following sequence is a guess and may 
-		   not make any sense... */
-
-		/* power down the system domain */
-		jtag_dp_sys_pwr_down(tap);
-
-		jtag_adi_abort(tap);
-
-		/* power down the debug domain */
-		jtag_dp_dbg_pwr_down(tap);
-
-		/* power up the debug domain */
-		jtag_dp_dbg_pwr_up(tap);
-
-		jtag_dp_dbg_reset(tap);
-
-		if ((ret = jtag_mem_ap_init(tap)) < 0) {
-			DCC_LOG(LOG_WARNING, "jtag_mem_ap_init() fail."); 
-			return ret;
-		}
+	DCC_LOG(LOG_TRACE, "jtag_adapter_reset()...");
+	if ((ret = jtag_adapter_reset(tap)) < 0) {
+		WARNS("jtag_adapter_reset() fail."); 
+		return ret;
 	}
-
-	/* power up the system domain */
-	jtag_dp_sys_pwr_up(tap);
 
 	if ((ret = armv7m_probe(tap, &ctrl->dbg_map)) < 0) {
 		WARNS("armv7m_probe() fail."); 
@@ -1314,9 +1266,9 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, ice_opt_t * opt, cm3ice_cfg_t * cfg)
 
 	/* initialize the ICE control structure */
 	ctrl->tap = tap;
-	DCC_LOG(LOG_INFO, "[UNCONNECTED]");
 
 	/* Configure ICE options */
+	INFS("CM3ICE: configuring options...");
 
 	/* check for Flash Patch and Breakpoint Unit */
 	memset(&ctrl->fpb, 0, sizeof(armv7m_fpb_ctrl_t));
@@ -1326,6 +1278,8 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, ice_opt_t * opt, cm3ice_cfg_t * cfg)
 		opt->bp_max = ctrl->fpb.code_max;
 		/* default breakpoint's size */
 		opt->bp_defsz = 2;
+	} else {
+		WARNS("CM3ICE: no FBP !!!"); 
 	}
 
 	/* check for DWT */
@@ -1336,6 +1290,8 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, ice_opt_t * opt, cm3ice_cfg_t * cfg)
 		opt->wp_max = ctrl->dwt.numcomp;
 		/* default watchpoints' size */
 		opt->wp_defsz = 4;
+	} else {
+		WARNS("CM3ICE: no DWT !!!"); 
 	}
 
 	if (jtag_mem_ap_wr32(tap, ARMV7M_DCRDR, 0) != JTAG_ADI_ACK_OK_FAULT) {
@@ -1397,7 +1353,7 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, ice_opt_t * opt, cm3ice_cfg_t * cfg)
 	}
 
 	if (dp_stickyerr_get(tap)) {
-		WARNS("JTAG DP STICKYERR flag set!");
+		WARNS("Clearing JTAG DP STICKYERR flag!");
 		dp_stickyerr_clr(tap);
 	}
 
@@ -1663,6 +1619,8 @@ int cm3ice_bp_set(cm3ice_ctrl_t * ctrl, uint32_t addr,
 	int id;
 
 	comp = (addr & 0x3ffffffc) | COMP_ENABLE;
+
+	size &= ~1;
 
 	if (size == 2) {
 		if (addr & 0x02) {
@@ -2093,14 +2051,14 @@ int cm3ice_success(cm3ice_ctrl_t * ctrl)
 
 int cm3ice_mem_lock(cm3ice_ctrl_t * ctrl)
 {
-	INFS("cm3ice_mem_lock()...");
+	YAPS("cm3ice_mem_lock()...");
 	ctrl->flags |= CM3ICE_MEM_LOCK;
 	return ICE_OK;
 }
 
 int cm3ice_mem_unlock(cm3ice_ctrl_t * ctrl)
 {
-	INFS("cm3ice_mem_unlock()...");
+	YAPS("cm3ice_mem_unlock()...");
 	ctrl->flags &= ~CM3ICE_MEM_LOCK;
 	return ICE_OK;
 }

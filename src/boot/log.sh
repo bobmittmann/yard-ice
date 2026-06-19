@@ -22,7 +22,7 @@ PROG_ELF=${PROG_BIN%%.bin}.elf
 ${PYTHON} ${TOOLS_DIR}/tftp_cmd.py -h ${JTAGTOOL_ADDR} \
 'nrst' 'tgt 9 f c' 'run' 'disable debug'
 if [ $? = 0 ] ; then
-# Trace
-${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF} | tee dbg.log
+	# Trace
+	${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} ${PROG_ELF} | tee dbg.log
 fi
 

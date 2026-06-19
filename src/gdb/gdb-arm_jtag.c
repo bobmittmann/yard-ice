@@ -46,10 +46,9 @@ int arm_jtag_init(void * arg)
 int arm_jtag_mem_write(void * arg, uint32_t addr, 
 					   const void * ptr, unsigned int len)
 {
-	DCC_LOG(LOG_TRACE, ".");
+	DBG("mem_write(%d).", len);
 	return 0;
 }
-
 
 int arm_jtag_mem_read(void * arg, uint32_t addr, void * ptr, unsigned int len)
 {
@@ -60,6 +59,7 @@ int arm_jtag_mem_read(void * arg, uint32_t addr, void * ptr, unsigned int len)
 int arm_jtag_file_read(void * arg, const char * name, char * dst, 
 					  unsigned int offs, unsigned int size)
 {
+
 	DCC_LOGSTR(LOG_TRACE, "file=%s.", name);
 	return 0;
 }

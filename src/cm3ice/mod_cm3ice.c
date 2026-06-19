@@ -179,7 +179,7 @@ int cm3ice_var_get(cm3ice_ctrl_t * ctrl, int var_id, value_t * val)
 	jtag_tap_t * tap = ctrl->tap;
 	int reg;
 
-	DCC_LOG1(LOG_TRACE, "var_id=%d", var_id);
+	DCC_LOG1(LOG_INFO, "var_id=%d", var_id);
 
 	switch (var_id) {
 
@@ -219,7 +219,7 @@ int cm3ice_var_set(cm3ice_ctrl_t * ctrl, int var_id, const value_t * val)
 	jtag_tap_t * tap = ctrl->tap;
 	int reg;
 
-	DCC_LOG1(LOG_TRACE, "var_id=%d", var_id);
+	DCC_LOG1(LOG_INFO, "var_id=%d", var_id);
 
 	switch (var_id) {
 

@@ -289,10 +289,11 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 					DCC_LOG2(LOG_ERROR, "<%d> error %d !!", thread, errno);
 				}
 
+				monitor_print_newln(comm);
 				monitor_puts("!ERR: thread=", comm);
-				monitor_comm_send_uint(thread, 3, comm);
+				monitor_print_uint(thread, 3, comm);
 				monitor_puts(", error code=", comm);
-				monitor_comm_send_uint(errno, 3, comm);
+				monitor_print_uint(errno, 3, comm);
 			}
 			break;
 #endif
@@ -355,13 +356,13 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 			}
 			break;
 
-		case MONITOR_RX_PIPE:
-			sigmask = monitor_on_rx_pipe(comm, sigmask);
-			break;
-
 		case MONITOR_COMM_CTL:
 			DCC_LOG1(LOG_MSG, "comm=%08x", comm);
 			sigmask = monitor_on_comm_ctl(comm, sigmask);
+			break;
+
+		case MONITOR_RX_PIPE:
+			sigmask = monitor_on_rx_pipe(comm, sigmask);
 			break;
 
 		case MONITOR_COMM_EOT:

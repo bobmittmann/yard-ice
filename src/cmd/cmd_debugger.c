@@ -34,54 +34,44 @@
 
 #include <sys/shell.h>
 
-static const struct dict_entry rst_mode[] = {
-	{ "a",      RST_AUTO },
-	{ "auto",   RST_AUTO },
-	{ "c",      RST_CORE },
-	{ "core",   RST_CORE },
-	{ "d",      RST_DBG },
-	{ "dbg",    RST_DBG },
-	{ "debug",  RST_DBG },
-	{ "h",      RST_HARD },
-	{ "hard",   RST_HARD },
-	{ "soft",   RST_SOFT },
-	{ "s",      RST_SOFT },
-	{ "sys",    RST_SYS },
-	{ "y",      RST_SYS }
+enum args {
+	ARG_CLR = 1,
 };
 
-const char * const rst_mode_str [] = {
-	[RST_AUTO] = "auto",
-	[RST_HARD] = "hard",
-	[RST_SOFT] = "soft",
-	[RST_CORE] = "core",
-	[RST_DBG] = "debug",
-	[RST_SYS] = "system"
+#define WITH_PARAM 0x100
+
+static const struct dict_entry dbg_args[] = {
+	{ "c",     ARG_CLR },
+	{ "clear", ARG_CLR },
+	{ "clr",   ARG_CLR }
 };
 
-int cmd_reset(FILE * f, int argc, char ** argv)
+int cmd_debugger(FILE * f, int argc, char ** argv)
 {
-	int err;
-	int mode;
+	bool flag[2] = { false, false };
+
+	if (argc < 2) {
+		return SHELL_ERR_ARG_MISSING;
+	}
 
 	if (argc > 2) {
 		return SHELL_ERR_EXTRA_ARGS;
 	}
 
 	if (argc > 1) {
-		if ((mode = dict_bsearch(rst_mode, DICT_LEN(rst_mode), argv[1])) < 0) {
+		int val;
+		val = dict_bsearch(dbg_args, DICT_LEN(dbg_args), argv[1]);
+		if (val > 0) {
+			flag[val] = true;
+		} else {
 			return SHELL_ERR_ARG_INVALID;
 		}
-	} else {
-		mode = RST_AUTO;
 	}
 
-	fprintf(f, "Target reset: %s\n", rst_mode_str[mode]);
-
-	if ((err = target_reset(f, mode)) < 0) {
-		printf("ERROR: reset: %s.\n", target_strerror(err));
-		return SHELL_ERR_LOW_LEVEL;
-	} 
+	if (flag[ARG_CLR]) {
+		fprintf(f, "Debugger fault clear\n");
+		target_fault_clr();
+	}
 
 	return SHELL_OK;
 }

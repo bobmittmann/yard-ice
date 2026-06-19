@@ -87,6 +87,7 @@
 									Control Register */
 #define ARMV7M_MVFR0  0xe000ef40 /* Media and FP Feature Register 0 */
 #define ARMV7M_MVFR1  0xe000ef44 /* Media and FP Feature Register 1 */
+#define ARMV7M_MVFR2  0xe000ef48 /* Media and FP Feature Register 2 */
 
 #define ARMV7M_ICTR   0xe000e004 /* Interrupt Controller Type Register */
 #define ARMV7M_ACTLR  0xe000e008 /* Auxiliary Control Register */
@@ -890,8 +891,66 @@ page B3-699
 #define ICSR_RETTOBASE (1 << 11)
 #define ICSR_VECTACTIVE (0x1ff << 0)
 
+/* ----------------------------------------------------------------------- */
+/* Media and FP Feature Register 0, MVFR0                                  */
+/* ----------------------------------------------------------------------- */
+#define MVFR0_FP_ROUND_MODE (0x0f << 28)
+/* FP rounding modes, bits[31:28]
+	Indicates the rounding modes supported by the FP floating-point hardware. 
+	The value of this field is:
+	0b0001 All rounding modes supported. */
 
+#define MVFR0_SHORT_VECTORS (0x0f << 24)
+/* Short vectors, bits[27:24]
+	Indicates the hardware support for FP short vectors. 
+	The value of this field is:
+	0b0000 Not supported in ARMv7-M. */
 
+#define MVFR0_SQUARE_ROOT (0x0f << 24)
+/* Square root, bits[23:20]
+	Indicates the hardware support for FP square root operations. 
+	The value of this field is:
+	0b0001 Supported. */
+
+#define MVFR0_DIVIDED (0x0f << 16)
+/* Divide, bits[19:16]
+	Indicates the hardware support for FP divide operations. 
+	The value of this field is:
+	0b0001 Supported.
+	Note: The VDIV.F32 instruction also requires the single-precision 
+		FP attribute, bits[7:4] */
+
+#define MVFR0_EXCEPT_TRAPD (0x0f << 12)
+/* FP exception trapping, bits[15:12]
+	Indicates whether the FP hardware implementation supports exception trapping. 
+	The value of this field is:
+	0b0000
+	Not supported in ARMv7-M. */
+
+#define MVFR0_DOUBLE_PRECISION (0x0f << 8)
+/* Double-precision, bits[11:8]
+	Indicates the hardware support for FP double-precision operations:
+	0b0000 Not supported.
+	0b0010 Supported. */
+
+#define MVFR0_SINGLE_PRECISION (0x0f << 4)
+/* Single-precision, bits[7:4]
+	Indicates the hardware support for FP single-precision operations. 
+	The value of this field is:
+	0b0010 Supported. 
+	FP adds an instruction to load a single-precision floating-point constant, 
+	and conversions between single-precision and fixed-point values.
+	A value of 0b0010 indicates support for all FP single-precision instructions, 
+	except that, in addition:
+	•VSQRT.F32 is only available if the Square root field is 0b0001.
+	•VDIV.F32 is only available if the Divide field is 0b0001.
+	•Conversion between double-precision and single-precision is only 
+	available if the double-precision field is nonzero. */
+
+#define MVFR0_A_SIMD_REGISTER (0x0f << 0)
+/* A_SIMD registers, bits[3:0]
+	Indicates the size of the FP register bank. The value of this field is:
+	0b0001 Supported, 16 x 64-bit registers. */
 
 #ifdef __ASSEMBLER__
 

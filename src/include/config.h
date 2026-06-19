@@ -34,7 +34,6 @@
 /* Interrupts */
 /* Maximum IRQ for this board */
 #define THINKOS_IRQ_MAX                     80
-/* Interrupt Vector Table Resides in RAM */
 #define THINKOS_ENABLE_RAM_VECTORS          1
 #define THINKOS_ENABLE_IRQ_CTL              1
 #define THINKOS_ENABLE_IRQ_CYCCNT           0
@@ -96,10 +95,10 @@
 
 #define THINKOS_EVENT_MAX                   8
 
-#define THINKOS_FLAG_MAX                   16
+#define THINKOS_FLAG_MAX                   32
 /* Enable Rendez vous synchronization. Wakes up all threads
  watching a flag in a given instant.*/
-#define THINKOS_ENABLE_FLAG_WATCH           0
+#define THINKOS_ENABLE_FLAG_WATCH           1
 
 #define THINKOS_GATE_MAX                    8
 
@@ -184,12 +183,12 @@
  * delay
  * ------------------------------------------------------------------------- */
 
-#define UDELAY_FACTOR     1706
+#define THINKOS_ENABLE_UDELAY_CALIBRATE     0
 
-#define THINKOS_ENABLE_UDELAY_CALIBRATE   0
+#define UDELAY_FACTOR                    1706
 
 /* -------------------------------------------------------------------------
-   Clock 
+   STM32 RCC 
    -------------------------------------------------------------------------- */
 
 #define STM32_HSE_HZ           24000000

@@ -44,7 +44,9 @@ typedef enum {
 	ERR_TIMEOUT = -6,
 	ERR_NULL_TARGET = -7,
 	ERR_OUTOFSYNC = -8,
-	ERR_TAP_INVALID = -9
+	ERR_JTAG_TAP_INVALID = -9,
+	ERR_JTAG_IR_LEN = -10,
+	ERR_PROBE_INVALID = -11
 } dbg_errno_t;
 
 /* target state */
@@ -76,6 +78,14 @@ struct mem_range {
 	uint32_t size;
 };
 
+#ifndef DBG_BREAKPOINT_MAX
+#define DBG_BREAKPOINT_MAX 16
+#endif
+
+#ifndef DBG_WATCHPOINT_MAX
+#define DBG_WATCHPOINT_MAX 16
+#endif
+
 struct dbg_bp {
 	union {
 		struct dbg_bp * next;
@@ -91,9 +101,9 @@ struct dbg_bp {
 };
 
 struct dbg_bp_ctrl {
-	uint16_t cnt;
-	struct dbg_bp ** lst;
-	struct dbg_bp * free;
+	uint32_t head;
+	uint32_t tail;
+	struct dbg_bp * lst[DBG_BREAKPOINT_MAX];
 };
 
 struct dbg_wp {
@@ -111,6 +121,8 @@ struct dbg_wp {
 };
 
 struct dbg_wp_ctrl {
+	uint16_t first;
+	uint16_t last;
 	uint16_t cnt;
 	struct dbg_wp ** lst;
 	struct dbg_wp * free;
@@ -341,6 +353,8 @@ int target_enable_comm(bool flag);
 void debugger_init(void);
 
 void debugger_except(const char * msg);
+
+void target_fault_clr(void);
 
 #ifdef __cplusplus
 	}

@@ -40,7 +40,7 @@
 #include "signals.h"
 
 #ifndef RSP_BUFFER_LEN
-#define RSP_BUFFER_LEN 512
+#define RSP_BUFFER_LEN 1024
 #endif
 
 #ifndef GDB_ENABLE_NOACK_MODE
@@ -48,11 +48,11 @@
 #endif
 
 #ifndef GDB_ENABLE_NOSTOP_MODE
-#define GDB_ENABLE_NOSTOP_MODE 1
+#define GDB_ENABLE_NOSTOP_MODE 0
 #endif
 
 #ifndef GDB_ENABLE_VCONT
-#define GDB_ENABLE_VCONT 1
+#define GDB_ENABLE_VCONT 0
 #endif
 
 #ifndef GDB_ENABLE_MULTIPROCESS
@@ -60,11 +60,11 @@
 #endif
 
 #ifndef GDB_ENABLE_QXFER_FEATURES
-#define GDB_ENABLE_QXFER_FEATURES 1
+#define GDB_ENABLE_QXFER_FEATURES 0
 #endif
 
 #ifndef GDB_ENABLE_QXFER_MEMORY_MAP
-#define GDB_ENABLE_QXFER_MEMORY_MAP 1
+#define GDB_ENABLE_QXFER_MEMORY_MAP 0
 #endif
 
 #ifndef GDB_ENABLE_RXMIT
@@ -118,7 +118,7 @@ extern "C" {
 
 int uint2dec(char * s, unsigned int val);
 unsigned long hex2int(const char * __s, char ** __endp);
-bool prefix(const char * __s, const char * __prefix);
+char * prefix(const char * __s, const char * __prefix);
 int char2hex(char * pkt, int c);
 int str2str(char * pkt, const char * s);
 int str2hex(char * pkt, const char * s);

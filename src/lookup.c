@@ -30,27 +30,69 @@
 
 #include "lookup.h"
 
-#include <sys/dcclog.h>
+#define TRACE_LEVEL TRACE_LVL_DBG
 
-int lookup_int_val(const lt_entry_int_t * tab, const char * tag, int * val)
+#include <trace.h>
+
+int dict_lookup_linear(const struct dict_entry tab[], const char * tag)
 {
-	lt_entry_int_t * lp;
+	const struct dict_entry * lp;
 	int i = 0;
 
 	for (i = 0; ; i++) {
-		lp = (lt_entry_int_t *)&tab[i];
+		lp = &tab[i];
 
-		if (lp->tag == NULL)
+		if (lp->key == NULL)
 			return -1;
 
-		if (strcmp(lp->tag, tag) == 0) {
+		if (strcmp(lp->key, tag) == 0) {
 			break;
 		}
 	}
 
-	if (val != NULL)
-		*val = lp->val;
+	return lp->val;
+}
 
-	return i;
+int str_bsearch(const char * lst[], int len, const char * key)
+{
+	int i = 0;
+    int j = len - 1;
+
+    /* Binary search */
+    while (i <= j) {
+        int k = i + ((j - i) / 2);
+        int cmp = strcmp(lst[k], key);
+        if (cmp == 0) {
+			return k;
+        } else if (cmp < 0) {
+            i = k + 1;
+        } else {
+            j = k - 1;
+        }
+    }
+
+	return -1; 
+}
+
+/* */
+int dict_bsearch(const struct dict_entry lst[], int len, const char * key)
+{
+	int i = 0;
+    int j = len - 1;
+
+    /* Binary search */
+    while (i <= j) {
+        int k = i + ((j - i) / 2);
+        int cmp = strcmp(lst[k].key, key);
+        if (cmp == 0) {
+			return lst[k].val;
+        } else if (cmp < 0) {
+            i = k + 1;
+        } else {
+            j = k - 1;
+        }
+    }
+
+	return -1; 
 }
 

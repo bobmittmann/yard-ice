@@ -118,11 +118,11 @@ int shell_exec(FILE * f, const struct shell_cmd * cmd_tab, char * line)
 
 	if ((cmd = cmd_lookup(cmd_tab, argv[0])) == NULL) {
 
-		DCC_LOG(LOG_TRACE, "cmd_lookup() == NULL");
+		DCC_LOG(LOG_INFO, "cmd_lookup() == NULL");
 
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
 			DCC_LOG(LOG_WARNING, "eval_uint32()");
-			return SHELL_ERR_PARSE;
+			return SHELL_ERR_EVAL;
 		}
 
 		if (n != argc) {
@@ -171,26 +171,13 @@ int shell(FILE * f, const char * (* prompt)(void),
 		ret = 0;
 
 		while ((stat = cmd_get_next(&cp)) != NULL) {
-#if 0
-			struct shell_cmd * cmd;
-
-			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
-				fprintf(f, "Command not found!\n");
-				break;
-			}
-
-			ret = cmd_exec(f, cmd, stat);
-#else
 			ret = shell_exec(f, cmd_tab, stat);
-#endif
 			if ((ret < 0) && (ret !=  SHELL_ABORT)) {
 				fprintf(f, "Error: %s\n", shell_strerror(ret));
 				break;
 			}
-			
 		}
 
-		YAP("shell() ret=%d", ret);
 	} while (ret != SHELL_ABORT); 
 
 	return 0;
@@ -233,6 +220,9 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 
 	{ cmd_show_context, "cpu", "c", 
 		"<ext | stack>", "show target CPU context" },
+
+	{ cmd_debugger, "debugger", "dbg", 
+		"[clr]", "\nclr - clear errors." },
 
 	{ cmd_disable, "disable", "dis", 
 		"[poll | comm | debug | irq]", "disable feature." },
