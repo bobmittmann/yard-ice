@@ -290,10 +290,11 @@ void __attribute__((noreturn)) monitor_task(const struct monitor_comm * comm,
 				}
 
 				monitor_print_newln(comm);
-				monitor_puts("!ERR: thread=", comm);
+				monitor_puts("!ERR: thread", comm);
 				monitor_print_uint(thread, 3, comm);
-				monitor_puts(", error code=", comm);
+				monitor_puts(", error code", comm);
 				monitor_print_uint(errno, 3, comm);
+				monitor_print_newln(comm);
 			}
 			break;
 #endif

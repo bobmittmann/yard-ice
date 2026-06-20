@@ -52,8 +52,10 @@
 
 struct gdb_rspd {
 	uint8_t noack_mode;
-	uint8_t run_flag;
-	uint8_t con_flag;
+	volatile bool connected;
+	volatile bool running;
+	uint8_t mutex;
+	uint8_t cond;
 	struct tcp_pcb * svc;
 	struct tcp_pcb * volatile tp;
 };
@@ -184,13 +186,14 @@ static int rsp_break_signal(struct tcp_pcb * tp, char * pkt)
 #else
 	INFS("GDB: target_halt_wait()");
 
-	if ((state = target_halt_wait(1000)) == ERR_TIMEOUT) {
+	if ((state = target_halt_wait(50)) == ERR_TIMEOUT) {
 		WARNS("GDB: timeout...");
 	}
 
 	if (state == DBG_ST_HALTED) {
 		INFS("GDB: halted.");
 		return rsp_signal(tp, pkt, SIGTRAP);
+	} else if (state == DBG_ST_RUNNING) {
 	}
 
 	return rsp_msg(tp, pkt, "YARD-ICE: target_halt failed!");
@@ -278,7 +281,7 @@ static int rsp_last_signal(struct gdb_rspd * gdb, struct tcp_pcb * tp,
 			return rsp_error(tp, 1);
 		}
 
-		if ((state = target_halt_wait(500)) == ERR_TIMEOUT) {
+		if ((state = target_halt_wait(50)) == ERR_TIMEOUT) {
 			DCC_LOG(LOG_TRACE, "timeout...");
 			rsp_msg(tp, pkt, "YARD-ICE: target_halt failed!");
 			return rsp_error(tp, 1);
@@ -287,7 +290,6 @@ static int rsp_last_signal(struct gdb_rspd * gdb, struct tcp_pcb * tp,
 	
 	if (state == DBG_ST_HALTED) {
 		DCC_LOG(LOG_TRACE, "halted");
-		thinkos_flag_clr(gdb->run_flag);
 		return rsp_signal(tp, pkt, SIGTRAP);
 	}
 
@@ -317,7 +319,6 @@ static int rsp_last_signal(struct gdb_rspd * gdb, struct tcp_pcb * tp,
 	case DBG_ST_RUNNING:
 		DCC_LOG(LOG_TRACE, "running");
 		rsp_msg(tp, pkt, "YARD-ICE: running\n");
-		thinkos_flag_set(gdb->run_flag);
 		break;
 	default:
 		DCC_LOG1(LOG_WARNING, "unknown state: %d", state);
@@ -885,8 +886,8 @@ static int rsp_continue(struct gdb_rspd * gdb, struct tcp_pcb * tp,
 	} 
 
 	/* signal that we are now running */
-	thinkos_flag_set(gdb->run_flag);
-//	thinkos_flag_give(gdb->run_flag);
+	gdb->running = true;
+	thinkos_cond_signal(gdb->cond);
 
 	return tcp_send(tp, "+", 1, TCP_SEND_NOWAIT);
 }
@@ -915,7 +916,7 @@ static int rsp_h_packet(struct tcp_pcb * tp, char * pkt, int len)
 			return rsp_error(tp, 1);
 		}
 
-		if ((state = target_halt_wait(500)) == ERR_TIMEOUT) {
+		if ((state = target_halt_wait(50)) == ERR_TIMEOUT) {
 			DCC_LOG(LOG_TRACE, "timeout...");
 			rsp_msg(tp, pkt, "YARD-ICE: target_halt failed!");
 			return rsp_error(tp, 1);
@@ -1070,27 +1071,26 @@ int __attribute__((noreturn)) gdb_brk_task(struct gdb_rspd * gdb)
 	DCC_LOG1(LOG_TRACE, "<%d>", thinkos_thread_self());
 	INF("BRK: <%d>", thinkos_thread_self());
 
+	thinkos_mutex_lock(gdb->mutex);
 	for (;;) {
-		/* wait for a connection */
 		DCC_LOG(LOG_TRACE, "waiting connect...");
-		thinkos_flag_watch(gdb->con_flag);
+		while (!(gdb->connected && gdb->running))  {
+			/* wait for a connection */
+			thinkos_cond_wait(gdb->cond, gdb->mutex);
+		}
 
 		/* wait for a 'target run' indication */
-		DCC_LOG(LOG_TRACE, "waiting run...");
+		DCC_LOG(LOG_TRACE, "waiting halt... ... ... ...");
 
-		/* wait for a target run */
-		thinkos_flag_watch(gdb->run_flag);
-
-		DCC_LOG(LOG_TRACE, "waiting halt...");
-
+		thinkos_mutex_unlock(gdb->mutex);
 		while ((state = target_halt_wait(5000)) == ERR_TIMEOUT) {
 			DCC_LOG(LOG_TRACE, "waiting...");
 		}
+		thinkos_mutex_lock(gdb->mutex);
 
 		if (state == DBG_ST_HALTED) {
-			DCC_LOG(LOG_TRACE, "halted");
-
-			thinkos_flag_clr(gdb->run_flag);
+			DCC_LOG(LOG_TRACE, "<<<<<<<<<<<<< halted >>>>>>>>>>>>>>>>>>>>>");
+			gdb->running = false;
 
 			if ((tp = gdb->tp) != NULL) {
 				pkt[0] = '$';
@@ -1125,8 +1125,12 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 			DCC_LOG(LOG_ERROR, "tcp_accept().");
 			break;
 		}
+		thinkos_mutex_lock(gdb->mutex);
+
 		gdb->tp = tp;
 		gdb->noack_mode = 0;
+
+		gdb->connected = true;
 
 		INF("accepted: %08x", (int)tp);
 		DCC_LOG(LOG_TRACE, "accepted.");
@@ -1135,20 +1139,25 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 		if (state == DBG_ST_RUNNING) {
 			DCC_LOG(LOG_TRACE, "running");
 			/* wakeup the break wait thread */
-			thinkos_flag_set(gdb->run_flag);
+			gdb->running = true;
 		} else {
-			thinkos_flag_clr(gdb->run_flag);
+			gdb->running = false;
 		} 
 
-		thinkos_flag_set(gdb->con_flag);
+		thinkos_cond_signal(gdb->cond);
 
 		for (;;) {
-			if ((len = tcp_recv(tp, buf, 1)) <= 0) {
+			thinkos_mutex_unlock(gdb->mutex);
+
+			len = tcp_recv(tp, buf, 1);
+		
+			thinkos_mutex_lock(gdb->mutex);
+
+			if (len  <= 0) {
 				INF("tcp_recv() failed!");
 				DCC_LOG1(LOG_WARNING, "tcp_recv(): %d", len);
 				break;
 			}
-		
 		//	tracef("%s(): tcp_recv: %d", __func__, len);
 
 			c = buf[0];
@@ -1278,10 +1287,10 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 		DCC_LOG(LOG_TRACE, "close...");
 
 		tcp_close(tp);
+		gdb->connected = false;
 		gdb->tp = NULL;
-		thinkos_flag_clr(gdb->con_flag);
-		/* wakeup the brk signaling thread */
-		thinkos_flag_set(gdb->run_flag);
+
+		thinkos_mutex_unlock(gdb->mutex);
 	}
 
 	for (;;);
@@ -1305,8 +1314,8 @@ const struct thinkos_thread_inf gdb_srv_inf = {
 const struct thinkos_thread_inf gdb_brk_inf = {
 	.stack_ptr = gdb_brk_stack, 
 	.stack_size = sizeof(gdb_brk_stack),
-	.priority = 32,
-	.thread_id = 32,
+	.priority = 31,
+	.thread_id = 31,
 	.paused = false,
 	.tag = "GDB_BRK"
 };
@@ -1327,8 +1336,8 @@ int gdb_rspd_start(void)
 
 	gdb_rspd.svc = svc;
 	gdb_rspd.tp = NULL;
-	gdb_rspd.run_flag = thinkos_flag_alloc();
-	gdb_rspd.con_flag = thinkos_flag_alloc();
+	gdb_rspd.mutex = thinkos_mutex_alloc();
+	gdb_rspd.cond = thinkos_cond_alloc();
 
 	th = thinkos_thread_create_inf((void *)gdb_task, (void *)&gdb_rspd, 
 								   &gdb_srv_inf);

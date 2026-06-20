@@ -1082,13 +1082,12 @@ int target_halt_wait(int tmo)
 
 	/* halt wait */
 	while (dbg->poll_enabled) {
-		DCC_LOG(LOG_INFO, "poll enabled waiting...");
-		thinkos_cond_wait(dbg->halt_cond, dbg->target_mutex);
-//		if (thinkos_cond_timedwait(dbg->halt_cond, dbg->target_mutex, 
-//								   tmo) < 0) {
-//			thinkos_mutex_unlock(dbg->target_mutex);
-//			return ERR_TIMEOUT;
-//		}
+		DCC_LOG1(LOG_TRACE, "poll enabled waiting... mtx=%d", dbg->target_mutex);
+		if (thinkos_cond_timedwait(dbg->halt_cond, dbg->target_mutex, 
+								   tmo) < 0) {
+			thinkos_mutex_unlock(dbg->target_mutex);
+			return ERR_TIMEOUT;
+		}
 	}
 
 	thinkos_mutex_lock(dbg->ice_mutex);

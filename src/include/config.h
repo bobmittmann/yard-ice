@@ -49,11 +49,11 @@
 #define THINKOS_ENABLE_ARG_CHECK            0
 /* Check if a thread tries to lock a mutex which it
    has previously locked. */
-#define THINKOS_ENABLE_DEADLOCK_CHECK       0
-/* Check if athread tries to unlock a mutex which is
+#define THINKOS_ENABLE_DEADLOCK_CHECK       1
+/* Check if a thread tries to unlock a mutex which is
    not his own. Also check for minimum stack size on 
  thread creation. */
-#define THINKOS_ENABLE_SANITY_CHECK         0
+#define THINKOS_ENABLE_SANITY_CHECK         1
 /* Allow to interrupt a system call */
 #define THINKOS_ENABLE_BREAK                0
 #define THINKOS_ENABLE_MEMORY_CLEAR         1
@@ -176,7 +176,7 @@
  * ------------------------------------------------------------------------- */
 
 #define KRN_PRINTF_ENABLE_FAST              1
-#define KRN_PRINTF_ENABLE_UNSIGNED          0
+#define KRN_PRINTF_ENABLE_UNSIGNED          1
 #define KRN_PRINTF_ENABLE_LONG              0
 
 /* -------------------------------------------------------------------------

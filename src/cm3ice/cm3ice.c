@@ -560,7 +560,7 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		return ICE_BRK_DBGERROR;
 	}
 
-	if ((ctrl->comm_addr == 0x00000000) || (ctrl->comm_addr == 0xffffffff)) {
+	if ((ctrl->comm_addr < 0x10000000) || (ctrl->comm_addr > 0x2ffffff0)) {
 		DCC_LOG1(LOG_INFO, "comm block not found! comm_addr=0x%08x", 
 				 ctrl->comm_addr);
 		return ICE_BRK_NONE;
