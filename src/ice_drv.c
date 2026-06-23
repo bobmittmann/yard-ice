@@ -585,7 +585,7 @@ int null_ice_status(ice_ctrl_t * ctrl)
 {
 	DCC_LOG1(LOG_INFO, "ctrl=%p", ctrl);
 
-	return ICE_ST_FAULT;
+	return ICE_STATUS_FAULT;
 }
 
 int null_ice_fail(ice_ctrl_t * ctrl)

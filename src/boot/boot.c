@@ -232,7 +232,7 @@ void main(int argc, char ** argv)
     DCC_LOG(LOG_TRACE, VT_PSH VT_BRI VT_FGR
             "* 5. thinkos_krn_monitor_init()." VT_POP);
 #endif
-	/* starts/restarts monitor with autoboot enabled */
+	/* starts/restarts monitor */
 	thinkos_krn_monitor_init(krn, comm, monitor_task, (void *)flags);
 
 	board_reset();

@@ -59,7 +59,8 @@ typedef enum {
 	DBG_ST_UNCONNECTED = 1,
 	DBG_ST_CONNECTED = 2,
 	DBG_ST_RUNNING = 3,
-	DBG_ST_HALTED = 4
+	DBG_ST_HALTED = 4,
+	DBG_ST_LOCKUP = 5
 } dbg_state_t;
 
 /*
@@ -333,6 +334,8 @@ int target_probe(FILE * f);
 struct target_info * get_target_info(void);
 
 int target_halt_wait(int tmo);
+
+void target_halt_wait_break(void);
 
 int target_ice_info(FILE * f, uint32_t which);
 

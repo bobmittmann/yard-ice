@@ -155,38 +155,35 @@ void rtc_init(void)
 
 #if TRACE_ENABLE_VT100
 const char * const lvl_attr_nm[] = {
-	VT_FRD VT_BRI VT_BLK "PANIC" VT_FWH VT_NML,
-	VT_FRD VT_BRI " CRIT" VT_FWH VT_NML,
-	VT_FRD VT_BRI "ALERT" VT_FWH VT_NML,
-	VT_FRD VT_BRI "ERROR" VT_FWH VT_NML,
+	_FG_RED_ _BRIGHT_ _BLINK_ "PANIC" _FG_WHITE_,
+	_FG_RED_ _BRIGHT_ " CRIT" _FG_WHITE_ _NORMAL_,
+	_FG_RED_ _BRIGHT_ "ALERT" _FG_WHITE_ _NORMAL_,
+	_FG_RED_ "ERROR" _FG_WHITE_ _NORMAL_,
 
-	VT_FYW " WARN" VT_FWH VT_NML,
-	VT_FGR " NOTE" VT_FWH VT_NML,
-	VT_FBL " INFO" VT_FWH VT_NML,
-	VT_FCY "DEBUG" VT_FWH VT_NML,
+	_FG_YELLOW_ " WARN" _FG_WHITE_ _NORMAL_,
+	_FG_GREEN_ " NOTE" _FG_WHITE_ _NORMAL_,
+	_FG_BLUE_ " INFO" _FG_WHITE_ _NORMAL_,
+	_FG_CYAN_ "DEBUG" _FG_WHITE_ _NORMAL_,
 
-	VT_FCY VT_DIM "  YAP" VT_FWH VT_NML,
+	_FG_CYAN_ _DIM_ "  YAP" _FG_WHITE_ _NORMAL_,
 	" !!!!",
 	" ????"
-	" ????"
 };
-
 const char * const txt_attr[] = {
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
+	_FG_WHITE_,
+	_FG_WHITE_,
+	_FG_WHITE_,
+	_FG_WHITE_,
 
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
+	_FG_WHITE_,
+	_FG_WHITE_,
+	_FG_WHITE_,
+	_FG_WHITE_,
 
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
-	VT_FWH VT_NML,
-	};
+	_FG_WHITE_,
+	_FG_WHITE_,
+	_FG_WHITE_
+};
 #endif
 
 
@@ -325,7 +322,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 				trace_ts2timeval(&tv, trace->dt);
 
 				if (file != NULL) {
-					if ((lvl = trace->ref->lvl) <= TRACE_LVL_WARN)
+					if ((lvl = trace->ref->lvl) <= TRACE_LVL_DBG)
 #if TRACE_ENABLE_VT100
 						/* extra info */
 						n = sprintf(line, _ATTR_PUSH_ "%s "
@@ -692,7 +689,7 @@ int main(int argc, char ** argv)
 
 	trace_init();
 
-	INF("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
+	INFS("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
 
 	DCC_LOG(LOG_TRACE, " 7. supervisor_init().");
 	supervisor_init();
@@ -715,15 +712,15 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, " 10. modules_init().");
 	modules_init();
 
-	INF("* Starting system module ...");
+	INFS("* Starting system module ...");
 	DCC_LOG(LOG_TRACE, " 11. sys_start().");
 	sys_start();
 
-	INF("* Initializing YARD-ICE debugger...");
+	INFS("* Initializing YARD-ICE debugger...");
 	DCC_LOG(LOG_TRACE, " 12. debugger_init().");
 	debugger_init();
 
-	INF("* Initializing JTAG module ...");
+	INFS("* Initializing JTAG module ...");
 	DCC_LOG(LOG_TRACE, " 13. jtag_start().");
 	if ((ret = jtag_start()) < 0) {
 		ERR("jtag_start() failed! [ret=%d]", ret);
@@ -731,7 +728,7 @@ int main(int argc, char ** argv)
 	}
 
 #if (ENABLE_NAND)
-	INF("* Initializing NAND module...");
+	INFS("* Initializing NAND module...");
 	DCC_LOG(LOG_TRACE, " 14. mod_nand_start().");
 	if (mod_nand_start() < 0) {
 		INF("mod_nand_start() failed!");
@@ -740,44 +737,44 @@ int main(int argc, char ** argv)
 #endif
 
 #if (ENABLE_I2C)
-	INF("* starting I2C module ... ");
+	INFS("* starting I2C module ... ");
 	DCC_LOG(LOG_TRACE, "15. i2c_init().");
 	i2c_init();
 #endif
 
 #if ENABLE_NETWORK
 	DCC_LOG(LOG_TRACE, " 16. network_config().");
-	INF("* Initializing network...");
+	INFS("* Initializing network...");
 	network_config();
 #endif
 
 #if (ENABLE_VCOM)
-	INF("* starting VCOM daemon ... ");
+	INFS("* starting VCOM daemon ... ");
 	/* connect the UART to the JTAG auxiliary pins */
 	jtag3ctrl_aux_uart(true);
 	vcom_start();
 #endif
 
 #if (ENABLE_COMM)
-	INF("* starting COMM daemon ... ");
+	INFS("* starting COMM daemon ... ");
 	DCC_LOG(LOG_TRACE, "18. comm_tcp_start().");
 	comm_tcp_start(&debugger.comm);
 #endif
 
 #if (ENABLE_TFTP)
-	INF("* starting TFTP server ... ");
+	INFS("* starting TFTP server ... ");
 	DCC_LOG(LOG_TRACE, "19. tftpd_start().");
 	tftpd_start();
 #endif
 
 #if (ENABLE_GDB)
-	INF("* starting GDB daemon ... ");
-	DCC_LOG(LOG_TRACE, "21. gdb_rspd_start().");
-	gdb_rspd_start();
+	INFS("* starting GDB daemon ... ");
+	DCC_LOG(LOG_TRACE, "21. gdbtcpd_start().");
+	gdbtcpd_start();
 #endif
 
 #if ENABLE_MONITOR
-	INF("* starting console shell ... ");
+	INFS("* starting console shell ... ");
 	DCC_LOG(LOG_TRACE, "22. console_shell().");
 	{
 		FILE * f;
@@ -804,16 +801,14 @@ int main(int argc, char ** argv)
 #endif
 
 #if ENABLE_TELNET
-	INF("* starting TELNET server ... ");
+	INFS("* starting TELNET server ... ");
 	telnet_shell();
 #endif
 
-	INF("* configuring initial target ... ");
+	INFS("* configuring initial target ... ");
 	init_target();
 
 	for (;;) {
-//		INF("* shell... ");
-		DCC_LOG(LOG_TRACE, "tick...");
 		thinkos_sleep(1000);
 		stdio_shell();
 	}

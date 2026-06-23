@@ -43,7 +43,7 @@ LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
 	  ../libopcodes ../libaltera\
 	  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
 	  ../armice ../cm3ice ../targets ../tftp ../vcom ../telnet\
-	  ../comm  ../dynfs ../oldgdb 
+	  ../comm  ../dynfs ../gdbtcp 
 
 LIBS = stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
        altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\

@@ -39,16 +39,16 @@ int cmd_show_context(FILE * f, int argc, char ** argv)
 	uint32_t addr;
 	int err;
 	bool stack = false;
-	bool extra = false;
+	bool nodasm = false;
 	int i;
 
 	if (argc > 3)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	for (i = 1; i < argc; i++) {
-		if ((strcmp(argv[i], "extra") == 0) || 
-			(strcmp(argv[i], "e") == 0)) {
-			extra = true;
+		if ((strcmp(argv[i], "nodasm") == 0) || 
+			(strcmp(argv[i], "n") == 0)) {
+			nodasm = true;
 		} else if ((strcmp(argv[i], "stack") == 0) || 
 			(strcmp(argv[i], "s") == 0)) {
 			stack = true;
@@ -62,8 +62,7 @@ int cmd_show_context(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_LOW_LEVEL;
 	}
 
-
-	if (extra) {
+	if (!nodasm) {
 		fprintf(f, "\n");
 		/* Get the Instruction Fetch Address */
 		target_ifa_get(&addr);

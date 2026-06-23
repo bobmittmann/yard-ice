@@ -33,7 +33,7 @@
 
 /* Interrupts */
 /* Maximum IRQ for this board */
-#define THINKOS_IRQ_MAX                     80
+#define THINKOS_IRQ_MAX                    79
 #define THINKOS_ENABLE_RAM_VECTORS          1
 #define THINKOS_ENABLE_IRQ_CTL              1
 #define THINKOS_ENABLE_IRQ_CYCCNT           0
@@ -120,14 +120,14 @@
 #define THINKOS_ENABLE_CONSOLE_DRAIN        1
 #define THINKOS_ENABLE_CONSOLE_MISC         1
 #define THINKOS_CONSOLE_RX_FIFO_LEN        64
-#define THINKOS_CONSOLE_TX_FIFO_LEN       256
+#define THINKOS_CONSOLE_TX_FIFO_LEN       128
 
 /* Error Handling */
 #define THINKOS_ENABLE_STACK_ALIGN          1
 #define THINKOS_ENABLE_UNALIGN_TRAP         1
 #define THINKOS_ENABLE_DIV0_TRAP            1
 #define THINKOS_EXCEPT_STACK_SIZE         512
-#define THINKOS_ENABLE_STACK_LIMIT          0
+#define THINKOS_ENABLE_STACK_LIMIT          1
 #define THINKOS_ENABLE_ERROR_TRAP           1
 #define THINKOS_ENABLE_BUSFAULT             0
 #define THINKOS_ENABLE_USAGEFAULT           0

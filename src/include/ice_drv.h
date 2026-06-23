@@ -72,9 +72,9 @@ typedef struct ice_wp ice_wp_t;
 
 
 /*
- * memory region descriptor
+ * ICE state 
  */
-
+/*
 typedef enum {
 	ICE_UNDEF = 0,
 	ICE_ERROR = 1,
@@ -83,13 +83,17 @@ typedef enum {
 	ICE_CONNECTED = 4,
 	ICE_OUTOFSYNC = 5,
 	ICE_RUNNING = 6,
-	ICE_HALTED = 7,
+	ICE_HALTED = 7
 } ice_state_t;
-
+*/
 
 /* ICE status flags */
-#define ICE_ST_HALT  (1 << 0) 
-#define ICE_ST_FAULT (1 << 7)
+#define ICE_STATUS_HALT    (1 << 0) 
+#define ICE_STATUS_SLEEP   (1 << 2)
+#define ICE_STATUS_LOCKUP  (1 << 3)
+#define ICE_STATUS_RESET   (1 << 4)
+#define ICE_STATUS_RUNNING (1 << 5)
+#define ICE_STATUS_FAULT   (1 << 7)
 
 typedef enum {
 	ICE_BRK_NONE = 0,
@@ -98,7 +102,9 @@ typedef enum {
 	ICE_BRK_BREAKPOINT = 3,
 	ICE_BRK_WATCHPOINT = 4,
 	ICE_BRK_EXCEPTION = 5,
-	ICE_BRK_LOCKUP = 6
+	ICE_BRK_LOCKUP = 6,
+	ICE_BRK_EXTERNAL = 7,
+	ICE_BRK_REQUEST = 8
 } ice_reason_t;
 
 typedef enum {
@@ -112,7 +118,9 @@ typedef enum {
 	ICE_ERR_LITTLE_ENDIAN = -107,
 	ICE_ERR_JTAG = -108,
 	ICE_ERR_HALT_TMO = -109,
-	ICE_ERR_HALT_FAIL = -110
+	ICE_ERR_HALT_FAIL = -110,
+	ICE_ERR_POLLING = -111,
+	ICE_ERR_DRV_FAIL = -112
 } ice_erro_t;
 
 typedef enum {
@@ -161,8 +169,7 @@ typedef void (* ice_signal_t)(ice_ctrl_t * ctrl, ice_sig_t sig);
 
 typedef int (* ice_halt_wait_t)(ice_ctrl_t * ctrl, int mutex, int tmo);
 
-typedef int (* ice_connect_t)(ice_ctrl_t * ctrl, uint32_t idmask, 
-							  uint32_t idcomp, uint32_t flags);
+typedef int (* ice_connect_t)(ice_ctrl_t * ctrl, uint32_t flags);
 
 typedef int (* ice_release_t)(ice_ctrl_t * ctrl);
 
@@ -470,9 +477,8 @@ static inline int ice_halt_wait(const ice_drv_t * ice, int mutex, int tmo) {
 	return ice->op.halt_wait(ice->ctrl, mutex, tmo);
 }
 
-static inline int ice_connect(const ice_drv_t * ice, uint32_t idmask, 
-							  uint32_t idcomp, uint32_t flags) {
-	return ice->op.connect(ice->ctrl, idmask, idcomp, flags);
+static inline int ice_connect(const ice_drv_t * ice, uint32_t flags) {
+	return ice->op.connect(ice->ctrl, flags);
 }
 
 static inline int ice_release(const ice_drv_t * ice) {

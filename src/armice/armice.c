@@ -293,9 +293,9 @@ int armice_poll(armice_ctrl_t * ctrl, ice_comm_t * comm)
 	ctrl->polling = false;
 
 	if (dbg_status < 0)
-		return ICE_ST_FAULT;
+		return ICE_STATUS_FAULT;
 
-	return (dbg_status & ARMICE_ST_DBGACK) ? ICE_ST_HALT : 0;
+	return (dbg_status & ARMICE_ST_DBGACK) ? ICE_STATUS_HALT : 0;
 }
 
 void armice_signal(armice_ctrl_t * ctrl, ice_sig_t sig)
@@ -345,15 +345,18 @@ int armice_status(armice_ctrl_t * ctrl)
 
 	core_status_update(ctrl, dbg_status);
 
-	return (dbg_status & ARMICE_ST_DBGACK) ? ICE_ST_HALT : 0;
+	return (dbg_status & ARMICE_ST_DBGACK) ? ICE_STATUS_HALT : 0;
 }
 
-int armice_connect(armice_ctrl_t * ctrl, uint32_t idmask, 
-					uint32_t idcomp, int force)
+int armice_connect(armice_ctrl_t * ctrl, int force)
 {
 //	int dbg_status;
+	uint32_t idmask = ctrl->tap->idmask; 
+	uint32_t idcomp = ctrl->tap->idcomp;
 	int ret;
 
+	(void)idmask;
+	(void)idcomp;
 	DCC_LOG3(LOG_TRACE, "idmask=%08x idcomp=%08x force=%d", 
 			 idmask, idcomp, force);
 
@@ -808,12 +811,12 @@ int armice_configure(armice_ctrl_t * ctrl, jtag_tap_t * tap,
 
 	if (!(ctrl->flags & ARMICE_OPENED)) {
 		DCC_LOG(LOG_WARNING, "not open!");
-		return ICE_ERROR;
+		return ICE_ERR_INVALID_STATE;
 	}
 
 	if (cfg == NULL) {
 		DCC_LOG(LOG_WARNING, "cfg == NULL"); 
-		return -1;
+		return ICE_ERR_ARG;
 	}
 
 	if (cfg->endianness) {
@@ -823,7 +826,7 @@ int armice_configure(armice_ctrl_t * ctrl, jtag_tap_t * tap,
 	
 	if (ctrl->polling) {
 		DCC_LOG(LOG_WARNING, "poll task is running!");
-		return -1;
+		return ICE_ERR_POLLING;
 	}
 
 	ctrl->work_addr = cfg->work_addr;
@@ -1711,7 +1714,7 @@ int armice_open(armice_ctrl_t * ctrl)
 {
 	if (ctrl->flags & ARMICE_OPENED) {
 		DCC_LOG(LOG_WARNING, "already open!");
-		return ICE_ERROR;
+		return ICE_ERR_INVALID_STATE;
 	}
 
 	DCC_LOG1(LOG_TRACE, "ctrl=0x%p [OPEN]", ctrl);
@@ -1755,7 +1758,7 @@ int armice_close(armice_ctrl_t * ctrl)
 {
 	if (!(ctrl->flags & ARMICE_OPENED)) {
 		DCC_LOG(LOG_WARNING, "not open!");
-		return ICE_ERROR;
+		return ICE_ERR_INVALID_STATE;
 	}
 
 	if (ctrl->polling) {

@@ -36,7 +36,7 @@
 extern "C" {
 #endif
 
-int gdb_rspd_start(void);
+int gdbtcpd_start(void);
 
 #ifdef __cplusplus
 }
