@@ -751,12 +751,10 @@ int ice_mem_write(const ice_drv_t * ice, const ice_mem_entry_t * mem,
 int ice_mem_erase(const ice_drv_t * ice, const ice_mem_entry_t * mem, 
 				  ice_addr_t addr, ice_size_t len);
 
-struct ice_mem_entry * ice_mem_by_name(const ice_drv_t * ice, 
-									   const ice_mem_entry_t * mem_map, 
+struct ice_mem_entry * ice_mem_by_name(const ice_mem_entry_t * mem_map, 
 									   const char * name);
 
-int ice_mem_lookup(const ice_drv_t * ice, 
-					const ice_mem_entry_t * mem, 
+int ice_mem_lookup(const ice_mem_entry_t * mem, 
 					const char * name);
 
 int ice_rd32(const ice_drv_t * ice, uint32_t addr, uint32_t * val);

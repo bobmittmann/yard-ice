@@ -18,25 +18,37 @@
  */
 
 /** 
- * @file dynfs-i.h
+ * @file cm3.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */
+ */ 
 
-#ifndef __DYNFS_I_H__
-#define __DYNFS_I_H__
+#include <crc.h>
+#include <stdlib.h>
+#include <sys/dcclog.h>
 
-#include "dynfs.h"
-#include "cache.h"
+#include "target.h"
+#include "armice.h"
+#include "script.h"
+#include "target/cm3.h"
+#include "cm3ice.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
+const struct target_cpu cortex_m4_cpu = {
+	.family = "Cortex-M4",
+	.model = "v7m",
+	.vendor = "ARM",
+	.irlength = 4,
+	.idmask = 0x7fffffff,
+	.idcomp = 0x4ba00477,
+//	.idmask = 0xffffffff,
+//	.idcomp = 0x3ba00477,
+	.sym = NULL
+};
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __DYNFS_I_H__ */
+const struct target_fpu cortex_m4_fpu = {
+	.model = "FPv4-SP",
+	.sp_regs = 32,
+	.dp_regs = 0
+};
 

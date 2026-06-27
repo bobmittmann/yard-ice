@@ -27,12 +27,12 @@ LIB_STATIC = arch
 
 ARM_CFILES = arm7.c arm9.c arm-ram.c arm-pn.c
 
-CM3_CFILES = cm3.c cm3-ram.c 
+CM_CFILES = cm3.c cortex_m4.c cm3-ram.c 
 
 TI_CFILES = icepick.c
 
 CFILES = $(addprefix arm/,$(ARM_CFILES)) \
-		 $(addprefix cm3/,$(CM3_CFILES)) \
+		 $(addprefix cortex_m/,$(CM_CFILES)) \
 		 $(addprefix ti/,$(TI_CFILES)) \
 
 include ../../thinkos/mk/lib.mk

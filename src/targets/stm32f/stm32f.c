@@ -43,6 +43,24 @@
 #define SRAM   3
 #define CCM    4
 
+const struct target_arch stm32f_arch = {
+	.name = "STM32F",
+	.model = "generic",
+	.vendor = "bobmittmann",
+	.cpu = &cortex_m3_cpu,
+	.fpu = NULL,
+	.sym = void_sym
+};
+
+const struct target_arch stm32_m4f_arch = {
+	.name = "STM32 M4F",
+	.model = "generic",
+	.vendor = "bobmittmann",
+	.cpu = &cortex_m4_cpu,
+	.fpu = &cortex_m4_fpu,
+	.sym = void_sym
+};
+
 uint16_t stm32f10xxx_config(const ice_drv_t * ice, 
 							target_info_t * target)
 {
@@ -187,6 +205,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		fprintf(f, "STM32F40X\n"); 
 		INF("STM32: [0x1fff7a22] FLASH_SIZE=0x%04x", memsz);
 		target->on_init = (target_script_t)stm32f2xx_on_init,
+		target->arch = &stm32_m4f_arch,
 		mem[FLASH].op = &flash_stm32f2_oper;
 		mem[FLASH].blk.size = MEM_KiB(16);
 		mem[FLASH].blk.count = memsz / 16;
@@ -199,6 +218,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		ice_rd16(ice, 0x1fff7a22, &memsz);
 		fprintf(f, "STM32F42X\n"); 
 		target->on_init = (target_script_t)stm32f2xx_on_init,
+		target->arch = &stm32_m4f_arch,
 		mem[FLASH].op = &flash_stm32f2_oper;
 		mem[FLASH].blk.size = MEM_KiB(16);
 		mem[FLASH].blk.count = (memsz & 0xffff) / 16;
@@ -305,6 +325,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		   expressed in Kbytes.As an example, 0x040 corresponds 
 		   to 64 Kbytes. */
 		target->on_init = (target_script_t)stm32f2xx_on_init,
+		target->arch = &stm32_m4f_arch,
 		mem[FLASH].op = &flash_stm32f2_oper;
 		mem[FLASH].blk.size = MEM_KiB(16);
 		mem[FLASH].blk.count = memsz / 16;
@@ -320,6 +341,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		fprintf(f, "STM32L43XXX or STM32L44XXX\n"); 
 		fprintf(f, "   - Package: %s\n", stm32lpkg_name(pkg));
 		target->on_init = (target_script_t)stm32l4xx_on_init,
+		target->arch = &stm32_m4f_arch,
 		mem[FLASH].op = &flash_stm32l4_oper;
 		mem[FLASH].blk.size = MEM_KiB(2);
 		mem[FLASH].blk.count = memsz / 2;
@@ -332,6 +354,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		fprintf(f, "STM32L45XXX or STM32L46XXX\n"); 
 		ice_rd16(ice, 0x1fff75e0, &memsz);
 		target->on_init = (target_script_t)stm32l4xx_on_init,
+		target->arch = &stm32_m4f_arch,
 		mem[FLASH].op = &flash_stm32l4_oper;
 		mem[FLASH].blk.size = MEM_KiB(2);
 		mem[FLASH].blk.count = memsz / 2;
@@ -346,6 +369,9 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 	}
 
 	fprintf(f, "   - Flash size = %dKiB\n", memsz & 0xffff); 
+	if (target->arch->fpu != NULL) {
+		fprintf(f, "   - Floating point unit = %s\n", target->arch->fpu->model); 
+	}
 
 	return 0;
 }
@@ -354,14 +380,6 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 
 const struct cm3ice_cfg stm32f_cfg = {
 	.endianness = LITTLE_ENDIAN
-};
-
-const struct target_arch stm32f_arch = {
-	.name = "STM32F",
-	.model = "generic",
-	.vendor = "bobmittmann",
-	.cpu = &cortex_m3_cpu,
-	.sym = void_sym
 };
 
 /* STM32F Generic */

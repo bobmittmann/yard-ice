@@ -41,6 +41,10 @@ extern const struct target_info target_cm3le;
 
 extern const struct target_cpu cortex_m3_cpu;
 
+extern const struct target_cpu cortex_m4_cpu;
+
+extern const struct target_fpu cortex_m4_fpu;
+
 int cm3_reset(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem);
 
 int cm3_probe(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem);

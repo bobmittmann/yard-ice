@@ -53,8 +53,6 @@ int mod_mem_on_load(struct ice_mem_entry * mem, int mod_id)
 {
 	int id;
 
-	YAP("mem=0x%p mod_id=%d", mem, mod_id);
-
 	for(id = 0; mem[id].op != NULL; ++id) {
 		uint32_t addr;
 #if 0
@@ -80,8 +78,6 @@ int mod_mem_on_load(struct ice_mem_entry * mem, int mod_id)
 int mod_mem_on_unload(struct ice_mem_entry * mem, int mod_id)
 {
 	int id;
-
-	DCC_LOG2(LOG_INFO, "mem=0x%p mod_id=%d", mem, mod_id);
 
 	for(id = 0; mem[id].op != NULL; id++) {
 #if 0
@@ -112,8 +108,6 @@ int mod_mem_register(struct ice_mem_entry * mem)
 {
 	if (mem == NULL)
 		return -1;
-
-	DCC_LOG1(LOG_INFO, "mem=0x%p", mem);
 
 	return module_register(&mem_module, mem);
 }

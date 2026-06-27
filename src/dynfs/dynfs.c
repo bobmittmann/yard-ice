@@ -170,10 +170,6 @@ int dynfs_fread(struct dynfs_file * f, void * dst, off_t offs, size_t max)
 	return rem;
 }
 
-
-
-
-
 #define DYNFS_INSTANCE_MAX 1
 
 struct dynfs dynfs_instance[DYNFS_INSTANCE_MAX];

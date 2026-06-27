@@ -23,11 +23,28 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
-#ifndef __DYNFS_I_H__
-#define __DYNFS_I_H__
+#ifndef __DYNFS_H__
+#define __DYNFS_H__
 
-#include "dynfs.h"
-#include "cache.h"
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define DYNFS_FNAME_MAX 51
+#define DYNFS_FILE_OPEN_MAX 1
+#define DYNFS_CACHE_MIN_SIZE 256
+
+struct dynfs_dirent {
+	uint8_t inode;
+	uint8_t flags;
+	uint16_t size;
+	char fname[DYNFS_FNAME_MAX + 1];
+	uint8_t * data;
+	int (* generate)(void * arg, char * dst, size_t size);
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,5 +55,5 @@ extern "C" {
 }
 #endif
 
-#endif /* __DYNFS_I_H__ */
+#endif /* __DYNFS_H__ */
 

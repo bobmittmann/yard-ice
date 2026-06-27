@@ -521,8 +521,7 @@ int ice_mem_erase(const ice_drv_t * ice, const ice_mem_entry_t * mem_map,
 	return len - rem;
 }
 
-int ice_mem_lookup(const ice_drv_t * ice, 
-					const ice_mem_entry_t * mem, 
+int ice_mem_lookup(const ice_mem_entry_t * mem, 
 					const char * name)
 {
 	int i;
@@ -537,13 +536,12 @@ int ice_mem_lookup(const ice_drv_t * ice,
 	return -1;
 }
 
-struct ice_mem_entry * ice_mem_by_name(const ice_drv_t * ice, 
-									   const ice_mem_entry_t * mem, 
+struct ice_mem_entry * ice_mem_by_name(const ice_mem_entry_t * mem, 
 									   const char * name)
 {
 	int idx;
 
-	if ((idx  = ice_mem_lookup(ice, mem, name)) < 0)
+	if ((idx  = ice_mem_lookup(mem, name)) < 0)
 		return NULL;
 
 	return (struct ice_mem_entry *)&mem[idx];

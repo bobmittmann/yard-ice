@@ -25,7 +25,7 @@ include ../../thinkos/mk/config.mk
 
 LIB_STATIC = dynfs
 
-CFILES = cache.c dynfs.c dynfs-arm_v7m.c
+CFILES = cache.c dynfs.c 
 
 include ../../thinkos/mk/lib.mk
 

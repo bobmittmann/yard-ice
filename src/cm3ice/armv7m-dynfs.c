@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <fixpt.h>
 #include "dynfs-i.h"
+#include "debugger.h"
 
 #define TRACE_LEVEL TRACE_LVL_DBG
 #include <trace.h>
@@ -83,7 +84,12 @@ const char feature_target_close_xml[] =
 
 int arm_v7m_target_xml_generate(void * arg, char * buf, size_t size)
 {
+	struct debugger * dbg = (struct debugger *)arg;
 	char * cp = (char *)buf;
+	ice_mem_entry_t * mem; 
+
+	mem = ice_mem_by_name(&dbg->ice, dbg->mem, name);
+
 	cp = stpcpy(cp, feature_target_core_xml);
 //	if (debugger_ice_has_fpu()) {
 	if (1) {
@@ -107,11 +113,22 @@ const char memory_map_close_xml[] = "</memory-map>\n";
 
 int arm_v7m_memory_map_generate(void * arg, char * buf, size_t size)
 {
+	struct debugger * dbg = (struct debugger *)arg;
 	char * cp = (char *)buf;
+	ice_mem_entry_t * e; 
+	uint32_t size;
+	uint32_t start;
+
 	cp = stpcpy(cp, memory_map_open_xml);
-//	if (debugger_ice_has_fpu()) {
-	if (1) {
-		cp += snprintf(cp, size, memory_flash_xml, 0x800000, 0x40000, 16384);
+	if ((e = ice_mem_by_name(&dbg->ice, dbg->mem, "flash")) != NULL) {
+		start = e->addr.base + e->addr.offs;
+		size = e->blk.count * e->blk.size;
+		cp += snprintf(cp, size, memory_flash_xml, start, size, e->blk.size);
+	}
+	if ((e = ice_mem_by_name(&dbg->ice, dbg->mem, "sram")) != NULL) {
+		start = e->addr.base + e->addr.offs;
+		size = e->blk.count * e->blk.size;
+		cp += snprintf(cp, size, memory_ram_xml, start, size);
 	}
 	cp = stpcpy(cp, memory_map_close_xml);
 
@@ -119,20 +136,30 @@ int arm_v7m_memory_map_generate(void * arg, char * buf, size_t size)
 }
 
 #if (GDB_ENABLE_QXFER_THREADS) 
-const char threads_xml[] = 
+const char threads_open_xml[] = 
 	"<?xml version=\"1.0\"?>"
-	"<threads>"
-	"<thread id=\"%d\" core=\"0\" name=\"%s\">"
-	"</thread>"
-	"</threads>"
+	"<threads>";
+
+const char threads_entry_xml[] = 
+	"\t<thread id=\"%d\" core=\"0\" name=\"%s\"/>";
+
+const char threads_close_xml[] = 
+	"</threads>";
 #endif
 
 
 const struct dynfs_dirent arm_v7m_dynfs_dir[] = {
 	{ .inode = 1, .fname = "target.xml", .data = (void *)feature_target_core_xml, 
-		arm_v7m_target_xml_generate },
+		.size = sizeof(feature_target_core_xml) +
+			sizeof(feature_target_vfp_xml) +
+			sizeof(feature_target_close_xml),
+		.generate = arm_v7m_target_xml_generate },
 	{ .inode = 2, .fname = "memory_map.xml", .data = (void *)memory_map_open_xml, 
-		arm_v7m_memory_map_generate},
+		.size = sizeof(memory_map_open_xml) +
+		sizeof(memory_flash_xml) +
+		4 * sizeof(memory_ram_xml) +
+		sizeof(memory_map_close_xml),
+		.generate = arm_v7m_memory_map_generate},
 	{ .inode = 0, .fname = "", .data = NULL, .generate = NULL }
 };
 

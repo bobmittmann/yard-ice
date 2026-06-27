@@ -73,6 +73,8 @@ typedef const struct target_conf * target_conf_set_t;
 #define TARGET_CPU_FAMILY_MAX 11
 #define TARGET_CPU_MODEL_MAX 15
 
+#define TARGET_FPU_MODEL_MAX 9
+
 typedef struct target_info target_info_t;
 
 typedef int (* target_script_t)(FILE * f, const ice_drv_t * drv, 
@@ -101,6 +103,18 @@ struct target_cpu {
 typedef struct target_cpu target_cpu_t;
 
 /******************************************************************************
+ * FPU
+ *****************************************************************************/
+
+struct target_fpu {
+	char model[TARGET_FPU_MODEL_MAX + 1];
+	uint8_t sp_regs;
+	uint8_t dp_regs;
+};
+
+typedef struct target_fpu target_fpu_t;
+
+/******************************************************************************
  * Arch
  *****************************************************************************/
 
@@ -109,6 +123,7 @@ struct target_arch {
 	char model[TARGET_ARCH_MODEL_MAX + 1];
 	char vendor[TARGET_ARCH_VENDOR_MAX + 1];
 	target_cpu_t const * cpu;
+	target_fpu_t const * fpu;
 	target_sym_map_t sym;
 };
 
@@ -149,7 +164,6 @@ struct target_info {
 	char desc[TARGET_DESC_MAX + 1];
 
 	target_arch_t const * arch;
-//	target_cpu_t const * cpu;
 	ice_mem_entry_t const * mem;
 
 	ice_drv_info_t const * ice_drv;
