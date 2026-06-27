@@ -37,19 +37,21 @@ int wp_usage(FILE * f, char * msg, char * cmd)
 {
 	if (msg)
 		fprintf(f, "%s\n", msg); 
-	fprintf(f, "Usage: %s [set | clr | en | dis] [all | <ADDR [SIZE]>]\n", 
+	fprintf(f, "Usage: %s [set | clr | en | dis] [all | <ADDR [SIZE [TYPE]]>]\n", 
 			cmd);
 	return -1;
 }
 
 int cmd_watchpoint(FILE * f, int argc, char ** argv)
 {
+#if 0
 	struct dbg_wp * wp = NULL;
 	value_t val;
 	char * cmd = argv[0];
-	int (* action)(uint32_t, uint32_t);
+	int (* action)(uint32_t, uint32_t, int);
 	uint32_t addr;
 	uint32_t size;
+	int type;
 	int n;
 
 	argc--;
@@ -57,13 +59,13 @@ int cmd_watchpoint(FILE * f, int argc, char ** argv)
 
 	if (argc == 0) {
 		n = 1;
-		fprintf(f, "  # | E | A | HW |       Addr |     Size |\n");
+		fprintf(f, "  # | E | A | HW |       Addr |     Size | T |\n");
 		while (target_watchpoint_next(wp, &wp) == 0) {
-			fprintf(f, " %2d | %c | %c | %2d | 0x%08x | %8d |\n", 
+			fprintf(f, " %2d | %c | %c | %2d | 0x%08x | %8d | %d |\n", 
 					n++, 
 					wp->enabled ? '*' : ' ', 
 					wp->active ? '*' : ' ', 
-					wp->hw_id, wp->addr, wp->size);
+					wp->hw_id, wp->addr, wp->size, wp->type);
 		}
 		return 0;
 	}
@@ -96,7 +98,7 @@ int cmd_watchpoint(FILE * f, int argc, char ** argv)
 			return wp_usage(f, "too many arguments", cmd);
 
 		while (target_watchpoint_next(wp, &wp) == 0)
-			action(wp->addr, wp->size);
+			action(wp->addr, wp->size, wp->type);
 
 		return 0;
 	}
@@ -130,10 +132,25 @@ int cmd_watchpoint(FILE * f, int argc, char ** argv)
 		size = 0;
 
 	if (argc) {
+		if ((n = eval_uint32(&val, argc, argv)) < 0) {
+			DCC_LOG(LOG_WARNING, "eval_uint32(), size");
+			wp_usage(f, "invalid argument", cmd);
+			return n;
+		}
+		type = val.uint32;
+		DCC_LOG2(LOG_TRACE, "type=%d n=%d", type, n);
+		argc -= n;
+		argv += n;
+	} else
+		type = 0;
+
+	if (argc) {
 		wp_usage(f, "too many arguments", cmd);
 		return -1;
 	}
 
-	return action(addr, size);
+	return action(addr, size, type);
+#endif
+	return 0;
 }
 

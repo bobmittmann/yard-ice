@@ -689,13 +689,17 @@ const struct ice_oper null_ice_oper = {
 	.step = (ice_step_t)null_ice_fail,	
 	.exec = (ice_exec_t)null_ice_fail,
 
-	/* breakpoints */
-	.bp_set = (ice_bp_set_t)null_ice_fail,
-	.bp_clr = (ice_bp_clr_t)null_ice_fail,
+	/* hardware breakpoints */
+	.hw_bp_set = (ice_hw_bp_set_t)null_ice_fail,
+	.hw_bp_clr = (ice_hw_bp_clr_t)null_ice_fail,
 
 	/* watchpoints */
-	.wp_set = (ice_wp_set_t)null_ice_fail,
-	.wp_clr = (ice_wp_clr_t)null_ice_fail,
+	.hw_wp_set = (ice_hw_wp_set_t)null_ice_fail,
+	.hw_wp_clr = (ice_hw_wp_clr_t)null_ice_fail,
+
+	/* software breakpoints */
+	.sw_bp_set = (ice_sw_bp_set_t)null_ice_fail,
+	.sw_bp_clr = (ice_sw_bp_clr_t)null_ice_fail,
 
 	/* register access */	
 	.reg_get = (ice_reg_get_t)null_ice_fail,

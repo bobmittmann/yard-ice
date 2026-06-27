@@ -32,13 +32,23 @@
 
 int __attribute__((noreturn)) gdbtcpd_task(struct gdbtcpd * gdb)
 {
+	char pktbuf[RSP_BUFFER_LEN];
 	struct tcp_pcb * svc = gdb->svc;
 	struct tcp_pcb * tp;
 
 	DCC_LOG1(LOG_TRACE, "<%d>", thinkos_thread_self());
 	INF("<%d>", thinkos_thread_self());
 
+	gdb->noack_mode = false;
+	gdb->thread.id = 1; 
+	gdb->last_signal = TARGET_SIGNAL_0;//TRAP;
+
 	for (;;) {
+		gdb->running = false;
+
+//		gdb->target.op->breakpoint_clear_all(gdb->target.arg);
+//		gdb->target.op->watchpoint_clear_all(gdb->target.arg);
+
 		if ((tp = tcp_accept(svc)) == NULL) {
 			DCC_LOG(LOG_ERROR, "tcp_accept().");
 			break;
@@ -48,7 +58,7 @@ int __attribute__((noreturn)) gdbtcpd_task(struct gdbtcpd * gdb)
 		DCC_LOG(LOG_TRACE, "GDB: TCP connection accepted.");
 
 		gdb->tp = tp;
-		rsp_comm_loop(gdb);
+		rsp_comm_loop(gdb, pktbuf);
 
 		tcp_close(tp);
 		gdb->tp = NULL;
@@ -59,9 +69,7 @@ int __attribute__((noreturn)) gdbtcpd_task(struct gdbtcpd * gdb)
 	for (;;);
 }
 
-
-
-uint32_t __attribute__((aligned(8))) gdb_srv_stack[RSP_BUFFER_LEN / 4 + 512];
+uint32_t __attribute__((aligned(8))) gdb_srv_stack[(RSP_BUFFER_LEN)/4 + 512];
 
 struct gdbtcpd gdbtcpd;
 
@@ -75,8 +83,10 @@ const struct thinkos_thread_inf gdb_srv_inf = {
 };
 
 int gdbtcpd_start(void)
-{  
+{
+	struct gdbtcpd * gdb = &gdbtcpd;
 	struct tcp_pcb * svc;
+	char * env;
 	int th;
 
 	svc = tcp_alloc();
@@ -88,18 +98,32 @@ int gdbtcpd_start(void)
 		return -1;
 	}
 
-	gdbtcpd.svc = svc;
-	gdbtcpd.tp = NULL;
-	gdbtcpd.connected = false;
-	gdbtcpd.mutex = thinkos_mutex_alloc();
-	gdbtcpd.cond = thinkos_cond_alloc();
+	gdb->svc = svc;
+	gdb->tp = NULL;
+	gdb->connected = false;
+	gdb->mutex = thinkos_mutex_alloc();
+	gdb->cond = thinkos_cond_alloc();
 
-	th = thinkos_thread_create_inf((void *)gdbtcpd_task, (void *)&gdbtcpd, 
+	if ((env = getenv("TEXT")) != NULL) {
+		gdb->offs.text = strtoul(env, NULL, 16);
+		INF("TEXT='0x%08x'", gdb->offs.text);
+	} else
+		gdb->offs.text = 0;
+
+	if ((env = getenv("DATA")) != NULL) {
+		gdb->offs.data = strtoul(env, NULL, 16);
+		INF("DATA='0x%08x'", gdb->offs.data);
+	} else
+		gdb->offs.data = 0;
+
+	mod_gdb_register(gdb);
+
+	th = thinkos_thread_create_inf((void *)gdbtcpd_task, (void *)gdb, 
 								   &gdb_srv_inf);
 
 	INF("GDB server started th=%d", th);
 
-	gdb_brk_start(&gdbtcpd);
+	gdb_brk_start(gdb);
 
 
 	(void)th;

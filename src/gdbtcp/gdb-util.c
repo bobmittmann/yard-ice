@@ -52,19 +52,19 @@ int hex2int(const char * __s, char ** __endp)
 	uint32_t val = 0;
 	char * cp = (char *)__s;
 	int c;
+	int i;
 
 	for (; ((c = *cp) == ' '); cp++);
 
-	while ((c = *cp) != '\0') {
-		if ((c = hex_digit(c)) < 0)
+	for (i = 0; i < 8; ++i) {
+		if ((c = hex_digit(cp[i])) < 0)
 			break;
 		val = val << 4;
 		val += c;
-		cp++;
 	}
 
 	if (__endp)
-		*__endp = cp;
+		*__endp = &cp[i];
 
 	return val;
 }

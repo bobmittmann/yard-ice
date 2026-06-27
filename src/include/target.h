@@ -233,7 +233,7 @@ int target_sym_lookup(const struct target_info * target, const char * name,
 int dummy_probe(FILE * f, const struct ice_drv * ice, 
 				ice_mem_entry_t * mem);
 
-int mem_hexdump(FILE * f, uint32_t addr, int size);
+int mem_hexdump(FILE * f, uint32_t addr, int size, int bits);
 
 #ifdef __cplusplus
 	}

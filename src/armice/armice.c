@@ -918,6 +918,15 @@ int armice_configure(armice_ctrl_t * ctrl, jtag_tap_t * tap,
 	ctrl->tap = tap;
 	opt->bp_max = 2;
 	opt->bp_defsz = 4;
+	opt->bp_maxsz = 4;
+
+	opt->wp_max = 2;
+	opt->wp_defsz = 4;
+	opt->wp_maxsz = 4;
+
+	opt->sw_max = 128;
+	opt->sw_defsz = 4;
+	opt->sw_maxsz = 4;
 
 	/* clear watchpoints */
 	memset(&ctrl->wp[0], 0, sizeof(jtag_arm_wp_t));
@@ -1409,10 +1418,11 @@ int armice_thumb_mode(armice_ctrl_t * ctrl, int thumb)
  * Breakpoints and Watchpoins
  *****************************************************************************/
 
-int armice_bp_set(armice_ctrl_t * ctrl, uint32_t addr, 
-				  uint32_t size, uint32_t * id_ptr)
+int armice_bp_set(armice_ctrl_t * ctrl, ice_hw_bp_t * bp)
 {
 	jtag_arm_wp_t * wp;
+	uint32_t addr = bp->hdr.addr;
+	int size = bp->hdr.size;
 	uint32_t mask;
 	int ret;
 	int id;
@@ -1468,14 +1478,15 @@ int armice_bp_set(armice_ctrl_t * ctrl, uint32_t addr,
 	else
 		ctrl->flags |= ARMICE_WP1_SET;
 
-	if (id_ptr != NULL)
-		*id_ptr = id;
+	bp->hdr.id = id;
 
 	return 0;
 }
 
-int armice_bp_clr(armice_ctrl_t * ctrl, uint32_t id)
+int armice_bp_clr(armice_ctrl_t * ctrl, ice_hw_bp_t * bp)
 {
+	int id = bp->hdr.id;
+
 	DCC_LOG1(LOG_INFO, "id=%d", id);
 
 	if (ctrl->polling) {
@@ -1503,21 +1514,36 @@ int armice_bp_clr(armice_ctrl_t * ctrl, uint32_t id)
 		return 0;
 	}
 
+	bp->hdr.id = 0xff;
+
 	DCC_LOG1(LOG_WARNING, "invalid hardware BP: %d !", id);
 
 	return -1;
 }
 
-int armice_wp_set(armice_ctrl_t * ctrl, int n, ice_addr_t addr, 
-				  ice_addr_mask_t mask)
+int armice_wp_set(armice_ctrl_t * ctrl, ice_hw_wp_t * wp)
 {
-	DCC_LOG3(LOG_TRACE, "n=%d, addr=%08x mask=%08x", n, addr, mask);
+	DCC_LOG3(LOG_TRACE, "addr=%08x size=%d type=%d", wp->hdr.addr, 
+			 wp->hdr.size, wp->hdr.type);
 	return -1;
 }
 
-int armice_wp_clr(armice_ctrl_t * ctrl, int n)
+int armice_wp_clr(armice_ctrl_t * ctrl, ice_hw_wp_t * bp)
 {
-	DCC_LOG1(LOG_TRACE, "n=%d", n);
+	DCC_LOG1(LOG_TRACE, "id=%d", bp->hdr.id);
+	return -1;
+}
+
+int armice_sw_set(armice_ctrl_t * ctrl, ice_sw_bp_t * sw)
+{
+	DCC_LOG3(LOG_TRACE, "addr=%08x size=%d type=%d", sw->hdr.addr, 
+			 sw->hdr.size, sw->hdr.type);
+	return -1;
+}
+
+int armice_sw_clr(armice_ctrl_t * ctrl, ice_sw_bp_t * sw)
+{
+	DCC_LOG1(LOG_TRACE, "id=%d", sw->hdr.id);
 	return -1;
 }
 
@@ -1807,11 +1833,14 @@ const struct ice_oper armice_oper = {
 	.step = (ice_step_t)armice_step,
 	.exec = (ice_exec_t)armice_exec,
 
-	.bp_set = (ice_bp_set_t)armice_bp_set,
-	.bp_clr = (ice_bp_clr_t)armice_bp_clr,
+	.hw_bp_set = (ice_hw_bp_set_t)armice_bp_set,
+	.hw_bp_clr = (ice_hw_bp_clr_t)armice_bp_clr,
 
-	.wp_set = (ice_wp_set_t)armice_wp_set,
-	.wp_clr = (ice_wp_clr_t)armice_wp_clr,
+	.hw_wp_set = (ice_hw_wp_set_t)armice_wp_set,
+	.hw_wp_clr = (ice_hw_wp_clr_t)armice_wp_clr,
+
+	.sw_bp_set = (ice_sw_bp_set_t)armice_sw_set,
+	.sw_bp_clr = (ice_sw_bp_clr_t)armice_sw_clr,
 
 	.reg_get = (ice_reg_get_t)armice_reg_get,
 	.reg_set = (ice_reg_set_t)armice_reg_set,

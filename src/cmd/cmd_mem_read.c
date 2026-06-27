@@ -40,14 +40,26 @@
 
 int cmd_mem_read(FILE * f, int argc, char ** argv)
 {
-	struct debugger * dbg = &debugger;
+	struct mem_range * dump = target_dump_range();
+	int width = HEXDUMP_32_BITS;
 	value_t val;
 	uint32_t addr;
 	uint32_t size;
 	int n;
+	int c;
 
 	argc--;
 	argv++;
+
+	c = *argv[0];
+	if ((argc) && ((c == 'b') || (c == 'h'))) {
+		if (c == 'b')
+			width = HEXDUMP_8_BITS;
+		else
+			width = HEXDUMP_16_BITS;
+		argc--;
+		argv++;
+	};
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
@@ -59,7 +71,7 @@ int cmd_mem_read(FILE * f, int argc, char ** argv)
 		addr = val.uint32;
 		DCC_LOG2(LOG_INFO, "addr=%08x n=%d", addr, n);
 	} else
-		addr = (uint32_t)dbg->dump.base;
+		addr = (uint32_t)dump->base;
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
@@ -71,7 +83,7 @@ int cmd_mem_read(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else
-		size = (dbg->dump.size + 3) & ~0x03;
+		size = (dump->size + 3) & ~0x03;
 
 	if (argc) {
 		return SHELL_ERR_EXTRA_ARGS;
@@ -80,13 +92,13 @@ int cmd_mem_read(FILE * f, int argc, char ** argv)
 	if (size == 0)
 		size = 64;
 
-	dbg->dump.base = addr & ~0x03;
-	dbg->dump.size = 0;
+	dump->base = addr & ~0x03;
+	dump->size = 0;
+	
+	size = mem_hexdump(f, dump->base, size, width);
 
-	size = mem_hexdump(f, dbg->dump.base, size);
-
-	dbg->dump.base += size;
-	dbg->dump.size = size;
+	dump->base += size;
+	dump->size = size;
 
 	return 0;
 }

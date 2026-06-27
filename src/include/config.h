@@ -64,7 +64,6 @@
 #define THINKOS_ENABLE_PRIVILEGED_THREAD    0
 #define THINKOS_ENABLE_CORE_RESET           1
 #define THINKOS_ENABLE_CTL                  1
-#define THINKOS_ENABLE_MEM_MAP              0
 #define THINKOS_ENABLE_IDLE_HOOKS           0
 #define THINKOS_ENABLE_I_CALLS              1
 #define THINKOS_ENABLE_READY_MASK           0

@@ -31,9 +31,9 @@ VERSION_MINOR = "45"
 
 PROG = yard-ice-$(VERSION_MAJOR).$(VERSION_MINOR)
 
-CFILES = yard-ice.c io.c ../debugger.c ../ice_drv.c\
+CFILES = yard-ice.c io.c ../ice_drv.c\
 	 ../mod_mem.c ../fmt_freq.c ../mem_hexdump.c ../targets.c\
-	 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c
+	 ../i2c-master.c ../mod_ice.c ../shell.c ../lookup.c ../console.c\
 
 LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
 	  $(SDKDIR)/libice-comm $(SDKDIR)/libc $(SDKDIR)/libtcpip \
@@ -43,12 +43,12 @@ LIBDIRS = $(ARCHDIR)/libstm32f $(SDKDIR)/libutil \
 	  ../libopcodes ../libaltera\
 	  ../arch ../jtag ../script ../cmd ../nand ../jtag3drv\
 	  ../armice ../cm3ice ../targets ../tftp ../vcom ../telnet\
-	  ../comm  ../dynfs ../gdbtcp 
+	  ../comm  ../dynfs ../gdbtcp ../debugger
 
 LIBS = stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
        altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
        targets tftp shell thinkos-usr tty vcom telnet crc xmodem comm dynfs\
-	   gdb gcc
+	   debugger gdb gcc
 
 CDEFS = CONFIG_H
 CFLAGS = -g -Ofast

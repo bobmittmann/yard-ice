@@ -30,9 +30,13 @@
 #include <thinkos.h>
 #include <stdbool.h>
 
-#include "target.h"
-#include "ice_drv.h"
 #include "nand.h"
+#include "target.h"
+
+/*
+ * define a generic breakpoint controller type
+ */
+#include "bkptctrl.h"
 
 typedef enum {
 	OK = 0,
@@ -63,122 +67,12 @@ typedef enum {
 	DBG_ST_LOCKUP = 5
 } dbg_state_t;
 
-/*
- * Hardware breakpoint type
- */
- 
-typedef enum {
-     BP_WRITE   = 0, /* Common (write) HW watchpoint */
-     BP_READ    = 1, /* Read    HW watchpoint */
-     BP_ACCESS  = 2, /* Access (read or write) HW watchpoint */
-     BP_EXECUTE = 3  /* Execute HW breakpoint */
-} dbg_hw_bp_t;
-
 struct mem_range {
 	uint32_t base;
 	uint32_t size;
 };
 
-#ifndef DBG_BREAKPOINT_MAX
-#define DBG_BREAKPOINT_MAX 16
-#endif
-
-#ifndef DBG_WATCHPOINT_MAX
-#define DBG_WATCHPOINT_MAX 16
-#endif
-
-struct dbg_bp {
-	union {
-		struct dbg_bp * next;
-		struct {
-			int16_t hw_id;
-			uint8_t type;
-			uint8_t active:1;
-			uint8_t enabled:1;
-			uint32_t addr;
-			uint32_t size;
-		};
-	};
-};
-
-struct dbg_bp_ctrl {
-	uint32_t head;
-	uint32_t tail;
-	struct dbg_bp * lst[DBG_BREAKPOINT_MAX];
-};
-
-struct dbg_wp {
-	union {
-		struct dbg_wp * next;
-		struct {
-			int16_t hw_id;
-			uint8_t type;
-			uint8_t active:1;
-			uint8_t enabled:1;
-			uint32_t addr;
-			uint32_t size;
-		};
-	};
-};
-
-struct dbg_wp_ctrl {
-	uint16_t first;
-	uint16_t last;
-	uint16_t cnt;
-	struct dbg_wp ** lst;
-	struct dbg_wp * free;
-};
-
-#define DBG_STACK_MAX 64
-#define DBG_CACHE_MAX 64
-#define DBG_TRACE_MAX 2
-
-struct debugger {
-	/* Target ice driver */
-	ice_drv_t ice;
-
-	/* configuration */
-	struct {
-		bool enable_ice_polling;
-	} cfg;
-
-	dbg_state_t state;
-
-	/* target memory map cache */
-	const ice_mem_entry_t * mem;
-
-	/* Target info */
-	const target_info_t * target;
-
-	/* XXX: memory module id */
-	int16_t mem_mod_id;
-
-	uint16_t tcp_port;
-
-	uint8_t ext_pwr;
-
-	int target_mutex;
-	int ice_mutex;
-
-	struct mem_range dasm;
-	struct mem_range dump;
-	struct mem_range stack;
-	struct mem_range transf;
-
-	struct dbg_bp_ctrl bp_ctrl;
-	struct dbg_wp_ctrl wp_ctrl;
-
-	/* poll control */
-	int halt_cond;
-	int poll_cond;
-	int poll_thread;
-
-	volatile bool poll_enabled;
-	volatile uint8_t break_code;
-
-	/* debug communication control */
-	ice_comm_t comm;
-};
+struct debugger;
 
 extern struct debugger debugger;
 
@@ -236,41 +130,23 @@ int target_reset(FILE * f, int mode);
 
 int target_init(FILE * f);
 
-int target_breakpoint_next(struct dbg_bp * bp, struct dbg_bp ** next);
-
-int target_breakpoint_set(uint32_t addr, uint32_t size);
-
-int target_breakpoint_clear(uint32_t addr, uint32_t size);
-
-int target_breakpoint_enable(uint32_t addr, uint32_t size);
-
-int target_breakpoint_disable(uint32_t addr, uint32_t size);
-
-int target_breakpoint_delete(struct dbg_bp * bp);
-
-int target_breakpoint_all_disable(void);
-
-int target_breakpoint_all_enable(void);
 
 
+struct bkpt_ctrl * target_bkpt_next(struct bkpt_ctrl * p, unsigned int type);
 
-int target_watchpoint_next(struct dbg_wp * wp, struct dbg_wp ** next);
+struct bkpt_ctrl * target_bkpt_head(unsigned int type);
 
-int target_watchpoint_set(uint32_t addr, uint32_t mask);
+int target_bkpt_set(uint32_t addr, uint32_t size, unsigned int type);
 
-int target_watchpoint_clear(uint32_t addr, uint32_t mask);
+int target_bkpt_clear(uint32_t addr, uint32_t size, unsigned int type);
 
-int target_watchpoint_enable(uint32_t addr, uint32_t size);
+int target_bkpt_enable(uint32_t addr, uint32_t size, unsigned int type);
 
-int target_watchpoint_disable(uint32_t addr, uint32_t size);
+int target_bkpt_disable(uint32_t addr, uint32_t size, unsigned int type);
 
-int target_watchpoint_delete(struct dbg_wp * wp);
+int target_bkpt_disable_all(void);
 
-int target_watchpoint_all_disable(void);
-
-int target_watchpoint_all_enable(void);
-
-
+int target_bkpt_enable_all(void);
 
 int target_exp(char * sym, uint32_t offs, uint32_t * vp);
 
@@ -327,8 +203,6 @@ int target_print_insn(FILE * f, uint32_t addr);
 
 int target_test(FILE * f, uint32_t val);
 
-int target_eval(ice_val_t * val, int argc, char * argv[]);
-
 int target_probe(FILE * f);
 
 struct target_info * get_target_info(void);
@@ -340,24 +214,39 @@ void target_halt_wait_break(void);
 int target_ice_info(FILE * f, uint32_t which);
 
 /* NAND operations */
+int target_nand_chip_get(int dev_id, int chip_id, nand_chip_t ** chipp);
 
 int target_nand_bb_check(uint32_t block);
 
 int target_nand_block_erase(uint32_t block, bool force);
 
-int target_nand_dev_get(int dev_id, nand_dev_t ** nandp);
-
-int target_nand_chip_get(int dev_id, int chip_id, nand_chip_t ** chipp);
-
 int target_enable_ice_poll(bool flag);
 
 int target_enable_comm(bool flag);
+
+ice_comm_t * target_comm(void);
 
 void debugger_init(void);
 
 void debugger_except(const char * msg);
 
 void target_fault_clr(void);
+
+struct mem_range * target_dasm_range(void);
+
+struct mem_range * target_dump_range(void);
+
+struct mem_range * target_stack_range(void);
+
+struct mem_range * target_xfer_range(void);
+
+ice_mem_entry_t * target_mem_tab(void);
+
+ice_drv_t * target_ice_drv(void);
+
+target_info_t * target_info(void);
+
+ice_mem_entry_t * target_mem_by_name(const char * name);
 
 #ifdef __cplusplus
 	}

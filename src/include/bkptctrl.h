@@ -18,46 +18,39 @@
  */
 
 /** 
- * @file hexdump.h
+ * @file bkptctrl.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */
+ */ 
 
+#ifndef __BKPTCTRL_H__
+#define __BKPTCTRL_H__
 
-#ifndef __HEXDUMP_H__
-#define __HEXDUMP_H__
+#include <stdint.h>
+#include "ice_drv.h"
 
-#include <stdint.h> 
-#include <stdio.h> 
+/* This structure controls breakpoints and watchpoints */
+
+struct bkpt_ctrl {
+	union {
+		struct ice_breakpoint hdr;
+		struct ice_hw_breakpoint ice_hw;
+		struct ice_sw_breakpoint ice_sw;
+		struct ice_hw_watchpoint ice_wp;
+	};
+};
+
+struct bkpt_list;
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum hexdump_bit_width = {
-	HEXDUMP_8_BITS = 8,
-	HEXDUMP_16_BITS = 16,
-	HEXDUMP_32_BITS = 32
-};
-
-void show_line_char(FILE * f, uint32_t  addr, const uint8_t * data, int count);
-
-void show_line_hex32(FILE * f, uint32_t  addr, const uint8_t * data, int count);
-
-int show_hex32(FILE * f, uint32_t  addr, const void * buf, int len);
-
-void show_line_hex16(FILE * f, uint32_t  addr, const uint8_t * data, int count);
-
-int show_hex16(FILE * f, uint32_t  addr, const void * buf, int len);
-
-void show_line_hex8(FILE * f, uint32_t  addr, const uint8_t * data, int count);
-
-int show_hex8(FILE * f, uint32_t  addr, const void * buf, int len);
 
 #ifdef __cplusplus
-}
+	}
 #endif
 
-#endif /* __HEXDUMP_H__ */
-
+#endif /* __BKPTCTRL_H__ */
 

@@ -64,7 +64,7 @@ enum {
 
 int mod_ice_var_get(struct debugger * dbg, int var_id, value_t * val)
 {
-	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	ice_drv_t * ice = (ice_drv_t *)target_ice_drv();
 	DCC_LOG1(LOG_TRACE, "var_id=%d", var_id);
 
 	switch (var_id) {
@@ -91,7 +91,9 @@ int mod_ice_var_set(struct debugger * dbg, int var_id, const value_t * val)
 		val_decode(&type_def_tag, val, name);
 		if ((info = ice_drv_lookup(name)) == NULL)
 			return -EINVAL;
-		return ice_drv_select(dbg, info);
+//		return ice_drv_select(dbg, info);
+/* FIXME: unsuported TAG on command line */
+		return -EINVAL;
 	default:
 		return -1;
 	}

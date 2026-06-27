@@ -53,7 +53,7 @@ int mod_mem_on_load(struct ice_mem_entry * mem, int mod_id)
 {
 	int id;
 
-	INF("mem=0x%p mod_id=%d", mem, mod_id);
+	YAP("mem=0x%p mod_id=%d", mem, mod_id);
 
 	for(id = 0; mem[id].op != NULL; ++id) {
 		uint32_t addr;
@@ -66,7 +66,7 @@ int mod_mem_on_load(struct ice_mem_entry * mem, int mod_id)
 		addr = mem[id].addr.base + mem[id].addr.offs;
 		(void)addr;
 
-		DBG("mem=\"%s\" id=%d addr=0x%08x", mem[id].name, id, addr);
+		YAP("mem=\"%s\" id=%d addr=0x%08x", mem[id].name, id, addr);
 
 		if (var_global_add(mod_id, mem[id].name, TYPE_UINT32, id) < 0) {
 			DCC_LOG(LOG_WARNING, "var_global_add() fail!");

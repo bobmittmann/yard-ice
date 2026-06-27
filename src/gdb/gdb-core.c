@@ -1584,6 +1584,7 @@ void gdb_rsp_comm_loop(struct gdb_rsp * gdb)
 	struct gdb_comm * comm = &gdb->comm;
 	char pkt[RSP_BUFFER_LEN];
 	char buf[4];
+	int state;
 	int len;
 
 	gdb->pkt = pkt;

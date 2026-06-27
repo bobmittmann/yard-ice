@@ -158,6 +158,7 @@ int tftp_oack(struct udp_pcb * udp, struct sockaddr_in * sin,
 
 int tftp_decode_fname(struct debugger * dbg, char * fname)
 {
+	struct mem_range * xfer = target_xfer_range();
 	char * cp;
 	unsigned int size;
 	unsigned int addr;
@@ -213,7 +214,7 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 		DCC_LOG1(LOG_TRACE, "addr=0x%08x", addr);
 
 		if (cp == NULL) {
-			end = addr + (dbg->transf.size);
+			end = addr + (xfer->size);
 		} else {
 			if ((*cp == ':') || (*cp == '-')) {
 				cp++;
@@ -243,7 +244,7 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 
 					end = addr + size;
 				} else {
-					end = addr + (dbg->transf.size);
+					end = addr + (xfer->size);
 				}
 			}
 		}
@@ -252,10 +253,9 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 		DBG("TFTP region: %08x, %d", addr, end - addr);
 
 		/* set the address and size info in the debugger state */
-		dbg->transf.base = addr;
-		dbg->transf.size = end - addr;
+		xfer->base = addr;
+		xfer->size = end - addr;
 	} else {
-		ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 		struct ice_mem_entry * e;
 		char * cp;
 		int c;
@@ -267,7 +267,7 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 			}
 		}
 
-		if ((e = ice_mem_by_name(ice, dbg->mem, fname)) == NULL) {
+		if ((e = target_mem_by_name(fname)) == NULL) {
 			WARN("TFTP memory '%s' not found!", fname);
 			DCC_LOG(LOG_TRACE, "memory not found!");
 			return 0;
@@ -278,8 +278,8 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 		DBG("TFTP mem: %08x,%d", e->addr.base + e->addr.offs, 
 			e->blk.count * e->blk.size);
 
-		dbg->transf.base = e->addr.base + e->addr.offs;
-		dbg->transf.size = e->blk.count * e->blk.size;
+		xfer->base = e->addr.base + e->addr.offs;
+		xfer->size = e->blk.count * e->blk.size;
 	}
 
 	return 0;
@@ -426,6 +426,7 @@ int tftp_req_parse(char * hdr, struct tftp_req * req)
 
 void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 {
+	struct mem_range * xfer = target_xfer_range();
 	uint8_t buf[MAX_TFTP_MSG];
 	struct tftphdr * hdr = (struct tftphdr *)buf;
 	char * msg = (char *)buf;
@@ -509,8 +510,8 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				}
 
 				/* set the transfer info */
-				addr_start = dbg->transf.base;
-				addr_end = addr_start + dbg->transf.size;
+				addr_start = xfer->base;
+				addr_end = addr_start + xfer->size;
 				block = 0;
 
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
@@ -557,8 +558,8 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				}
 
 				/* set the transfer info */
-				addr_start = dbg->transf.base;
-				addr_end = addr_start + dbg->transf.size;
+				addr_start = xfer->base;
+				addr_end = addr_start + xfer->size;
 				block = 0;
 
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 

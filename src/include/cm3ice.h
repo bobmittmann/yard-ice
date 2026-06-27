@@ -234,6 +234,7 @@ struct cm3ice_ctrl {
 	volatile bool jtag_lock;
 	volatile bool polling;
 	volatile bool poll_enabled;
+	uint8_t sw_bkpt_seq;
 	uint32_t dhcsr;
 	uint32_t comm_addr;
 

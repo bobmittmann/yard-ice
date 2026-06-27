@@ -75,41 +75,6 @@
 #define THREAD_ID_ANY 0
 #define THREAD_ID_IDLE 33
 
-struct gdb_comm {
-	void * arg;
-	const struct gdb_comm_op * op;
-};
-
-struct gdb_target {
-	void * arg;
-	const struct gdb_target_op  * op;
-};
-
-struct gdb_rsp {
-	struct gdb_comm comm;
-	struct gdb_target target;
-	uint8_t noack_mode    : 1;
-	uint8_t nonstop_mode  : 1;
-	uint8_t stopped       : 1;
-	uint8_t active_app    : 1;
-	uint8_t session_valid : 1;
-	uint8_t last_signal;
-#if GDB_ENABLE_MULTIPROCESS
-	uint16_t pid;
-#endif
-	struct {
-		int8_t g; 
-		int8_t c;
-	} thread_id;
-#if GDB_ENABLE_RXMIT
-	struct {
-		char * pkt;
-		uint16_t len;
-	} tx;
-#endif
-	char * pkt;
-};
-
 extern const char __hextab[];
 
 #ifdef __cplusplus

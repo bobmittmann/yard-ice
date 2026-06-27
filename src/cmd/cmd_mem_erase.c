@@ -39,7 +39,7 @@
 
 int cmd_mem_erase(FILE * f, int argc, char ** argv)
 {
-	struct debugger * dbg = &debugger;
+	struct mem_range * xfer = target_xfer_range();
 	value_t val;
 	uint32_t addr;
 	uint32_t size;
@@ -59,7 +59,7 @@ int cmd_mem_erase(FILE * f, int argc, char ** argv)
 		addr = val.uint32;
 		DCC_LOG2(LOG_INFO, "addr=%08x n=%d", addr, n);
 	} else
-		addr = (uint32_t)dbg->transf.base;
+		addr = (uint32_t)xfer->base;
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
@@ -71,15 +71,15 @@ int cmd_mem_erase(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else
-		size = (dbg->transf.size + 3) & ~0x03;
+		size = (xfer->size + 3) & ~0x03;
 
 	if (argc) {
 		fprintf(f, "Too many arguments...\n");
 		return -1;
 	}
 
-	dbg->transf.base = addr & ~0x03;
-	dbg->transf.size = size;
+	xfer->base = addr & ~0x03;
+	xfer->size = size;
 
 	INF("target_mem_erase: 0x%08x, %d", addr, size);
 

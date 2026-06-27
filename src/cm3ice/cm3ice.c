@@ -895,9 +895,7 @@ int cm3ice_signal(cm3ice_ctrl_t * ctrl, ice_sig_t sig)
 	return 0;
 }
 
-
-
-
+/* read and translate spacific IIE status into generic ones */
 int cm3ice_status(cm3ice_ctrl_t * ctrl)
 {
 	jtag_tap_t * tap = ctrl->tap;
@@ -906,24 +904,15 @@ int cm3ice_status(cm3ice_ctrl_t * ctrl)
 
 	DCC_LOG(LOG_MSG, "1.");
 
-//	if (ctrl->polling) {
-//		DCC_LOG(LOG_MSG, "2.");
-//		dhcsr = ctrl->dhcsr;
-//	} else {
-		DCC_LOG(LOG_MSG, "3.");
-//		ctrl->jtag_lock = true;
-		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
-							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
-			WARNS("jtag_mem_ap_rd32() failed!"); 
-			ctrl->jtag_lock = false;
-			return ICE_ERR_JTAG;
-		}
-//		ctrl->jtag_lock = false;
-//	}
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
+						 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
+		WARNS("jtag_mem_ap_rd32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
 
 	status = (dhcsr & DHCSR_S_HALT) ? ICE_STATUS_HALT : 0;
-/*	status | = (dhcsr & DHCSR_S_LOCKUP) ? ICE_STATUS_LOCKUP : 0;
-	status |= (dhcsr & DHCSR_S_SLEEP) ? ICE_STATUS_SLEEP : 0; */
+	status |= (dhcsr & DHCSR_S_LOCKUP) ? ICE_STATUS_LOCKUP : 0;
+/*	status |= (dhcsr & DHCSR_S_SLEEP) ? ICE_STATUS_SLEEP : 0; */
 
 	YAP("S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "
 		"S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
@@ -967,8 +956,6 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t flags)
 		ERRS("jtag_mem_ap_rd32() failed!"); 
 		return ICE_ERR_JTAG;
 	}
-
-	DBG("DHCSR: 0x%08x", dhcsr); 
 
 	if (!(dhcsr & DHCSR_C_DEBUGEN)) { 
 		/* enable debug */
@@ -1055,14 +1042,14 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t flags)
 		return ICE_ERR_JTAG;
 	}
 
-	INF("CM3ICE: S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+	INF("CM_ICE: S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
 			 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
 			 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
 			 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
 			 (dhcsr & DHCSR_S_SLEEP) ? 1 : 0,
 			 (dhcsr & DHCSR_S_HALT) ? 1 : 0);
 
-	INF("CM3ICE: S_REGRDY=%d C_MASKINTS=%d C_STEP=%d "\
+	INF("CM_ICE: S_REGRDY=%d C_MASKINTS=%d C_STEP=%d "\
 			 "C_HALT=%d C_DEBUGEN=%d", (dhcsr & DHCSR_S_REGRDY) ? 1 : 0,
 			 (dhcsr & DHCSR_C_MASKINTS) ? 1 : 0,
 			 (dhcsr & DHCSR_C_STEP) ? 1 : 0,
@@ -1072,7 +1059,6 @@ int cm3ice_connect(cm3ice_ctrl_t * ctrl, uint32_t flags)
 	if (dp_stickyerr_get(tap)) {
 		WARNS("Clearing JTAG DP STICKYERR flag!");
 		dp_stickyerr_clr(tap);
-//		return -1;
 	}
 
 	return 0;
@@ -1181,7 +1167,7 @@ int cm3ice_goto(cm3ice_ctrl_t * ctrl, unsigned int addr)
 	int ret;
 
 	if ((ret = core_reg_set(ctrl->tap, &ctrl->core, CM3_PC, addr)) != ICE_OK) {
-		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr8() failed!"); 
+		DCC_LOG(LOG_WARNING, "core_reg_set() failed!"); 
 	}
 
 	return ret;
@@ -1195,11 +1181,11 @@ int cm3ice_step(cm3ice_ctrl_t * ctrl)
 	if ((ret = jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | 
 								DHCSR_C_STEP | 
 								DHCSR_C_DEBUGEN)) < 0) {
-		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr32() failed!"); 
+		DCC_LOG(LOG_INFO, "jtag_mem_ap_wr32() failed!"); 
 		return ret;
 	}
 
-	DBGS("CM_ICE: step!");
+	YAPS("CM_ICE: step!");
 	ctrl->core.cache_bmp = 0; /* clear cache */
 
 	return 0;
@@ -1236,6 +1222,9 @@ int cm3ice_init(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap)
 
 	/* initialize the ICE control structure */
 	ctrl->tap = tap;
+
+	/* Initialize software breakpoint sequence counter */
+	ctrl->sw_bkpt_seq = 1;
 
 	INFS("CM3ICE: [UNCONFIGURED]");
 
@@ -1289,8 +1278,10 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, ice_opt_t * opt, cm3ice_cfg_t * cfg)
 		opt->bp_max = ctrl->fpb.code_max;
 		/* default breakpoint's size */
 		opt->bp_defsz = 2;
+		opt->bp_maxsz = 4;
 	} else {
 		WARNS("CM3ICE: no FBP !!!"); 
+		opt->bp_max = 0;
 	}
 
 	/* check for DWT */
@@ -1301,9 +1292,16 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, ice_opt_t * opt, cm3ice_cfg_t * cfg)
 		opt->wp_max = ctrl->dwt.numcomp;
 		/* default watchpoints' size */
 		opt->wp_defsz = 4;
+		opt->wp_maxsz = 8;
 	} else {
 		WARNS("CM3ICE: no DWT !!!"); 
+		opt->wp_max = 0;
 	}
+
+	opt->sw_max = 128;
+	opt->sw_defsz = 4;
+	opt->sw_maxsz = 8;
+
 #if 0
 	if (jtag_mem_ap_wr32(tap, ARMV7M_DCRDR, 0) != JTAG_ADI_ACK_OK_FAULT) {
 		ERRS("jtag_mem_ap_wr32() failed!"); 
@@ -1622,7 +1620,7 @@ int cm3_print_insn(cm3ice_ctrl_t * ctrl, uint32_t addr,
 /*****************************************************************************
  * Breakpoints and Watchpoins
  *****************************************************************************/
-
+#if 0
 int cm3ice_bp_set(cm3ice_ctrl_t * ctrl, uint32_t addr, 
 				  uint32_t size, uint32_t * id_ptr)
 {
@@ -1667,7 +1665,7 @@ int cm3ice_bp_clr(cm3ice_ctrl_t * ctrl, uint32_t id)
 }
 
 int cm3ice_wp_set(cm3ice_ctrl_t * ctrl, uint32_t addr, 
-				  uint32_t size, uint32_t * id_ptr)
+				  uint32_t size, int type, uint32_t * id_ptr)
 {
 	jtag_tap_t * tap = ctrl->tap;
 	uint32_t comp = addr;
@@ -1689,14 +1687,13 @@ int cm3ice_wp_set(cm3ice_ctrl_t * ctrl, uint32_t addr,
 		DCC_LOG1(LOG_WARNING, "invalid WP size: %d!", size); 
 		return -1;
 	}
-/*
-	if (access == 1) {
+
+	if (type == 1) {
 		func |= DWT_DATAV_RO_BKP;
-	} else if (access == 2) {
+	} else if (type == 2) {
 		func |= DWT_DATAV_WO_BKP;
 	} else
-*/
-	func |= DWT_DATAV_RW_BKP;
+		func |= DWT_DATAV_RW_BKP;
 
 	if ((id = dwt_comp_set(tap, &ctrl->dwt, comp, mask, func)) < 0) {
 		DCC_LOG(LOG_WARNING, "dwt_comp_set() failed!");
@@ -1715,6 +1712,176 @@ int cm3ice_wp_clr(cm3ice_ctrl_t * ctrl, uint32_t id)
 	DCC_LOG1(LOG_INFO, "clearing bp %d...", id); 
 
 	return dwt_comp_clr(tap, &ctrl->dwt, id);
+}
+#endif
+
+int cm3ice_hw_bp_set(cm3ice_ctrl_t * ctrl, ice_hw_bp_t * bp)
+{
+	jtag_tap_t * tap = ctrl->tap;
+	uint32_t addr = bp->hdr.addr;
+	int size = bp->hdr.size;
+	uint32_t comp;
+	int id;
+
+	comp = (addr & 0x3ffffffc) | COMP_ENABLE;
+
+	size &= ~1;
+
+	if (size == 2) {
+		if (addr & 0x02) {
+			comp |= COMP_BP_HIGH;
+		} else {
+			comp |= COMP_BP_LOW;
+		}
+	} else if (size == 4) {
+		comp |= COMP_BP_WORD;
+	} else {
+		DCC_LOG1(LOG_WARNING, "invalid BP size: %d!", size); 
+		return -1;
+	}
+
+	if ((id = fpb_code_comp_set(tap, &ctrl->fpb, comp)) < 0) {
+		DCC_LOG(LOG_WARNING, "fpb_code_comp_set() failed!");
+		return id;
+	}
+
+	bp->hdr.id = id;
+
+	return 0;
+}
+
+int cm3ice_hw_bp_clr(cm3ice_ctrl_t * ctrl,  ice_hw_bp_t * bp)
+{
+	jtag_tap_t * tap = ctrl->tap;
+	int id = bp->hdr.id;
+
+	DCC_LOG1(LOG_INFO, "clearing bp %d...", id); 
+
+	bp->hdr.id = 0xff;
+	return fpb_code_comp_clr(tap, &ctrl->fpb, id);
+}
+
+int cm3ice_hw_wp_set(cm3ice_ctrl_t * ctrl, ice_hw_wp_t * wp)
+{
+	jtag_tap_t * tap = ctrl->tap;
+	uint32_t comp = wp->hdr.addr;
+	int size = wp->hdr.size;
+	uint32_t func;
+	uint32_t mask;
+	int type = wp->hdr.type;
+	int id;
+
+	if (size == 4) {
+		func = DWT_DATAVSIZE_WORD;
+		mask = 2;
+	} else if (size == 2) {
+		func = DWT_DATAVSIZE_HALFWORD;
+		mask = 1;
+	} else if (size == 1) {
+		func = DWT_DATAVSIZE_BYTE;
+		mask = 0;
+	} else {
+		DCC_LOG1(LOG_WARNING, "invalid WP size: %d!", size); 
+		return -1;
+	}
+
+	if (type == ICE_BKPT_READ_HW) {
+		func |= DWT_DATAV_RO_BKP;
+	} else if (type == ICE_BKPT_WRITE_HW) {
+		func |= DWT_DATAV_WO_BKP;
+	} else if (type == ICE_BKPT_ACCESS_HW) {
+		func |= DWT_DATAV_RW_BKP;
+	}
+
+	if ((id = dwt_comp_set(tap, &ctrl->dwt, comp, mask, func)) < 0) {
+		DCC_LOG(LOG_WARNING, "dwt_comp_set() failed!");
+		return id;
+	}
+
+	wp->hdr.id = id;
+
+	return 0;
+}
+
+int cm3ice_hw_wp_clr(cm3ice_ctrl_t * ctrl,  ice_hw_wp_t * wp)
+{
+	jtag_tap_t * tap = ctrl->tap;
+	int id = wp->hdr.id;
+
+	DCC_LOG1(LOG_INFO, "clearing bp %d...", id); 
+
+	wp->hdr.id = 0xff;
+	return dwt_comp_clr(tap, &ctrl->dwt, id);
+}
+
+#define CORTEX_M_BKPT(__NO) (0xbe00 | ((__NO) & 0x7f))
+
+int cm3ice_sw_bp_set(cm3ice_ctrl_t * ctrl, ice_sw_bp_t * bp)
+{
+	jtag_tap_t * tap = ctrl->tap;
+	uint32_t addr = bp->hdr.addr;
+	int size = bp->hdr.size;
+	int id = ctrl->sw_bkpt_seq++ & 0x7f;
+	uint16_t opc;
+
+	if (size != 2) 
+		size = 2;
+
+	addr &= ~0x1;
+
+	/* save code */
+	if (jtag_mem_ap_rd16(tap, addr, (uint16_t *)bp->data) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd16() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	/* write opcode */
+	opc = CORTEX_M_BKPT(id);
+
+	if (jtag_mem_ap_wr16(tap, addr, opc) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr16() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	DCC_LOG2(LOG_TRACE, "inserting bp id=%d addr=0x%08x.", id, addr); 
+
+	bp->hdr.id = id;
+
+	return 0;
+}
+
+int cm3ice_sw_bp_clr(cm3ice_ctrl_t * ctrl,  ice_sw_bp_t * bp)
+{
+	jtag_tap_t * tap = ctrl->tap;
+	uint32_t addr = bp->hdr.addr;
+	int size = bp->hdr.size;
+	int id = bp->hdr.id;
+	uint16_t opc[1];
+
+	bp->hdr.id = 0xff;
+	DCC_LOG2(LOG_TRACE, "removing bp id=%d addr=0x%08x.", id, addr); 
+
+	if (size != 2) 
+		size = 2;
+
+	addr &= ~0x1;
+
+	if (jtag_mem_ap_rd16(tap, addr, opc) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd16() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	if ((opc[0] & 0xff) != id) {
+		DCC_LOG(LOG_WARNING, "mismatch bkpt id???"); 
+	}
+
+	/* write back */
+	if (jtag_mem_ap_wr16(tap, addr, bp->data[0]) != JTAG_ADI_ACK_OK_FAULT) {
+		DCC_LOG(LOG_WARNING, "jtag_mem_ap_wr16() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	return 0;
 }
 
 /*****************************************************************************
@@ -2090,12 +2257,21 @@ const struct ice_oper cm3ice_oper = {
 	.run = (ice_run_t)cm3ice_run,
 	.step = (ice_step_t)cm3ice_step,
 	.exec = (ice_exec_t)NULL,
-
+/*
 	.bp_set = (ice_bp_set_t)cm3ice_bp_set,
 	.bp_clr = (ice_bp_clr_t)cm3ice_bp_clr,
 
 	.wp_set = (ice_wp_set_t)cm3ice_wp_set,
 	.wp_clr = (ice_wp_clr_t)cm3ice_wp_clr,
+*/
+	.hw_bp_set = (ice_hw_bp_set_t)cm3ice_hw_bp_set,
+	.hw_bp_clr = (ice_hw_bp_clr_t)cm3ice_hw_bp_clr,
+
+	.hw_wp_set = (ice_hw_wp_set_t)cm3ice_hw_wp_set,
+	.hw_wp_clr = (ice_hw_wp_clr_t)cm3ice_hw_wp_clr,
+
+	.sw_bp_set = (ice_sw_bp_set_t)cm3ice_sw_bp_set,
+	.sw_bp_clr = (ice_sw_bp_clr_t)cm3ice_sw_bp_clr,
 
 	.reg_get = (ice_reg_get_t)cm3ice_reg_get,
 	.reg_set = (ice_reg_set_t)cm3ice_reg_set,

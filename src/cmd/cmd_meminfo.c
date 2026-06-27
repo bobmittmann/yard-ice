@@ -34,7 +34,7 @@
 
 int cmd_meminfo(FILE * f, int argc, char ** argv)
 {
-	struct debugger * dbg = &debugger;
+	ice_mem_entry_t * mem = target_mem_tab();
 	ice_mem_entry_t * e;
 	uint32_t size;
 	uint32_t start;
@@ -46,7 +46,7 @@ int cmd_meminfo(FILE * f, int argc, char ** argv)
 
 	fprintf(f, "MEM:       FROM:    TO:      SIZE:     ACCESS:\n");
 
-	for (e = (ice_mem_entry_t *)dbg->mem; e->op != NULL; ++e) {
+	for (e = mem; e->op != NULL; ++e) {
 
 		if ((size = e->blk.count * e->blk.size) == 0) {
 			/* skip empty blocks */

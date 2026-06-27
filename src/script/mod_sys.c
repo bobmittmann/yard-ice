@@ -33,16 +33,23 @@
 
 uint64_t eval_ans;
 
+#define VAR_X 0
+#define VAR_Y 1
+#define VAR_Z 2
+
+uint64_t sys_var[3];
+
 typedef struct sys_var {
 	char name[11];
 	uint8_t type;
 	value_t * val;
 } sys_var_t;
 
-const struct sys_var sys_var_tab[1] = {
-	{ .name = "ans",
-	.type = TYPE_UINT32,
-	.val = (value_t *)&eval_ans }
+const struct sys_var sys_var_tab[4] = {
+	{ .name = "ans", .type = TYPE_UINT32, .val = (value_t *)&eval_ans },
+	{ .name = "x", .type = TYPE_UINT32, .val = (value_t *)&sys_var[VAR_X] },
+	{ .name = "y", .type = TYPE_UINT32, .val = (value_t *)&sys_var[VAR_Y] },
+	{ .name = "z", .type = TYPE_UINT32, .val = (value_t *)&sys_var[VAR_Z] }
 };
 
 int sys_var_get(void * arg, int var_id, value_t * val)

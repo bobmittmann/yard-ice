@@ -40,6 +40,10 @@
 
 extern const char * const mem_bus_str[];
 
+/* -------------------------------------------------------------------------- 
+ * Basic types 
+ * ------------------------------------------------------------------------- */ 
+
 /* Memory address type */
 typedef uint32_t ice_mem_addr_t;
 /* Memory address mask type */
@@ -56,38 +60,68 @@ typedef uint32_t ice_offs_t;
 /* Generic size type */
 typedef uint32_t ice_size_t;
 
-struct ice_bp {
-	ice_mem_addr_t addr;
-	ice_mem_size_t size;
-};
-
-typedef struct ice_bp ice_bp_t;
-
-struct ice_wp {
-	ice_mem_addr_t addr;
-	ice_mem_mask_t mask;
-};
-
-typedef struct ice_wp ice_wp_t;
-
-
-/*
- * ICE state 
- */
-/*
 typedef enum {
-	ICE_UNDEF = 0,
-	ICE_ERROR = 1,
-	ICE_INIT = 2,
-	ICE_UNCONNECTED = 3,
-	ICE_CONNECTED = 4,
-	ICE_OUTOFSYNC = 5,
-	ICE_RUNNING = 6,
-	ICE_HALTED = 7
-} ice_state_t;
-*/
+	LITTLE_ENDIAN = 0,
+	BIG_ENDIAN = 1
+} ice_endianness_t;
 
-/* ICE status flags */
+typedef int16_t ice_oid_t;
+
+typedef uint32_t ice_val_t;
+
+/* -------------------------------------------------------------------------- 
+ * Brekpoints and Watchpoints 
+ * ------------------------------------------------------------------------- */ 
+
+enum bkpt_type {
+     ICE_BKPT_EXEC_HW = 0, /* Common (write) HW watchpoint */
+     ICE_BKPT_READ_HW  = 1, /* Read  HW watchpoint */
+     ICE_BKPT_WRITE_HW = 2, /* Access (read or write) HW watchpoint */
+     ICE_BKPT_ACCESS_HW = 3, /* Access (read or write) HW watchpoint */
+     ICE_BKPT_EXEC_SW = 4  /* Execute Software breakpoint */
+};
+
+typedef enum bkpt_type bkpt_type_t;
+
+#define ICE_BKPT_ENABLED (1 << 0)
+#define ICE_BKPT_ACTIVE  (1 << 1)
+
+struct ice_breakpoint {
+	int8_t id;
+	uint8_t type;
+	uint8_t size;
+	uint8_t enabled: 1;
+	uint8_t active: 1;
+	uint8_t res: 6;
+	uint32_t addr;
+};
+
+struct ice_hw_breakpoint {
+	struct ice_breakpoint hdr;
+	uint32_t data;
+	uint32_t mask;
+};
+
+typedef struct ice_hw_breakpoint ice_hw_bp_t;
+
+struct ice_hw_watchpoint {
+	struct ice_breakpoint hdr;
+	uint32_t data;
+	uint32_t mask;
+};
+
+typedef struct ice_hw_watchpoint ice_hw_wp_t;
+
+struct ice_sw_breakpoint {
+	struct ice_breakpoint hdr;
+	uint32_t data[2];
+};
+
+typedef struct ice_sw_breakpoint ice_sw_bp_t;
+
+/* -------------------------------------------------------------------------- 
+ * ICE status flags 
+ * ------------------------------------------------------------------------- */ 
 #define ICE_STATUS_HALT    (1 << 0) 
 #define ICE_STATUS_SLEEP   (1 << 2)
 #define ICE_STATUS_LOCKUP  (1 << 3)
@@ -95,6 +129,9 @@ typedef enum {
 #define ICE_STATUS_RUNNING (1 << 5)
 #define ICE_STATUS_FAULT   (1 << 7)
 
+/* -------------------------------------------------------------------------- 
+ * ICE break reasons
+ * ------------------------------------------------------------------------- */ 
 typedef enum {
 	ICE_BRK_NONE = 0,
 	ICE_BRK_DBGERROR = 1,
@@ -104,9 +141,13 @@ typedef enum {
 	ICE_BRK_EXCEPTION = 5,
 	ICE_BRK_LOCKUP = 6,
 	ICE_BRK_EXTERNAL = 7,
-	ICE_BRK_REQUEST = 8
+	ICE_BRK_REQUEST = 8,
+	ICE_BRK_SWBREAKPOINT = 9
 } ice_reason_t;
 
+/* -------------------------------------------------------------------------- 
+ * ICE error codes
+ * ------------------------------------------------------------------------- */ 
 typedef enum {
 	ICE_OK = 0,
 	ICE_ERR_UNDEF = -101,
@@ -123,33 +164,39 @@ typedef enum {
 	ICE_ERR_DRV_FAIL = -112
 } ice_erro_t;
 
+/* -------------------------------------------------------------------------- 
+ * ICE signals
+ * ------------------------------------------------------------------------- */ 
 typedef enum {
 	ICE_SIG_POLL_STOP = 0,
 	ICE_SIG_POLL_START,
 	ICE_SIG_TARGET_RESET
 } ice_sig_t;
 
-typedef enum {
-	LITTLE_ENDIAN = 0,
-	BIG_ENDIAN = 1
-} ice_endianness_t;
-
 #define ICE_CONNECT_ON_RESET 1
-
-typedef int16_t ice_oid_t;
-
-typedef uint32_t ice_val_t;
 
 /* Dynamic configuration */
 struct ice_opt {
-	/* Maximum number of breakpoints */
-	uint16_t bp_max;
-	/* Default size for breakpoints */
-	uint16_t bp_defsz;
-	/* Maximum number of watchpoints */
-	uint16_t wp_max;
-	/* Default size for watchpoints */
-	uint16_t wp_defsz;
+	/* Maximum number of hardware breakpoints */
+	uint8_t bp_max;
+	/* Default size for hardware breakpoints */
+	uint8_t bp_defsz;
+	/* Default size for hardware breakpoints */
+	uint8_t bp_maxsz;
+
+	/* Maximum number of hardware watchpoints */
+	uint8_t wp_max;
+	/* Default size for hardware watchpoints */
+	uint8_t wp_defsz;
+	/* Maximum size for hardware watchpoints */
+	uint8_t wp_maxsz;
+
+	/* Maximum number of software watchpoints */
+	uint8_t sw_max;
+	/* Default size for software breakpoints */
+	uint8_t sw_defsz;
+	/* Maximum size for software breakpoints */
+	uint8_t sw_maxsz;
 };
 
 typedef struct ice_opt ice_opt_t;
@@ -186,15 +233,13 @@ typedef int (* ice_go_to_t)(ice_ctrl_t * ctrl, uint32_t addr);
 typedef int (* ice_int_enable_t)(ice_ctrl_t * ctrl);
 typedef int (* ice_int_disable_t)(ice_ctrl_t * ctrl);
 
-typedef int (* ice_bp_set_t)(ice_ctrl_t * ctrl, uint32_t addr, uint32_t len, 
-							 uint32_t * id);
+typedef int (* ice_hw_bp_set_t)(ice_ctrl_t * ctrl, ice_hw_bp_t * bp);
+typedef int (* ice_hw_wp_set_t)(ice_ctrl_t * ctrl, ice_hw_wp_t * wp);
+typedef int (* ice_sw_bp_set_t)(ice_ctrl_t * ctrl, ice_sw_bp_t * bp);
 
-typedef int (* ice_bp_clr_t)(ice_ctrl_t * ctrl, uint32_t id);
-
-typedef int (* ice_wp_set_t)(ice_ctrl_t * ctrl, uint32_t addr, uint32_t len, 
-							 uint32_t * id);
-
-typedef int (* ice_wp_clr_t)(ice_ctrl_t * ctrl, uint32_t id);
+typedef int (* ice_hw_bp_clr_t)(ice_ctrl_t * ctrl, ice_hw_bp_t * bp);
+typedef int (* ice_hw_wp_clr_t)(ice_ctrl_t * ctrl, ice_hw_wp_t * wp);
+typedef int (* ice_sw_bp_clr_t)(ice_ctrl_t * ctrl, ice_sw_bp_t * bp);
 
 typedef int (* ice_context_get_t)(ice_ctrl_t * ctrl);
 typedef int (* ice_context_set_t)(ice_ctrl_t * ctrl);
@@ -317,14 +362,17 @@ struct ice_oper {
 	ice_exec_t exec;
 
 	/* target set breakpoint */
-	ice_bp_set_t bp_set;
+	ice_hw_bp_set_t hw_bp_set;
 	/* target clear breakpoint */
-	ice_bp_clr_t bp_clr;
+	ice_hw_bp_clr_t hw_bp_clr;
 
 	/* target set watchpoint */
-	ice_wp_set_t wp_set;
+	ice_hw_wp_set_t hw_wp_set;
 	/* target clear watchpoint */
-	ice_wp_clr_t wp_clr;
+	ice_hw_wp_clr_t hw_wp_clr;
+
+	ice_sw_bp_set_t sw_bp_set;
+	ice_sw_bp_clr_t sw_bp_clr;
 
 	/* register access */	
 	ice_reg_get_t reg_get;
@@ -615,28 +663,28 @@ static inline int ice_system_reset(const ice_drv_t * ice) {
 	return ice->op.system_reset(ice->ctrl);
 }
 
-static inline int ice_bp_set(const ice_drv_t * ice, uint32_t addr, 
-							 uint32_t len, uint32_t * id)
-{
-	return ice->op.bp_set(ice->ctrl, addr, len, id);
+static inline int ice_hw_bp_set(const ice_drv_t * ice, ice_hw_bp_t * hwbp) {
+	return ice->op.hw_bp_set(ice->ctrl, hwbp);
 }
 
-static inline int ice_bp_clr(const ice_drv_t * ice, uint32_t id)
-{
-	return ice->op.bp_clr(ice->ctrl, id);
+static inline int ice_hw_bp_clr(const ice_drv_t * ice, ice_hw_bp_t * hwbp) {
+	return ice->op.hw_bp_clr(ice->ctrl, hwbp);
 }
 
-static inline int ice_wp_set(const ice_drv_t * ice, uint32_t addr, 
-							 uint32_t len, uint32_t * id)
-{
-	return ice->op.wp_set(ice->ctrl, addr, len, id);
+static inline int ice_hw_wp_set(const ice_drv_t * ice, ice_hw_wp_t * hwwp) {
+	return ice->op.hw_wp_set(ice->ctrl, hwwp);
 }
 
-static inline int ice_wp_clr(const ice_drv_t * ice, uint32_t id)
-{
-	return ice->op.wp_clr(ice->ctrl, id);
+static inline int ice_hw_wp_clr(const ice_drv_t * ice, ice_hw_wp_t * hwwp) {
+	return ice->op.hw_wp_clr(ice->ctrl, hwwp);
+}
+static inline int ice_sw_bp_set(const ice_drv_t * ice, ice_sw_bp_t * swbp) {
+	return ice->op.sw_bp_set(ice->ctrl, swbp);
 }
 
+static inline int ice_sw_bp_clr(const ice_drv_t * ice, ice_sw_bp_t * swbp) {
+	return ice->op.sw_bp_clr(ice->ctrl, swbp);
+}
 
 static inline int ice_info(const ice_drv_t * ice, FILE * f, uint32_t which)
 {

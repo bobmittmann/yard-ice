@@ -49,9 +49,9 @@
 
 int cmd_ymodem_recv(FILE * f, int argc, char ** argv)
 {
+	struct mem_range * xfer = target_xfer_range();
 	uint8_t buf[YMODEM_RCV_BUF_LEN];
 	struct comm_dev comm;
-	struct debugger * dbg = &debugger;
 	struct xmodem_rcv rx;
 	struct file * raw;
 	value_t val;
@@ -76,7 +76,7 @@ int cmd_ymodem_recv(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else {
-		addr = (uint32_t)dbg->transf.base;
+		addr = (uint32_t)xfer->base;
 	}
 
 	if (argc) {
@@ -87,7 +87,7 @@ int cmd_ymodem_recv(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else {
-		size = dbg->transf.size;
+		size = xfer->size;
 	}
 
 	if (argc) {
@@ -139,7 +139,7 @@ int cmd_ymodem_recv(FILE * f, int argc, char ** argv)
 				size, ms, (size * 1000) / ms);
 	}
 
-	dbg->transf.size = size;
+	xfer->size = size;
 
 	return 0;
 }

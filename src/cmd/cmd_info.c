@@ -61,13 +61,11 @@ static int info_target(FILE * f, const ice_drv_t * ice,
 
 int cmd_info(FILE * f, int argc, char ** argv)
 {
-	struct debugger * dbg = &debugger;
-
 	if (argc != 1) {
 //		return show_cmd_usage(argv[0]);
 		return -1;
 	}
 
-	return info_target(f, &dbg->ice, dbg->target);
+	return info_target(f, target_ice_drv(), target_info());
 }
 

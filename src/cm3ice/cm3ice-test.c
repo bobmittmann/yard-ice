@@ -37,15 +37,53 @@
 int cm3ice_test_memrd(FILE * f, jtag_tap_t * tap, 
 						   uint32_t addr, uint32_t len)
 {
-	uint32_t buf[64];
+	uint8_t buf[64 * 4];
 
-	if (len > (64 * 4))
-		len = 64 * 4;
+	if (len > sizeof(buf))
+		len = sizeof(buf);
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
+
+	fprintf(f, "* addr=0x%08x len=%d\n", addr, len);
 	jtag_mem_ap_read(tap, addr, buf, len);
 
-	show_hex32(f, addr, buf, len);
+	show_hex8(f, addr, buf, len);
+
+	return 0;
+}
+
+int cm3ice_test_memwr(FILE * f, jtag_tap_t * tap, 
+						   uint32_t addr, uint32_t val[], int32_t cnt)
+{
+	uint8_t buf[64];
+	int len = 0;
+	int i;
+
+	if (cnt <= 0) {
+		len = 1;
+		buf[0] = 1;
+	}
+
+	if (cnt > sizeof(buf))
+		cnt = sizeof(buf);
+
+	for (i = 0; i < cnt; ++i) {
+		uint32_t x = val[i];
+		buf[len++] = x;
+/*		if (x >= 0x100)
+			buf[len++] = x >> 8;
+		if (x >= 0x10000)
+			buf[len++] = x >> 16;
+		if (x >= 0x1000000)
+			buf[len++] = x >> 24; */
+	}
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
+
+	fprintf(f, "* addr=0x%08x cnt=%d\n", addr, len);
+	jtag_mem_ap_write(tap, addr, buf, len);
+
+	show_hex8(f, addr, buf, len);
 
 	return 0;
 }
@@ -267,22 +305,26 @@ int cm3ice_test(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t req,
 
 	switch(req) {
 	case 1:
-		cm3ice_test_memrd(f, tap, argv[0], argv[1]);
+		cm3ice_test_memwr(f, tap, argv[0], &argv[1], argc - 1);
 		break;
 	case 2:
-		cm3ice_test_ap_rd32(f, tap, argv[0], argv[1]);
+		cm3ice_test_memrd(f, tap, argv[0], argv[1]);
 		break;
 	case 3:
+		cm3ice_test_ap_rd32(f, tap, argv[0], argv[1]);
+		break;
+	case 4:
 		cm3ice_test_3(f, tap);
 		break;
 	default:
-		fprintf(f, " +----- Cortex M3 ICE Tests ----------------+\n");
-		fprintf(f, " | Test # | Parameters | Description        |\n");
-		fprintf(f, " +--------+------------+--------------------+\n");
-		fprintf(f, " |      1 | ADDR LEN   | Memory read        |\n");
-		fprintf(f, " |      2 | ADDR LEN   | 32 bits mem access |\n");
-		fprintf(f, " |      3 | none       | ...                |\n");
-		fprintf(f, " +--------+------------+--------------------+\n");
+		fprintf(f, " +----------- Cortex M3 ICE Tests ----------------+\n");
+		fprintf(f, " | Test # | Parameters       | Description        |\n");
+		fprintf(f, " +--------+------------------+--------------------+\n");
+		fprintf(f, " |      1 | ADDR D0 D1 ...   | Memory write       |\n");
+		fprintf(f, " |      2 | ADDR LEN         | Memory read        |\n");
+		fprintf(f, " |      3 | ADDR LEN         | 32 bits mem access |\n");
+		fprintf(f, " |      4 | none             | ...                |\n");
+		fprintf(f, " +--------+------------------+--------------------+\n");
 	}
 
 	return 0;

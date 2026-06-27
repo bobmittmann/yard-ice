@@ -959,7 +959,7 @@ int jtag_mem_ap_wr16(jtag_tap_t * tap, uint32_t addr, uint16_t din)
 	uint32_t data;
 	int ack;
 
-	DCC_LOG1(LOG_INFO, "addr=0x%08x", addr);
+	DCC_LOG1(LOG_TRACE, "addr=0x%08x", addr);
 
 	data = (addr & 0x2) ? din << 16 : din;
 

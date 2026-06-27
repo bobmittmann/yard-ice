@@ -32,13 +32,13 @@
 #include "target.h"
 #include "debugger.h"
 #include "hexdump.h"
+#include "nand.h"
 #include "eval.h"
 
 #include <sys/dcclog.h>
 
 int cmd_bb_scan(FILE * f, int argc, char ** argv)
 {
-//	struct debugger * dbg = &debugger;
 	nand_chip_t * chip;
 	int ret;
 	int i;

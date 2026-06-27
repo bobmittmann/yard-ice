@@ -45,18 +45,17 @@ int cmd_ice_test(FILE *f, int argc, char ** argv)
 	argc--;
 	argv++;
 
-	if (argc < 1) {
-		fprintf(f, "usage: icetst REQ [ARG1 ... ARGn]\n");
-		return -1;
+	if (argc == 0)
+		req = 0;
+	else {
+		if ((n = eval_uint32(&val, argc, argv)) < 0) {
+			DCC_LOG(LOG_WARNING, "eval_uint32(), addr");
+			return n;
+		}
+		argc -= n;
+		argv += n;
+		req = val.uint32;
 	}
-
-	if ((n = eval_uint32(&val, argc, argv)) < 0) {
-		DCC_LOG(LOG_WARNING, "eval_uint32(), addr");
-		return n;
-	}
-	argc -= n;
-	argv += n;
-	req = val.uint32;
 	DCC_LOG1(LOG_INFO, "req=%d", req);
 
 	for (cnt = 0; cnt < ICET_ARGMAX ; ++cnt)

@@ -37,7 +37,7 @@
 
 int cmd_disassemble(FILE * f, int argc, char ** argv)
 {
-	struct debugger * dbg = &debugger;
+	struct mem_range * dasm = target_dasm_range();
 	value_t val;
 	uint32_t addr;
 	uint32_t size;
@@ -57,7 +57,7 @@ int cmd_disassemble(FILE * f, int argc, char ** argv)
 		addr = val.uint32;
 		DCC_LOG2(LOG_INFO, "addr=%08x n=%d", addr, n);
 	} else
-		addr = (uint32_t)dbg->dasm.base;
+		addr = (uint32_t)dasm->base;
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x argc=%d", addr, argc);
 
@@ -71,7 +71,7 @@ int cmd_disassemble(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else
-		size = (dbg->dasm.size + 3) & ~0x03;
+		size = (dasm->size + 3) & ~0x03;
 
 	if (argc) {
 		fprintf(f, "Too many arguments...\n");
@@ -82,7 +82,7 @@ int cmd_disassemble(FILE * f, int argc, char ** argv)
 	if (size == 0)
 		size = 64;
 
-	dbg->dasm.size = 0;
+	dasm->size = 0;
 
 	for (i = 0; i < size; i++) {
 		n = target_print_insn(f, addr);
@@ -93,8 +93,8 @@ int cmd_disassemble(FILE * f, int argc, char ** argv)
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 
-	dbg->dasm.size = i;
-	dbg->dasm.base = addr;
+	dasm->size = i;
+	dasm->base = addr;
 
 	return 0;
 }

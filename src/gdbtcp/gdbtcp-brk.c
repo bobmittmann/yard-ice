@@ -43,19 +43,17 @@ int __attribute__((noreturn)) gdbtcp_brk_task(struct gdbtcpd * gdb)
 	for (;;) {
 //		while (!(gdb->connected))  {
 		while (!(gdb->connected && gdb->running))  {
-			WARNS("waiting for connect...");
+			WARNS("waiting for running...");
 			/* wait for a connection */
 			thinkos_cond_wait(gdb->cond, gdb->mutex);
 		}
-
-		/* wait for a 'target run' indication */
-		WARNS("waiting for halt...");
 
 		state = target_status();
 
 		thinkos_mutex_unlock(gdb->mutex);
 		while (gdb->running && (state != DBG_ST_HALTED)) {
 			WARNS("halt wait...");
+			/* wait for a 'target run' indication */
 			state = target_halt_wait(5000);
 			switch (state) {
 			case DBG_ST_ERROR:
@@ -99,8 +97,8 @@ int __attribute__((noreturn)) gdbtcp_brk_task(struct gdbtcpd * gdb)
 
 			if ((tp = gdb->tp) != NULL) {
 				WARNS("Core halted sending break signal...");
-				rsp_send_stop_core(tp, TARGET_SIGNAL_TRAP, 1);
-//				rsp_send_stop_thread(tp, TARGET_SIGNAL_INT, 1);
+//				rsp_send_stop_core(tp, TARGET_SIGNAL_TRAP, gdb->core.id);
+				rsp_send_stop_thread(tp, TARGET_SIGNAL_INT, gdb->thread.id);
 			}
 		}
 	}

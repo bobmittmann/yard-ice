@@ -143,10 +143,12 @@ static void tcp_rcv_task(struct rcv_info * info, uthread_id_t id)
 static uint32_t stack[256 + 128];
 #endif
 
+uint16_t tcp_xfer_port = 9;
+
 int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 {
-	struct debugger * dbg = &debugger;
 	uint8_t buf[TCP_RCV_BUF_LEN];
+	struct mem_range * xfer = target_xfer_range();
 	value_t val;
 	struct tcp_pcb * svc;
 	struct tcp_pcb * tp;
@@ -174,7 +176,7 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else {
-		addr = (uint32_t)dbg->transf.base;
+		addr = (uint32_t)xfer->base;
 	}
 
 	if (argc) {
@@ -185,7 +187,7 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else {
-		port = dbg->tcp_port;
+		port = tcp_xfer_port;
 	}
 
 	if (argc) {
@@ -193,8 +195,8 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 		return -1;
 	}
 
-	dbg->transf.base = addr & ~0x03;
-	dbg->tcp_port = port;
+	xfer->base = addr & ~0x03;
+	tcp_xfer_port = port;
 
 	svc = tcp_alloc();
 	tcp_bind(svc, INADDR_ANY, htons(port));
@@ -279,7 +281,7 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 	}
 
 	tcp_close(tp);
-	dbg->transf.size = size;
+	xfer->size = size;
 
 	return 0;
 }

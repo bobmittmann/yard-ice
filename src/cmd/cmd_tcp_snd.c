@@ -42,10 +42,12 @@
 #define TCP_SND_BUF_LEN 1024
 #endif
 
+uint16_t tcp_snd_port = 9;
+
 int cmd_tcp_send(FILE * f, int argc, char ** argv)
 {
-	struct debugger * dbg = &debugger;
 	uint8_t buf[TCP_SND_BUF_LEN];
+	struct mem_range * xfer = target_xfer_range();
 	value_t val;
 	struct tcp_pcb * svc;
 	struct tcp_pcb * tp;
@@ -71,7 +73,7 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else {
-		addr = (uint32_t)dbg->transf.base;
+		addr = (uint32_t)xfer->base;
 	}
 
 	if (argc) {
@@ -82,7 +84,7 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else {
-		size = (uint32_t)dbg->transf.size;
+		size = (uint32_t)xfer->size;
 	}
 
 	if (argc) {
@@ -93,7 +95,7 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 		argc -= n;
 		argv += n;
 	} else {
-		port = dbg->tcp_port;
+		port = tcp_snd_port;
 	}
 
 	if (argc) {
@@ -101,8 +103,8 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 		return -1;
 	}
 
-	dbg->transf.base = addr & ~0x03;
-	dbg->tcp_port = port;
+	xfer->base = addr & ~0x03;
+	tcp_snd_port = port;
 
 	svc = tcp_alloc();
 	tcp_bind(svc, INADDR_ANY, htons(port));
@@ -168,7 +170,7 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 	}
 
 	tcp_close(tp);
-	dbg->transf.size = size;
+	xfer->size = size;
 
 	return 0;
 }

@@ -33,7 +33,9 @@
 #include "dbglog.h"
 #include "hexdump.h"
 
-int mem_hexdump(FILE * f, uint32_t addr, int size)
+
+
+int mem_hexdump(FILE * f, uint32_t addr, int size, int bits)
 {
 	uint8_t buf[265];
 	unsigned int base;
@@ -61,7 +63,16 @@ int mem_hexdump(FILE * f, uint32_t addr, int size)
 			break;
 
 		DCC_LOG2(LOG_MSG, "addr:%08x n:%d", addr, n); 
-		show_hex32(f, addr, buf, n);
+		switch (bits) {
+		case HEXDUMP_8_BITS:
+			show_hex8(f, addr, buf, n);
+			break;
+		case HEXDUMP_16_BITS:
+			show_hex16(f, addr, buf, n);
+			break;
+		default:
+			show_hex32(f, addr, buf, n);
+		}
 
 		addr += n;
 		size -= n;

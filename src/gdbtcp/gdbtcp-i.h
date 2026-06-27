@@ -40,6 +40,7 @@
 
 #include <tcpip/tcp.h>
 #include <sys/util.h>
+#include <ascii.h>
 
 #include "debugger.h"
 #include "command.h"
@@ -104,40 +105,31 @@
 #define GDB_ENABLE_RXMIT 0
 #endif
 
-#define CTRL_B 0x02
-#define CTRL_C 0x03
-#define CTRL_D 0x04
-#define CTRL_E 0x05
-#define CTRL_F 0x06
-#define CTRL_G 0x07
-#define CTRL_H 0x08
-#define CTRL_I 0x09
-#define CTRL_J 0x0a
-#define CTRL_K 0x0b
-#define CTRL_L 0x0c
-#define CTRL_M 0x0d /* CR */
-#define CTRL_N 0x0e
-#define CTRL_O 0x0f
-#define CTRL_P 0x10
-#define CTRL_Q 0x11
-#define CTRL_R 0x12
-#define CTRL_S 0x13
-#define CTRL_T 0x14
-#define CTRL_U 0x15
-#define CTRL_V 0x16
-#define CTRL_W 0x17
-#define CTRL_X 0x18
-#define CTRL_Y 0x19
-#define CTRL_Z 0x1a
+enum gdb_error_code {
+	GDB_ERR_THREAD_IS_DEAD = 1,
+	GDB_ERR_REGISTER_NOT_KNOWN = 2,
+	GDB_ERR_REGISTER_SET_FAIL = 3,
+	GDB_ERR_MEMORY_READ_FAIL = 4,
+	GDB_ERR_BREAKPOINT_SET_FAIL = 5,
+	GDB_ERR_WATCHPOINT_SET_FAIL = 6,
+	GDB_ERR_STEP_REQUEST_FAIL = 7,
+	GDB_ERR_APP_EXEC_FAIL = 8,
+};
 
 struct gdbtcpd {
+	struct {
+		uint32_t text;
+		uint32_t data;
+	} offs;
 	bool noack_mode;
 	volatile bool connected;
 	volatile bool running;
 	uint8_t mutex;
 	uint8_t cond;
 	int last_signal; 
-	int thread_id; 
+	struct {
+		int id;
+	} thread;
 	struct tcp_pcb * svc;
 	struct tcp_pcb * volatile tp;
 };
@@ -197,7 +189,7 @@ struct file * rsp_fopen(struct tcp_pcb * tp);
 
 int rsp_fclose(struct file * f);
 
-void rsp_comm_loop(struct gdbtcpd * gdb);
+void rsp_comm_loop(struct gdbtcpd * gdb, char pktbuf[]);
 
 int gdb_brk_start(struct gdbtcpd * gdbd);
 
@@ -205,6 +197,8 @@ int rsp_decoder_lookup(const struct rsp_pkt_decoder lst[], unsigned int len, int
 
 int rsp_query_lookup(const struct rsp_pkt_decoder lst[], 
 					   unsigned int len, char * key);
+
+int mod_gdb_register(struct gdbtcpd * gdb);
 
 #ifdef __cplusplus
 }

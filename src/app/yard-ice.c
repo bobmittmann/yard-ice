@@ -322,7 +322,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 				trace_ts2timeval(&tv, trace->dt);
 
 				if (file != NULL) {
-					if ((lvl = trace->ref->lvl) <= TRACE_LVL_DBG)
+					if ((lvl = trace->ref->lvl) <= TRACE_LVL_WARN)
 #if TRACE_ENABLE_VT100
 						/* extra info */
 						n = sprintf(line, _ATTR_PUSH_ "%s "
@@ -758,7 +758,7 @@ int main(int argc, char ** argv)
 #if (ENABLE_COMM)
 	INFS("* starting COMM daemon ... ");
 	DCC_LOG(LOG_TRACE, "18. comm_tcp_start().");
-	comm_tcp_start(&debugger.comm);
+	comm_tcp_start(target_comm());
 #endif
 
 #if (ENABLE_TFTP)

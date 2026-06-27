@@ -35,7 +35,7 @@
 
 int target_stack_show(FILE * f)
 {
-	struct debugger * dbg = &debugger;
+	struct mem_range * stack = target_stack_range();
 	unsigned int addr;
 	uint32_t buf[16];
 	uint32_t * sp;
@@ -45,8 +45,8 @@ int target_stack_show(FILE * f)
 	if ((ret = target_stack_refresh(buf, sizeof(buf))) < 0)
 		return ret;
 
-	addr = dbg->stack.base;
-	cnt = dbg->stack.size;
+	addr = stack->base;
+	cnt = stack->size;
 	sp = (uint32_t *)buf;
 
 	addr &= ~(sizeof(uint32_t) - 1);
