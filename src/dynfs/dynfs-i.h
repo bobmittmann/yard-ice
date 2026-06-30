@@ -27,12 +27,63 @@
 #define __DYNFS_I_H__
 
 #include "dynfs.h"
+
 #include "cache.h"
+#include <sys/param.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <fixpt.h>
+
+#define DYNFS_FILE_OPEN_MAX 8
+
+#define DYNFS_STREAM_RW   (1 << 0)
+#define DYNFS_STREAM_FILE (1 << 1)
+#define DYNFS_STREAM_DIR  (1 << 2)
+
+struct dynfs_meta {
+	uint8_t fd;
+	uint8_t flags;
+	uint16_t offs;
+	struct dynfs * fs;
+	const struct dynfs_file_def * fsdef;
+};
+
+struct dynfs_file {
+	struct dynfs_meta meta;
+	uint16_t len;
+	uint16_t cache_key;
+};
+
+struct dynfs_dir {
+	struct dynfs_meta meta;
+};
+
+struct dynfs {
+	struct {
+		uint16_t size;
+		uint16_t key;
+		uint32_t seed;
+		char * buf;
+	} cache;
+
+	struct {
+		union {
+			struct dynfs_meta meta;
+			struct dynfs_dir dir;
+			struct dynfs_file file;
+		} stream[DYNFS_FILE_OPEN_MAX];
+		uint32_t bmp;
+	} alloc;
+
+	void * arg;
+	uint8_t ndef;
+	const struct dynfs_file_def * def;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 #ifdef __cplusplus
 }

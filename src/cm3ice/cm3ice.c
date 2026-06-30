@@ -44,7 +44,9 @@
 #include "arm-fpb.h"
 #include "arm-dwt.h"
 
-#include "trace.h"
+#include <trace.h>
+#undef TRACE_LEVEL 
+#define TRACE_LEVEL TRACE_LVL_WARN
 
 #ifndef ENABLE_CM3ICE_DP_STICKYERR
 #define ENABLE_CM3ICE_DP_STICKYERR 1
@@ -1957,8 +1959,9 @@ int cm3ice_core_reset(cm3ice_ctrl_t * ctrl)
 		return ICE_ERR_JTAG;
 	}
 
-	if (dhcsr & DHCSR_S_RESET_ST)
+	if (dhcsr & DHCSR_S_RESET_ST) {
 		YAPS("CM_ICE: DHCSR S_RESET_ST stick flag set.");
+	}
 
 	if (dhcsr & DHCSR_C_DEBUGEN) {
 		INFS("CM_ICE: DHCSR_C_DEBUGEN flag set.");

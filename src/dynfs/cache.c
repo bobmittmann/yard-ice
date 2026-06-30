@@ -75,7 +75,7 @@ static inline unsigned int __bytes2blk(unsigned int bytes)
 
 static inline size_t __blk2bytes(unsigned int nblk)
 {
-	return (nblk << CACHE_BLK_BITS) - CHUNK_HDR_SIZE;
+	return (nblk << CACHE_BLK_BITS);
 }
 
 static inline int __blk2offs(struct cache_ctl * cache, struct cache_blk * blk)
@@ -117,9 +117,11 @@ int cache_init(struct cache_ctl * cache, void * cache_buf, size_t cache_size)
 	int nblk;
 	assert(cache_size > DYNFS_CACHE_MIN_SIZE);
 
-	nblk = __bytes2blk(cache_size);
+	nblk = cache_size >> CACHE_BLK_BITS;
 	cache->blk = ((struct cache_blk *)cache_buf);
 	cache->mask = nblk - 1;
+	DBG("cache_size=%d nblk=%d size=%d", cache_size, nblk, 
+		nblk * sizeof(struct cache_blk));
 	cache->nblk = nblk;
 	cache->free = nblk;
 	cache->head = 0;
@@ -141,6 +143,7 @@ void cache_chunk_delete(struct cache_ctl * cache, struct cache_chunk * chunk)
 	int32_t free;
 
 	offs = __blk2offs(cache, (struct cache_blk *)chunk);
+	(void)offs;
 	tail = cache->tail;
 	head = cache->head;
 	mask = cache->mask;
@@ -150,17 +153,17 @@ void cache_chunk_delete(struct cache_ctl * cache, struct cache_chunk * chunk)
 	/* get the first entry from the tail */
 	blk = &cache->blk[tail & mask];
 	/* discard all the entries up to ours */
-	while (tail < head) {
+	while (tail != head) {
 		if (tail == head) {
 			INFS("tail == head");
 			break;
 		}
-		int ti = (tail & mask);
+//		int ti = (tail & mask);
 		free += blk->chunk.nblk;
 		tail += blk->chunk.nblk;
-		if (offs == ti) {
-			break;
-		}
+	//	if (offs == ti) {
+	//		break;
+	//	}
 		blk = &cache->blk[tail & mask];
 	}
 
@@ -190,7 +193,7 @@ struct cache_chunk * cache_chunk_lookup(struct cache_ctl * cache, int key)
 	head = cache->head;
 	mask = cache->mask;
 
-	while (tail < head) {
+	while (tail != head) {
 		blk = &cache->blk[tail & mask];
 		if (blk->chunk.key == key)
 			return &blk->chunk;
@@ -238,6 +241,8 @@ struct cache_chunk * cache_chunk_new(struct cache_ctl * cache,
  *                  v           v         
  *	 {            ][###########]                    }
  */
+	head = 0;
+	tail = 0;
 	
 	INF("tail=%d head=%d", tail, head);
 
@@ -264,6 +269,7 @@ struct cache_chunk * cache_chunk_new(struct cache_ctl * cache,
 		tail = head;
 		INFS("tail = head = top");
 	}
+
 
 	blk = &cache->blk[head & mask];
 	blk->chunk.key = key;

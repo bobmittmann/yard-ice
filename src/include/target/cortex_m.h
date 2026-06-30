@@ -31,7 +31,9 @@
 
 #include <target.h>
 #include <stdint.h>
+#include <dynfs.h>
 
+extern const struct dynfs_file_def arm_v7m_dynfs_fsdef[];
 /*
  * generic Cortex-M3 RAM operations
  */

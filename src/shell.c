@@ -287,6 +287,12 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_let, "let", "@", 
 		"VAR EXPR", "assign a value to variable" },
 
+	{ cmd_dynfs_ls, "list", "ls", 
+		"", "list filesystem files." },
+
+	{ cmd_dynfs_cat, "cat", "cat", 
+		"", "copy file to stdout." },
+
 	{ cmd_meminfo, "meminfo", "mi", 
 		"", "show memory info" },
 

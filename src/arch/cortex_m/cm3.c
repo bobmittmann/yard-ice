@@ -30,7 +30,7 @@
 #include "target.h"
 #include "armice.h"
 #include "script.h"
-#include "target/cm3.h"
+#include "target/cortex_m.h"
 #include "cm3ice.h"
 
 int cm3_reset(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)

@@ -34,6 +34,7 @@
 #include "script.h"
 #include "cm3ice.h"
 #include "target/stm32f.h"
+#include "target/cortex_m.h"
 
 #define STM32F2X
 #include "stm32f_defs.h"
@@ -490,5 +491,6 @@ struct target_info stm32f = {
 	.on_init = (target_script_t)stm32f1xx_on_init,
 	.reset_script = (target_script_t)cm3_reset,
 	.probe = (target_script_t)cm3_probe,
+	.fsdef = arm_v7m_dynfs_fsdef
 };
 

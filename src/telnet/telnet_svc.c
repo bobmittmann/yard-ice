@@ -213,7 +213,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 	for (;;) {
 
 		INF("TELNET wating for connection.");
-		DCC_LOG(LOG_TRACE, "TELNET: waiting for connection...");
+		DCC_LOG(LOG_INFO, "TELNET: waiting for connection...");
 
 		if ((tp = tcp_accept(svc)) == NULL) {
 			DCC_LOG(LOG_ERROR, "tcp_accept().");
@@ -221,7 +221,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 		}
 
 		INF("TELNET connection accepted.");
-		DCC_LOG(LOG_TRACE, "TELNET: accepted.");
+		DCC_LOG(LOG_INFO, "TELNET: accepted.");
 
 		tn->tp  = tp;
 
@@ -242,7 +242,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 			if (head != tn->rx.tail) {
 				/* update the head */
 				tn->rx.head = head;
-				DCC_LOG1(LOG_TRACE, "rx nonempty: head=%d", head);
+				DCC_LOG1(LOG_INFO, "rx nonempty: head=%d", head);
 				/* signal the head update */
 				thinkos_flag_give(tn->rx.nonempty_flag);
 			}
@@ -253,7 +253,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 				break;
 			}
 
-			DCC_LOG1(LOG_TRACE, "recv: %d", len);
+			DCC_LOG1(LOG_INFO, "recv: %d", len);
 
 			/* set the input processing pointer */
 			src = buf;
@@ -270,7 +270,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 					} else {
 						if ((binary) || ((c >= 3) && (c < 127))) {
 							/* ASCII characters */
-							DCC_LOG1(LOG_TRACE, "rx nonempty: head=%d", head);
+							DCC_LOG1(LOG_INFO, "rx nonempty: head=%d", head);
 
 							/* buffer is full */
 							if (head == (tn->rx.tail + TELNET_SVC_RX_BUF_LEN)) {
@@ -339,13 +339,13 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 					break;
 
 				case TN_DONT_RCVD:
-					DCC_LOG1(LOG_TRACE, "DONT %s", TELOPT(c));
+					DCC_LOG1(LOG_INFO, "DONT %s", TELOPT(c));
 					tn_opt_wont(tp, &opt, c);
 					state = TN_DATA;
 					break;
 
 				case TN_DO_RCVD:
-					DCC_LOG1(LOG_TRACE, "DO %s", TELOPT(c));
+					DCC_LOG1(LOG_INFO, "DO %s", TELOPT(c));
 					switch (c) {
 
 					case TELOPT_SGA:
@@ -368,13 +368,13 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 					break;
 
 				case TN_WONT_RCVD:
-					DCC_LOG1(LOG_TRACE, "WONT %s", TELOPT(c));
+					DCC_LOG1(LOG_INFO, "WONT %s", TELOPT(c));
 					tn_opt_dont(tp, &opt, c);
 					state = TN_DATA;
 					break;
 
 				case TN_WILL_RCVD:
-					DCC_LOG1(LOG_TRACE, "WILL %s", TELOPT(c));
+					DCC_LOG1(LOG_INFO, "WILL %s", TELOPT(c));
 
 					switch (c) {
 					case TELOPT_ECHO:
@@ -405,7 +405,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 					if (c == IAC)
 						state = TN_SB_IAC_RCVD;
 					if (sb_len < TN_SB_BUF_LEN) {
-						DCC_LOG1(LOG_TRACE, "suboption: %d", c);
+						DCC_LOG1(LOG_INFO, "suboption: %d", c);
 					}
 //					sb_buf[sb_len++] = c;
 					break;
@@ -441,7 +441,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 
 		}
 
-		DCC_LOG(LOG_TRACE, "close...");
+		DCC_LOG(LOG_INFO, "close...");
 
 		tcp_close(tp);
 		INF("TELNET connection closed.");
@@ -509,7 +509,7 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 	int cnt;
 	int pos;
 
-	DCC_LOG3(LOG_TRACE, "<%d> len=%d msec=%d", 
+	DCC_LOG3(LOG_INFO, "<%d> len=%d msec=%d", 
 			 thinkos_thread_self(), len, msec);
 
 	/* rx.tail can oly be changed inside this function, it is declared 
@@ -545,7 +545,7 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 		/* the remaining chars are at the beginning of the buffer */
 		m = cnt - n;
 	
-		DCC_LOG2(LOG_TRACE, "n=%d m=%d", n, m);
+		DCC_LOG2(LOG_INFO, "n=%d m=%d", n, m);
 
 		memcpy(cp, &tn->rx.buf[pos], n);
 		cp += n;
@@ -557,7 +557,7 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 	tn->rx.tail = tail += cnt;
 
 	if (cnt) {
-		DCC_LOG(LOG_TRACE, "rx buffer non empty signal");
+		DCC_LOG(LOG_INFO, "rx buffer non empty signal");
 		thinkos_flag_give(tn->rx.nonfull_flag);
 	}
 

@@ -26,10 +26,6 @@
 #ifndef __CACHE_H__
 #define __CACHE_H__
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <stdbool.h>
 

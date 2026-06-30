@@ -44,7 +44,7 @@
 /* Enable the per thread CPU usage counters */
 #define THINKOS_ENABLE_PROFILING            1
 #define THINKOS_ENABLE_PREEMPTION           1
-#define THINKOS_ENABLE_CRITICAL             0
+#define THINKOS_ENABLE_CRITICAL             1
 /* Check the validity of arguments to system calls */
 #define THINKOS_ENABLE_ARG_CHECK            0
 /* Check if a thread tries to lock a mutex which it
@@ -277,7 +277,7 @@
  * Trace 
  * ------------------------------------------------------------------------- */
 
-#define TRACE_LEVEL           TRACE_LVL_DBG
+//#define TRACE_LEVEL           TRACE_LVL_DBG
 #define TRACE_ENABLE_VT100    1
 
 /* -------------------------------------------------------------------------

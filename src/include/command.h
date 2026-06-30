@@ -175,6 +175,10 @@ int shell_exec(FILE * f, const struct shell_cmd * cmd_tab, char * line);
 
 void show_val(FILE * f, uint32_t val);
 
+int cmd_dynfs_ls(FILE * f, int argc, char ** argv);
+
+int cmd_dynfs_cat(FILE * f, int argc, char ** argv);
+
 #ifdef __cplusplus
 }
 #endif

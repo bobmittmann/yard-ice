@@ -26,18 +26,15 @@
 #ifndef __DYNFS_H__
 #define __DYNFS_H__
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 #define DYNFS_FNAME_MAX 51
-#define DYNFS_FILE_OPEN_MAX 1
 #define DYNFS_CACHE_MIN_SIZE 256
 
-struct dynfs_dirent {
+struct dynfs_file_def {
 	uint8_t inode;
 	uint8_t flags;
 	uint16_t size;
@@ -46,10 +43,38 @@ struct dynfs_dirent {
 	int (* generate)(void * arg, char * dst, size_t size);
 };
 
+struct dynfs;
+
+struct dynfs_dirent {
+	uint16_t d_size;
+	uint8_t d_ino;
+	char d_name[DYNFS_FNAME_MAX];
+};
+
+struct dynfs_dir;
+
+struct dynfs_file;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+int dynfs_init(struct dynfs * fs, const struct dynfs_file_def * dir, 
+			   void * arg, void * cache_buf, size_t cache_size);
+
+struct dynfs_dir * dynfs_opendir(struct dynfs * fs, const char * path);
+
+int dynfs_readdir(struct dynfs_dir * dir, struct dynfs_dirent * dirent);
+
+int dynfs_closedir(struct dynfs_dir * dir);
+
+struct dynfs_file * dynfs_fopen(struct dynfs * fs, const char * path);
+
+int dynfs_fread(struct dynfs_file * f, void * dst, off_t offs, size_t max);
+
+int dynfs_fclose(struct dynfs_file * f);
+
+struct dynfs * dynfs_get_instance(unsigned int instance);
 
 #ifdef __cplusplus
 }

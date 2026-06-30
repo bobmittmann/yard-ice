@@ -24,10 +24,6 @@
  */
 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +36,8 @@
 
 #include <sys/dcclog.h>
 #include <altera.h>
+
+#define TRACE_LEVEL TRACE_LVL_DBG
 #include <trace.h>
 
 uint16_t volatile * jtagdrv_reg = JTAGDRV_REG;

@@ -181,9 +181,9 @@ const struct target_info stm32f207ve = {
 
 	.start_addr = 0x00000000,
 
-
 	.on_init = (target_script_t)stm32f207_on_init,
 	.reset_script = (target_script_t)cm3_reset,
-	.probe = (target_script_t)cm3_probe
+	.probe = (target_script_t)cm3_probe,
+	.fsdef = arm_v7m_dynfs_fsdef
 };
 

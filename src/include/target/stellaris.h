@@ -31,7 +31,7 @@
 #include <stdint.h>
 #include <cm3ice.h>
 #include <target.h>
-#include <target/cm3.h>
+#include "target/cortex_m.h"
 
 extern const struct cm3ice_cfg stellaris_cfg;
 

@@ -248,6 +248,10 @@ target_info_t * target_info(void);
 
 ice_mem_entry_t * target_mem_by_name(const char * name);
 
+struct dynfs * target_fs_get(void);
+
+int target_file_read(const char * fname, void * buf, off_t offs, size_t len);
+
 #ifdef __cplusplus
 	}
 #endif

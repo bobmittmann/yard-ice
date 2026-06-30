@@ -38,10 +38,6 @@
 #include <sys/dcclog.h>
 
 #include <thinkos.h>
-#ifndef THINKAPP
-#define __THINKOS_DBGMON__
-#include <thinkos/dbgmon.h>
-#endif
 
 #include <tcpip/net.h>
 #include <tcpip/ethif.h>
@@ -61,7 +57,7 @@
 #define TRACE_ENABLE_VT100    1
 #endif
 
-#define TRACE_LEVEL_DBG
+#define TRACE_LEVEL           TRACE_LVL_DBG
 #include <trace.h>
 
 #if TRACE_ENABLE_VT100

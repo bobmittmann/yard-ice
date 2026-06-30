@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <ice_drv.h>
+#include <dynfs.h>
 
 #define LITTLE_ENDIAN 0
 #define BIG_ENDIAN 1
@@ -216,6 +217,7 @@ struct target_info {
 	target_script_t reset_script;
 	target_script_t probe;
 	target_test_t test;
+	const struct dynfs_file_def * fsdef;
 };
 
 extern const struct target_cpu * const cpu_db[];

@@ -40,7 +40,7 @@ CFILES = show_asm.c cmd_beep.c \
 	  cmd_irpause.c cmd_drpause.c cmd_i2c.c cmd_en_dis.c \
 	  cmd_trace.c cmd_relay.c cmd_scrub.c \
 	  cmd_fpga.c cmd_ymodem_recv.c show_stack.c\
-	  cmd_debugger.c
+	  cmd_debugger.c cmd_dynfs.c
 	  
 include ../../thinkos/mk/lib.mk
 

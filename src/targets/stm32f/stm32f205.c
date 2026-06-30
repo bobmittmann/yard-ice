@@ -90,6 +90,7 @@ const struct target_info stm32f205 = {
 	.on_run = NULL,
 	.reset_script = (target_script_t)cm3_reset,
 	.probe = (target_script_t)cm3_probe,
-	.test = (target_test_t)NULL
+	.test = (target_test_t)NULL,
+	.fsdef = arm_v7m_dynfs_fsdef
 };
 

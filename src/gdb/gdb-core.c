@@ -1,4 +1,4 @@
-/* 
+LOG_TREACE, /* 
  * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
  * 
  * This file is part of the YARD-ICE.

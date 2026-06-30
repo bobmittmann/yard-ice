@@ -98,7 +98,8 @@ int __attribute__((noreturn)) gdbtcp_brk_task(struct gdbtcpd * gdb)
 			if ((tp = gdb->tp) != NULL) {
 				WARNS("Core halted sending break signal...");
 //				rsp_send_stop_core(tp, TARGET_SIGNAL_TRAP, gdb->core.id);
-				rsp_send_stop_thread(tp, TARGET_SIGNAL_INT, gdb->thread.id);
+//				rsp_send_stop_thread(tp, TARGET_SIGNAL_INT, gdb->thread.id);
+				rsp_send_stop_thread(tp, TARGET_SIGNAL_TRAP, gdb->thread.id);
 			}
 		}
 	}

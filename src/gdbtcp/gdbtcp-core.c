@@ -25,7 +25,7 @@
 
 #include "gdbtcp-i.h"
 
-#define TRACE_LEVEL TRACE_LVL_DBG
+#define TRACE_LEVEL TRACE_LVL_WARN
 #include <trace.h>
 
 #include <sys/dcclog.h>
@@ -98,11 +98,48 @@ int rsp_offsets(struct gdbtcpd * gdb, char * pkt, int len)
 int rsp_xfer(struct gdbtcpd * gdb, char * pkt, int len)
 {
 	struct tcp_pcb * tp = gdb->tp;
-	char * cp = pkt;
+	char * cp = pkt; /* skip qXfer: */ 
+	unsigned int offs;
+	unsigned int size;
+	int cnt;
+	char * fname;
 
-	DBG("Xfer %s", cp);
+	for (;;) {
+#if GDB_ENABLE_QXFER_FEATURES
+		if ((cp = prefix(pkt, "features:read:"))) {
+			DCC_LOG(LOG_TRACE, "qXfer:features:read:");
+			fname = cp;
+			while (*cp != ':')
+				cp++;
+			*cp++ = '\0';
+			break;
+		}
+#endif
 
-	return rsp_send_empty(tp);
+#if (GDB_ENABLE_QXFER_MEMORY_MAP)
+		if ((cp = prefix(pkt, "memory-map:read::"))) {
+			DCC_LOG(LOG_TRACE, "qXfer:memory-map:read::");
+			fname = "memory_map.xml";
+			break;
+		}
+#endif
+		DCC_LOG4(LOG_TRACE, "qXfer:%c%c%c%c....", cp[0], cp[1], cp[2], cp[3]);
+		return rsp_send_empty(tp);
+	}
+
+	offs = hex2int(cp, &cp);
+	cp++; /* skip ',' */
+	size = hex2int(cp, NULL);
+
+	DBG("qXfer: fname=%s offs=%d size=%d", fname, offs, size);
+	cnt = target_file_read(fname, &pkt[2], offs, size);
+	if (cnt < 0)
+		return rsp_send_error(tp, 1);
+
+	pkt[0] = '$';
+	pkt[1] = (cnt == size) ? 'm' : 'l';
+
+	return rsp_send_pkt(tp, pkt, cnt + 2);
 }
 
 int rsp_thread_get_first(struct gdbtcpd * gdb, char * pkt, int len)
@@ -329,7 +366,7 @@ static int rsp_qsupported(struct gdbtcpd * gdb, char * pkt, int len)
 	cp = pkt + str2str(pkt, "$PacketSize=");
 	cp += uint2hex(cp, RSP_BUFFER_LEN - 1);
 	cp += str2str(cp, 
-#if GDB_ENABLE_QXFER_FEATURES
+#if (GDB_ENABLE_QXFER_FEATURES)
 				  ";qXfer:features:read+"
 #else
 				  ";qXfer:features:read-"
@@ -366,7 +403,7 @@ static int rsp_qsupported(struct gdbtcpd * gdb, char * pkt, int len)
 #endif
 #if GDB_ENABLE_VFLASH
 #endif
-#if GDB_ENABLE_VCONT
+#if (GDB_ENABLE_VCONT)
 				  ";vContSupported+"
 #else
 				  ";vContSupported-"
@@ -850,23 +887,33 @@ static int rsp_v_packet(struct gdbtcpd * gdb, char * pkt, int len)
 {
 	struct tcp_pcb * tp = gdb->tp;
 
-#if GDB_ENABLE_VCONT
+#if (GDB_ENABLE_VCONT)
 	unsigned int sig = 0;
 	int thread_id = THREAD_ID_ALL;
 	int n;
 	char * cp;
-	int action ;
+	int action;
+
+	if (prefix(pkt, "vKill")) {
+		DCC_LOG(LOG_TRACE, "vKill");
+		INF("vKill: %s", pkt);
+		return rsp_send_ok(tp);
+	}
 
 	if (prefix(pkt, "vCont?")) {
-		DCC_LOG(LOG_MSG, "vCont?");
+		DCC_LOG(LOG_TRACE, "vCont?");
 		n = str2str(pkt, "$vCont;c;C;s;S;t");
 		return rsp_send_pkt(tp, pkt, n);
 	}
 
 	if (prefix(pkt, "vCont;")) {
 		cp = &pkt[5];
-
+#if (GDB_ENABLE_MULTITHREAD)
 		while (*cp == ';') {
+#else
+		/* No multithread support: just get the first action in the list */
+		if (*cp == ';') {
+#endif
 			sig = 0;
 			thread_id = THREAD_ID_ALL;
 
@@ -883,34 +930,41 @@ static int rsp_v_packet(struct gdbtcpd * gdb, char * pkt, int len)
 			switch (action) {
 			case 'c':
 				if (thread_id == THREAD_ID_ALL) {
-					DCC_LOG(LOG_TRACE, "Continue all!");
+					DCC_LOG(LOG_TRACE, "vCont Continue all!");
 					/* XXX: if there is no active application run  */
 					target_run();
-					gdb->running = false;
+					gdb->running = true;
 				} else {
-					DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
+					DCC_LOG1(LOG_TRACE, "vCont Continue %d", thread_id);
+					target_run();
+					gdb->running = true;
 				}
 				break;
 			case 'C':
-				DCC_LOG2(LOG_TRACE, "Continue %d sig=%d", thread_id, sig);
+				DCC_LOG2(LOG_TRACE, "vCont Continue %d sig=%d", thread_id, sig);
 				if (thread_id == THREAD_ID_ALL) {
 					DCC_LOG(LOG_TRACE, "Continue all!");
 					target_run();
 					gdb->running = true;
 				} else {
 					DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
+					target_run();
+					gdb->running = true;
 				}
 				gdb->last_signal = sig;
 				break;
 			case 's':
 				DCC_LOG1(LOG_TRACE, "vCont step %d", thread_id);
 				target_step();
+				gdb->running = false;
 				break;
 			case 'S':
-				DCC_LOG2(LOG_TRACE, "Step %d sig=%d", thread_id, sig);
+				DCC_LOG2(LOG_TRACE, "vCont Step %d sig=%d", thread_id, sig);
+				target_step();
+				gdb->running = false;
 				break;
 			case 't':
-				DCC_LOG1(LOG_TRACE, "Stop %d", thread_id);
+				DCC_LOG1(LOG_TRACE, "vCont Stop %d", thread_id);
 				target_halt(0);
 				gdb->running = false;
 				target_halt_wait_break();
@@ -920,8 +974,10 @@ static int rsp_v_packet(struct gdbtcpd * gdb, char * pkt, int len)
 				return rsp_send_empty(tp);
 			}
 		}
-
-		return rsp_send_stop_thread(tp, TARGET_SIGNAL_TRAP, gdb->thread.id);
+		if (gdb->running)
+			return rsp_send_ok(tp);
+		else
+			return rsp_send_stop_thread(tp, TARGET_SIGNAL_TRAP, gdb->thread.id);
 	}
 
 	DCC_LOG(LOG_WARNING, "v???");
@@ -1045,7 +1101,7 @@ const struct rsp_pkt_decoder pkt_decoder_lst[] = {
 	{ .c = 'q', rsp_query },
 	{ .c = 's', rsp_step },
 	{ .c = 'v', rsp_v_packet },
-	{ .c = 'z', rsp_breakpoint_remove },
+	{ .c = 'z', rsp_breakpoint_remove }
 };
 
 void rsp_comm_loop(struct gdbtcpd * gdb, char pkt[])

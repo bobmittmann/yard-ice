@@ -28,11 +28,8 @@
 #include <ctype.h>
 #include <assert.h>
 #include <fixpt.h>
-#include "dynfs-i.h"
-#include "debugger.h"
-
-#define TRACE_LEVEL TRACE_LVL_DBG
-#include <trace.h>
+#include "dynfs.h"
+#include "target.h"
 
 const char feature_target_core_xml[] = 
 	"<?xml version=\"1.0\"?>\n"
@@ -84,15 +81,11 @@ const char feature_target_close_xml[] =
 
 int arm_v7m_target_xml_generate(void * arg, char * buf, size_t size)
 {
-	struct debugger * dbg = (struct debugger *)arg;
+	struct target_info * tgt = (struct target_info *)arg;
 	char * cp = (char *)buf;
-	ice_mem_entry_t * mem; 
-
-	mem = ice_mem_by_name(&dbg->ice, dbg->mem, name);
 
 	cp = stpcpy(cp, feature_target_core_xml);
-//	if (debugger_ice_has_fpu()) {
-	if (1) {
+	if (tgt->arch->fpu != NULL) {
 		cp = stpcpy(cp, feature_target_vfp_xml);
 	}
 	cp = stpcpy(cp, feature_target_close_xml);
@@ -104,8 +97,8 @@ const char memory_map_open_xml[] =
 	"<?xml version=\"1.0\"?>\n"
 	"<memory-map>\n";
 const char memory_flash_xml[] = 
-	"\t<memory type=\"flash\" start=\0x%08x\" length=\"0x%08x\">\n"
-	"\t<property name=\"blocksize\">%d</property>\n"
+	"\t<memory type=\"flash\" start=\"0x%08x\" length=\"0x%08x\">\n"
+	"\t\t<property name=\"blocksize\">%d</property>\n"
 	"\t</memory>\n";
 const char memory_ram_xml[] = 
 	"\t<memory type=\"ram\" start=\"0x%08x\" length=\"0x%08x\"/>\n";
@@ -113,22 +106,22 @@ const char memory_map_close_xml[] = "</memory-map>\n";
 
 int arm_v7m_memory_map_generate(void * arg, char * buf, size_t size)
 {
-	struct debugger * dbg = (struct debugger *)arg;
+	struct target_info * tgt = (struct target_info *)arg;
 	char * cp = (char *)buf;
 	ice_mem_entry_t * e; 
-	uint32_t size;
-	uint32_t start;
+	uint32_t memsize;
+	uint32_t memstart;
 
 	cp = stpcpy(cp, memory_map_open_xml);
-	if ((e = ice_mem_by_name(&dbg->ice, dbg->mem, "flash")) != NULL) {
-		start = e->addr.base + e->addr.offs;
-		size = e->blk.count * e->blk.size;
-		cp += snprintf(cp, size, memory_flash_xml, start, size, e->blk.size);
+	if ((e = ice_mem_by_name(tgt->mem, "flash")) != NULL) {
+		memstart = e->addr.base + e->addr.offs;
+		memsize = e->blk.count * e->blk.size;
+		cp += sprintf(cp, memory_flash_xml, memstart, memsize, e->blk.size);
 	}
-	if ((e = ice_mem_by_name(&dbg->ice, dbg->mem, "sram")) != NULL) {
-		start = e->addr.base + e->addr.offs;
-		size = e->blk.count * e->blk.size;
-		cp += snprintf(cp, size, memory_ram_xml, start, size);
+	if ((e = ice_mem_by_name(tgt->mem, "sram")) != NULL) {
+		memstart = e->addr.base + e->addr.offs;
+		memsize = e->blk.count * e->blk.size;
+		cp += sprintf(cp, memory_ram_xml, memstart, memsize);
 	}
 	cp = stpcpy(cp, memory_map_close_xml);
 
@@ -148,7 +141,7 @@ const char threads_close_xml[] =
 #endif
 
 
-const struct dynfs_dirent arm_v7m_dynfs_dir[] = {
+const struct dynfs_file_def arm_v7m_dynfs_fsdef[] = {
 	{ .inode = 1, .fname = "target.xml", .data = (void *)feature_target_core_xml, 
 		.size = sizeof(feature_target_core_xml) +
 			sizeof(feature_target_vfp_xml) +

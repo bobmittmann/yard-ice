@@ -47,9 +47,7 @@ int __attribute__((noreturn)) console_task(FILE * f_tty)
 {
 	for (;;) {
 //		trace_output_set(f_tty, true);
-		int ret;
-		ret = shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
-		INF("shell ret=%d", ret);
+		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
 	}
 }
 

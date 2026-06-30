@@ -30,7 +30,7 @@
 #include <stdint.h>
 #include <cm3ice.h>
 #include <target.h>
-#include <target/cm3.h>
+#include <target/cortex_m.h>
 
 extern struct ice_mem_entry stm32f_mem[];
 

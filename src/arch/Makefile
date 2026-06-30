@@ -27,7 +27,7 @@ LIB_STATIC = arch
 
 ARM_CFILES = arm7.c arm9.c arm-ram.c arm-pn.c
 
-CM_CFILES = cm3.c cortex_m4.c cm3-ram.c 
+CM_CFILES = cm3.c cortex_m4.c cm3-ram.c armv7m-dynfs.c
 
 TI_CFILES = icepick.c
 

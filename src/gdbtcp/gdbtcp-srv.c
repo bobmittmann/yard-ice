@@ -32,7 +32,7 @@
 
 int __attribute__((noreturn)) gdbtcpd_task(struct gdbtcpd * gdb)
 {
-	char pktbuf[RSP_BUFFER_LEN];
+	char pktbuf[RSP_BUFFER_LEN + 16];
 	struct tcp_pcb * svc = gdb->svc;
 	struct tcp_pcb * tp;
 
